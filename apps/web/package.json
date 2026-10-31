@@ -6,20 +6,33 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "prepare": "next typegen",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "test": "echo no tests yet"
+    "test": "vitest run"
   },
   "dependencies": {
+    "@auth/pg-adapter": "^1.11.3",
+    "@playloop/db": "workspace:*",
     "@playloop/sdk": "workspace:*",
+    "@tanstack/react-query": "^5.105.0",
     "next": "^15",
+    "next-auth": "5.0.0-beta.32",
+    "nodemailer": "^7.0.13",
+    "postgres": "^4.0.0",
     "react": "^19",
-    "react-dom": "^19"
+    "react-dom": "^19",
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.13",
+    "@electric-sql/pglite-pgvector": "^0.0.14",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "typescript": "^5"
+    "drizzle-orm": "^0.45.4",
+    "typescript": "^5",
+    "vitest": "^3",
+    "zod": "^4.6.7"
   }
 }

@@ -1,0 +1,414 @@
+/**
+ * Self-contained guest shim, injected inline at the top of <head> by the play
+ * Worker. Plain ES2017 IIFE, no imports. The body is a String.raw literal so it
+ * must contain NO backtick characters and NO "${" sequences.
+ */
+export const SHIM_SOURCE = String.raw`
+(function () {
+  'use strict';
+  var w = window;
+  if (w.PlayLoop && w.PlayLoop.__shim) { return; }
+
+  var realDateNow = Date.now;
+  var realPerfNow = null;
+  try {
+    if (w.performance && typeof w.performance.now === 'function') {
+      realPerfNow = w.performance.now.bind(w.performance);
+    }
+  } catch (e) {}
+
+  /* ---- transport: rate limited (<= 60 posts per second) ---- */
+  var postWindowStart = 0;
+  var postCount = 0;
+  function canPost() {
+    var now = realDateNow.call(Date);
+    if (now - postWindowStart >= 1000) { postWindowStart = now; postCount = 0; }
+    if (postCount >= 60) { return false; }
+    postCount += 1;
+    return true;
+  }
+  function post(type, payload, id) {
+    if (!canPost()) { return; }
+    var msg = { v: 1, src: 'playloop', type: type };
+    if (id !== undefined && id !== null) { msg.id = id; }
+    if (payload !== undefined) {
+      try {
+        if (JSON.stringify(payload).length > 8192) { return; }
+      } catch (e) { return; }
+      msg.payload = payload;
+    }
+    try { w.parent.postMessage(msg, '*'); } catch (e) {}
+  }
+
+  /* ---- error reporting (rate limited to 20) ---- */
+  var errorCount = 0;
+  function postError(message, stack) {
+    if (errorCount >= 20) { return; }
+    errorCount += 1;
+    var payload = { message: String(message) };
+    if (stack) { payload.stack = String(stack); }
+    post('error', payload);
+  }
+  w.onerror = function (message, source, lineno, colno, error) {
+    if (error && error.stack) { postError(error.message || message, error.stack); }
+    else { postError(message, source ? String(source) + ':' + String(lineno) + ':' + String(colno) : ''); }
+    return true;
+  };
+  try {
+    w.addEventListener('unhandledrejection', function (ev) {
+      var r = ev && ev.reason;
+      if (r && r.stack) { postError(r.message || r, r.stack); }
+      else { postError(r, ''); }
+    });
+  } catch (e) {}
+
+  /* ---- neutralised globals: never block, never open popups ---- */
+  w.open = function () { return null; };
+  w.alert = function () { return false; };
+  w.confirm = function () { return false; };
+  w.prompt = function () { return null; };
+
+  /* ---- injected CSS: no scroll, no zoom, no text selection ---- */
+  try {
+    var style = document.createElement('style');
+    style.textContent = 'html,body{margin:0;padding:0;height:100%;touch-action:none;overscroll-behavior:none;-webkit-user-select:none;user-select:none;}';
+    (document.head || document.documentElement).appendChild(style);
+  } catch (e) {}
+
+  /* ---- virtual clock: frozen while paused, shifted on resume ---- */
+  var paused = false;
+  var clockOffset = 0;
+  var pauseStartReal = 0;
+  var pauseStartPerf = 0;
+  function vnow() {
+    if (paused) { return pauseStartReal - clockOffset; }
+    return realDateNow.call(Date) - clockOffset;
+  }
+  function vTimestamp() {
+    if (!realPerfNow) { return vnow(); }
+    if (paused) { return pauseStartPerf - clockOffset; }
+    return realPerfNow() - clockOffset;
+  }
+  Date.now = function () { return vnow(); };
+  try {
+    if (realPerfNow) { w.performance.now = function () { return vTimestamp(); }; }
+  } catch (e) {}
+
+  /* ---- timers: queued and deferred while paused ---- */
+  var realSetTimeout = w.setTimeout.bind(w);
+  var realClearTimeout = w.clearTimeout.bind(w);
+  var timers = {};
+  var timerSeq = 0;
+
+  function scheduleTimer(entry) {
+    if (paused) { entry.realId = null; return; }
+    var delay = entry.vDeadline - vnow();
+    if (delay < 0) { delay = 0; }
+    entry.realId = realSetTimeout(function () { fireTimer(entry); }, delay);
+  }
+  function fireTimer(entry) {
+    if (paused) { return; }
+    if (entry.interval) {
+      entry.vDeadline += entry.interval;
+      scheduleTimer(entry);
+    } else {
+      delete timers[entry.id];
+    }
+    entry.fn.apply(null, entry.args);
+  }
+  w.setTimeout = function (fn, ms) {
+    var id = ++timerSeq;
+    var entry = { id: id, fn: fn, args: [].slice.call(arguments, 2), vDeadline: vnow() + (Number(ms) || 0), interval: 0, realId: null };
+    timers[id] = entry;
+    scheduleTimer(entry);
+    return id;
+  };
+  w.setInterval = function (fn, ms) {
+    var id = ++timerSeq;
+    var interval = Number(ms) || 1;
+    var entry = { id: id, fn: fn, args: [].slice.call(arguments, 2), vDeadline: vnow() + interval, interval: interval, realId: null };
+    timers[id] = entry;
+    scheduleTimer(entry);
+    return id;
+  };
+  w.clearTimeout = function (id) {
+    var entry = timers[id];
+    if (!entry) { return; }
+    if (entry.realId !== null && entry.realId !== undefined) { realClearTimeout(entry.realId); }
+    delete timers[id];
+  };
+  w.clearInterval = function (id) { w.clearTimeout(id); };
+
+  /* ---- requestAnimationFrame: queued and deferred while paused ---- */
+  var rafs = {};
+  var rafSeq = 0;
+  var frameCount = 0;
+  var perfWindow = 0;
+  var realRaf = w.requestAnimationFrame
+    ? w.requestAnimationFrame.bind(w)
+    : function (fn) { return realSetTimeout(function () { fn(vTimestamp()); }, 16); };
+  var realCaf = w.cancelAnimationFrame ? w.cancelAnimationFrame.bind(w) : realClearTimeout;
+
+  w.requestAnimationFrame = function (fn) {
+    var id = ++rafSeq;
+    var entry = { fn: fn, realId: null, queued: true };
+    rafs[id] = entry;
+    if (!paused) { attachRaf(id); }
+    return id;
+  };
+  w.cancelAnimationFrame = function (id) {
+    var entry = rafs[id];
+    if (!entry) { return; }
+    if (entry.realId !== null && entry.realId !== undefined) { realCaf(entry.realId); }
+    delete rafs[id];
+  };
+  function attachRaf(id) {
+    var entry = rafs[id];
+    if (!entry) { return; }
+    entry.queued = false;
+    entry.realId = realRaf(function () {
+      if (rafs[id] !== entry) { return; }
+      if (paused) { entry.queued = true; entry.realId = null; return; }
+      delete rafs[id];
+      sampleFps();
+      entry.fn(vTimestamp());
+    });
+  }
+  /* fps probe: sample frames and post perf about every 2s */
+  function sampleFps() {
+    frameCount += 1;
+    var now = vTimestamp();
+    if (!perfWindow) { perfWindow = now; return; }
+    var elapsed = now - perfWindow;
+    if (elapsed >= 2000) {
+      post('perf', { fps: Math.round((frameCount * 1000) / elapsed) });
+      frameCount = 0;
+      perfWindow = now;
+    }
+  }
+
+  /* ---- AudioContext: created contexts are suspended on pause ---- */
+  var audioCtxs = [];
+  function shimAudio(Real) {
+    function Shimmed() {
+      var ctx = Reflect.construct(Real, arguments, Real);
+      if (audioCtxs.indexOf(ctx) === -1) { audioCtxs.push(ctx); }
+      return ctx;
+    }
+    Shimmed.prototype = Real.prototype;
+    return Shimmed;
+  }
+  try {
+    var RealAudio = w.AudioContext || w.webkitAudioContext;
+    if (RealAudio) {
+      var ShimmedAudio = shimAudio(RealAudio);
+      w.AudioContext = ShimmedAudio;
+      w.webkitAudioContext = ShimmedAudio;
+    }
+  } catch (e) {}
+  function eachAudio(fn) {
+    for (var i = 0; i < audioCtxs.length; i += 1) {
+      try {
+        var p = fn(audioCtxs[i]);
+        if (p && typeof p.catch === 'function') { p.catch(function () {}); }
+      } catch (e) {}
+    }
+  }
+
+  /* ---- pause / resume (honourable even for non-cooperative games) ---- */
+  var pauseCbs = [];
+  var resumeCbs = [];
+  var restartCbs = [];
+  function fireCbs(list) {
+    for (var i = 0; i < list.length; i += 1) {
+      try { list[i](); } catch (e) { postError(e && e.message ? e.message : e, e && e.stack ? e.stack : ''); }
+    }
+  }
+  function setPaused(next) {
+    if (next === paused) { return; }
+    if (next) {
+      paused = true;
+      pauseStartReal = realDateNow.call(Date);
+      pauseStartPerf = realPerfNow ? realPerfNow() : pauseStartReal;
+      for (var id in timers) {
+        if (Object.prototype.hasOwnProperty.call(timers, id)) {
+          var t = timers[id];
+          if (t.realId !== null && t.realId !== undefined) { realClearTimeout(t.realId); t.realId = null; }
+        }
+      }
+      for (var rid in rafs) {
+        if (Object.prototype.hasOwnProperty.call(rafs, rid)) {
+          var r = rafs[rid];
+          if (r.realId !== null && r.realId !== undefined) { realCaf(r.realId); r.realId = null; }
+          r.queued = true;
+        }
+      }
+      eachAudio(function (c) { return c.suspend && c.suspend(); });
+    } else {
+      clockOffset += realDateNow.call(Date) - pauseStartReal;
+      paused = false;
+      for (var id2 in timers) {
+        if (Object.prototype.hasOwnProperty.call(timers, id2)) { scheduleTimer(timers[id2]); }
+      }
+      var flush = [];
+      for (var rid2 in rafs) {
+        if (Object.prototype.hasOwnProperty.call(rafs, rid2) && rafs[rid2].queued) { flush.push(rid2); }
+      }
+      for (var i = 0; i < flush.length; i += 1) { attachRaf(flush[i]); }
+      eachAudio(function (c) { return c.resume && c.resume(); });
+    }
+  }
+
+  /* ---- storage routed through the host (opaque origin has none) ---- */
+  var pending = {};
+  var storageSeq = 0;
+  function storageRequest(type, payload) {
+    return new Promise(function (resolve) {
+      var id = 's' + (++storageSeq);
+      var timer = realSetTimeout(function () {
+        delete pending[id];
+        resolve(null);
+      }, 3000);
+      pending[id] = { resolve: resolve, timer: timer };
+      post(type, payload, id);
+    });
+  }
+  var storage = {
+    get: function (key) { return storageRequest('storage:get', { key: String(key) }); },
+    set: function (key, value) { return storageRequest('storage:set', { key: String(key), value: value }); }
+  };
+
+  /* ---- seeded PRNG (mulberry32) ---- */
+  function mulberry32(a) {
+    a = a | 0;
+    return function () {
+      a = (a + 0x6d2b79f5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function seedToInt(seed) {
+    if (typeof seed === 'number' && isFinite(seed)) { return seed | 0; }
+    var s = String(seed);
+    var n = Number(s);
+    if (isFinite(n)) { return n | 0; }
+    var h = 0;
+    for (var i = 0; i < s.length; i += 1) { h = (Math.imul(31, h) + s.charCodeAt(i)) | 0; }
+    return h;
+  }
+  function querySeed() {
+    try {
+      var q = String(w.location.search || '').replace(/^\?/, '');
+      var parts = q.split('&');
+      for (var i = 0; i < parts.length; i += 1) {
+        var kv = parts[i].split('=');
+        if (decodeURIComponent(kv[0] || '') === 'seed' && kv.length > 1) {
+          return seedToInt(decodeURIComponent(kv.slice(1).join('=')));
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+  var initSeed = null;
+  function rng(seed) {
+    var s;
+    if (seed !== undefined && seed !== null) { s = seedToInt(seed); }
+    else {
+      var q = querySeed();
+      if (q !== null) { s = q; }
+      else if (initSeed !== null) { s = initSeed; }
+      else { s = (Math.random() * 2147483647) | 0; }
+    }
+    return mulberry32(s);
+  }
+
+  /* ---- public API ---- */
+  var readySent = false;
+  var safeArea = { top: 0, bottom: 0 };
+  var muted = false;
+
+  var api = {
+    __shim: true,
+    ready: function () {
+      if (readySent) { return; }
+      readySent = true;
+      post('ready');
+    },
+    gameOver: function (opts) {
+      var p = {};
+      opts = opts || {};
+      if (typeof opts.score === 'number' && isFinite(opts.score)) { p.score = opts.score; }
+      if (typeof opts.won === 'boolean') { p.won = opts.won; }
+      if (opts.stats && typeof opts.stats === 'object') { p.stats = opts.stats; }
+      post('gameOver', p);
+    },
+    submitScore: function (n) {
+      post('score', { score: Number(n) });
+    },
+    storage: storage,
+    rng: rng,
+    haptic: function (type) {
+      post('haptic', { type: String(type) });
+    },
+    share: function (text) {
+      post('share', (text === undefined || text === null) ? {} : { text: String(text) });
+    },
+    log: function (msg) {
+      post('log', { message: String(msg) });
+    },
+    safeArea: safeArea,
+    onPause: function (cb) { if (typeof cb === 'function') { pauseCbs.push(cb); } },
+    onResume: function (cb) { if (typeof cb === 'function') { resumeCbs.push(cb); } },
+    onRestart: function (cb) { if (typeof cb === 'function') { restartCbs.push(cb); } }
+  };
+  w.PlayLoop = api;
+
+  /* ---- host to guest messages ---- */
+  w.addEventListener('message', function (ev) {
+    try {
+      var d = ev.data;
+      if (!d || d.v !== 1 || d.src !== 'playloop' || typeof d.type !== 'string') { return; }
+      if (ev.source !== w.parent) { return; }
+      if (d.type === 'init') {
+        var p = d.payload || {};
+        if (p.safeArea) {
+          var top = Number(p.safeArea.top);
+          var bottom = Number(p.safeArea.bottom);
+          safeArea.top = isFinite(top) ? top : 0;
+          safeArea.bottom = isFinite(bottom) ? bottom : 0;
+        }
+        if (p.seed !== undefined && p.seed !== null) { initSeed = seedToInt(p.seed); }
+        if (typeof p.muted === 'boolean') { muted = p.muted; }
+      } else if (d.type === 'pause') {
+        setPaused(true);
+        fireCbs(pauseCbs);
+      } else if (d.type === 'resume') {
+        setPaused(false);
+        fireCbs(resumeCbs);
+      } else if (d.type === 'restart') {
+        fireCbs(restartCbs);
+      } else if (d.type === 'mute') {
+        muted = !!(d.payload && d.payload.muted);
+      } else if (d.type === 'storage:result') {
+        var pend = d.id ? pending[d.id] : null;
+        if (pend) {
+          realClearTimeout(pend.timer);
+          delete pending[d.id];
+          pend.resolve(d.payload === undefined ? null : d.payload);
+        }
+      }
+    } catch (e) {
+      postError(e && e.message ? e.message : e, e && e.stack ? e.stack : '');
+    }
+  });
+
+  /* ---- ready on window load if the game never called ready() ---- */
+  w.addEventListener('load', function () {
+    if (!readySent) {
+      readySent = true;
+      post('ready');
+    }
+  });
+})();
+`;

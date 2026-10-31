@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Minimal Game</title>
+<script type="application/json" id="pl-manifest">
+{"title":"Minimal Game","description":"A minimal tap game: tap to score points before the timer runs out.","controls":"tap","orientation":"any","sdkVersion":1,"tags":["casual"],"scoring":"higher"}
+</script>
+<style>
+html,body{margin:0;height:100%;background:#123;overflow:hidden;touch-action:none;user-select:none}
+canvas{display:block;width:100%;height:100%}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+if (!window.PlayLoop) window.PlayLoop = { ready() {}, gameOver() {}, haptic() {}, safeArea: { top: 0, bottom: 0 } };
+const cv = document.getElementById('c'); const ctx = cv.getContext('2d');
+let W = 0, H = 0, score = 0, timeLeft = 15, last = 0, over = false, ready = false;
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.floor(W * dpr); cv.height = Math.floor(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize); resize();
+function tap() { if (!over) { score += 1; PlayLoop.haptic('light'); } }
+window.addEventListener('pointerdown', tap);
+window.addEventListener('keydown', (e) => { if (e.code === 'Space') tap(); });
+function frame(t) {
+  const dt = Math.min((t - last) / 1000, 0.05); last = t;
+  if (!over) {
+    timeLeft -= dt;
+    if (timeLeft <= 0) { over = true; PlayLoop.gameOver({ score: score }); }
+  }
+  const sa = PlayLoop.safeArea || { top: 0, bottom: 0 };
+  ctx.fillStyle = '#123'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#eef'; ctx.font = '600 22px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Score ' + score + '  Time ' + Math.ceil(timeLeft), W / 2, sa.top + 32);
+  ctx.fillText('TAP TO SCORE', W / 2, H - sa.bottom - 28);
+  if (!ready) { ready = true; PlayLoop.ready(); }
+  if (!over) requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

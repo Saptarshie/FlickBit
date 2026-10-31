@@ -1,0 +1,185 @@
+import { describe, it, expect, afterEach } from 'vitest';
+import { SHIM_SOURCE } from './shim-source';
+
+describe('SHIM_SOURCE', () => {
+  it('parses as a function body', () => {
+    expect(() => new Function(SHIM_SOURCE)).not.toThrow();
+  });
+
+  it('contains no backticks and no dollar-brace sequences', () => {
+    expect(SHIM_SOURCE).not.toContain('`');
+    expect(SHIM_SOURCE).not.toContain('${');
+  });
+
+  it('contains the required markers', () => {
+    expect(SHIM_SOURCE).toContain('ready');
+    expect(SHIM_SOURCE).toContain('gameOver');
+    expect(SHIM_SOURCE).toContain('requestAnimationFrame');
+    expect(SHIM_SOURCE).toContain("src: 'playloop'");
+    expect(SHIM_SOURCE).toContain('mulberry32');
+  });
+
+  it('never touches cookie, localStorage, fetch, XHR or WebSocket', () => {
+    expect(SHIM_SOURCE).not.toContain('document.cookie');
+    expect(SHIM_SOURCE).not.toContain('localStorage');
+    expect(SHIM_SOURCE).not.toContain('fetch(');
+    expect(SHIM_SOURCE).not.toContain('XMLHttpRequest');
+    expect(SHIM_SOURCE).not.toContain('WebSocket');
+  });
+
+  it('wraps timers and rAF and suspends AudioContext', () => {
+    expect(SHIM_SOURCE).toContain('setTimeout');
+    expect(SHIM_SOURCE).toContain('setInterval');
+    expect(SHIM_SOURCE).toContain('cancelAnimationFrame');
+    expect(SHIM_SOURCE).toContain('AudioContext');
+  });
+});
+
+interface FakeMsg {
+  data: unknown;
+  origin?: string;
+}
+
+function makeFakeWindow() {
+  const posted: FakeMsg[] = [];
+  const listeners: Record<string, Array<(ev: unknown) => void>> = {};
+  const timeouts: Record<number, unknown> = {};
+  const fakeWin: Record<string, unknown> = {
+    parent: {
+      postMessage: (data: unknown, origin?: string) => {
+        posted.push({ data, origin });
+      },
+    },
+    location: { search: '?seed=42' },
+    addEventListener: (type: string, cb: (ev: unknown) => void) => {
+      (listeners[type] ??= []).push(cb);
+    },
+    removeEventListener: () => {},
+    setTimeout: (fn: () => void, ms?: number) => globalThis.setTimeout(fn, ms),
+    clearTimeout: (id: unknown) => globalThis.clearTimeout(id as ReturnType<typeof setTimeout>),
+    setInterval: (fn: () => void, ms?: number) => globalThis.setInterval(fn, ms),
+    clearInterval: (id: unknown) => globalThis.clearInterval(id as ReturnType<typeof setInterval>),
+    requestAnimationFrame: (fn: (t: number) => void) => globalThis.setTimeout(() => fn(Date.now()), 16),
+    cancelAnimationFrame: (id: unknown) => globalThis.clearTimeout(id as ReturnType<typeof setTimeout>),
+    performance: { now: () => Date.now() },
+  };
+  return { fakeWin, posted, listeners, timeouts };
+}
+
+function makeFakeDocument() {
+  return {
+    head: { appendChild: () => {} },
+    documentElement: { appendChild: () => {} },
+    createElement: () => ({ textContent: '' }),
+  };
+}
+
+describe('SHIM_SOURCE execution smoke', () => {
+  const originalDateNow = Date.now;
+
+  afterEach(() => {
+    Date.now = originalDateNow;
+    delete (globalThis as Record<string, unknown>).window;
+    delete (globalThis as Record<string, unknown>).document;
+  });
+
+  it('installs window.PlayLoop and posts ready on window load', () => {
+    const { fakeWin, posted, listeners } = makeFakeWindow();
+    (globalThis as Record<string, unknown>).window = fakeWin;
+    (globalThis as Record<string, unknown>).document = makeFakeDocument();
+
+    new Function(SHIM_SOURCE)();
+
+    const api = fakeWin['PlayLoop'] as Record<string, unknown>;
+    expect(api).toBeDefined();
+    expect(typeof api['ready']).toBe('function');
+    expect(typeof api['gameOver']).toBe('function');
+    expect(typeof api['submitScore']).toBe('function');
+    expect(typeof (api['storage'] as Record<string, unknown>)['get']).toBe('function');
+    expect(typeof (api['storage'] as Record<string, unknown>)['set']).toBe('function');
+    expect(typeof api['rng']).toBe('function');
+    expect(typeof api['haptic']).toBe('function');
+    expect(typeof api['share']).toBe('function');
+    expect(typeof api['log']).toBe('function');
+    expect(api['safeArea']).toEqual({ top: 0, bottom: 0 });
+    expect(typeof api['onPause']).toBe('function');
+    expect(typeof api['onResume']).toBe('function');
+    expect(typeof api['onRestart']).toBe('function');
+
+    // no ready yet, then window load fires -> ready posted
+    expect(posted.length).toBe(0);
+    for (const fn of listeners['load'] ?? []) fn({});
+    expect(posted).toContainEqual({
+      data: { v: 1, src: 'playloop', type: 'ready' },
+      origin: '*',
+    });
+  });
+
+  it('a game calling ready() earlier suppresses the load fallback', () => {
+    const { fakeWin, posted, listeners } = makeFakeWindow();
+    (globalThis as Record<string, unknown>).window = fakeWin;
+    (globalThis as Record<string, unknown>).document = makeFakeDocument();
+    new Function(SHIM_SOURCE)();
+    (fakeWin['PlayLoop'] as { ready: () => void }).ready();
+    for (const fn of listeners['load'] ?? []) fn({});
+    const readies = posted.filter((m) => (m.data as { type?: string }).type === 'ready');
+    expect(readies.length).toBe(1);
+  });
+
+  it('storage.get resolves from a matching storage:result and null on timeout', async () => {
+    const { fakeWin, posted, listeners } = makeFakeWindow();
+    (globalThis as Record<string, unknown>).window = fakeWin;
+    (globalThis as Record<string, unknown>).document = makeFakeDocument();
+    new Function(SHIM_SOURCE)();
+    const api = fakeWin['PlayLoop'] as { storage: { get: (k: string) => Promise<unknown> } };
+
+    const p = api.storage.get('coins');
+    const req = posted.find((m) => (m.data as { type?: string }).type === 'storage:get');
+    expect(req).toBeDefined();
+    const id = (req?.data as { id?: string }).id;
+    expect(typeof id).toBe('string');
+    for (const fn of listeners['message'] ?? []) {
+      fn({ source: fakeWin['parent'], data: { v: 1, src: 'playloop', type: 'storage:result', id, payload: 7 } });
+    }
+    await expect(p).resolves.toBe(7);
+
+    // timeout path
+    const p2 = api.storage.get('other');
+    await new Promise((r) => setTimeout(r, 3100));
+    await expect(p2).resolves.toBeNull();
+  }, 10000);
+
+  it('pause queues rAF callbacks and fires them on resume', () => {
+    const { fakeWin, listeners } = makeFakeWindow();
+    (globalThis as Record<string, unknown>).window = fakeWin;
+    (globalThis as Record<string, unknown>).document = makeFakeDocument();
+    new Function(SHIM_SOURCE)();
+
+    const fire = (type: string, data: unknown) => {
+      for (const fn of listeners['message'] ?? []) fn({ source: fakeWin['parent'], data });
+    };
+
+    let fired = 0;
+    const raf = fakeWin['requestAnimationFrame'] as (fn: (t: number) => void) => number;
+    // pause first, then register rAF: must NOT run while paused
+    fire('message', undefined); // noise, ignored
+    fire('pause-malformed', {});
+    for (const fn of listeners['message'] ?? []) {
+      fn({ source: fakeWin['parent'], data: { v: 1, src: 'playloop', type: 'pause' } });
+    }
+    raf(() => {
+      fired += 1;
+    });
+    expect(fired).toBe(0);
+    for (const fn of listeners['message'] ?? []) {
+      fn({ source: fakeWin['parent'], data: { v: 1, src: 'playloop', type: 'resume' } });
+    }
+    // queued rAF fires on resume (via a real rAF -> timer)
+    return new Promise<void>((resolve) => {
+      setTimeout(() => {
+        expect(fired).toBe(1);
+        resolve();
+      }, 60);
+    });
+  });
+});
