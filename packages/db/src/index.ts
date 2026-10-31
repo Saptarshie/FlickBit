@@ -1,1 +1,2 @@
-export const name = '@playloop/db';
+export * from './schema';
+export * from './seed';

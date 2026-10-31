@@ -8,4 +8,4 @@ Start with `docs/00-README.md`. Implementing agents: read `docs/11-agent-handoff
     pnpm typecheck && pnpm lint && pnpm test
     pnpm infra:up     # postgres+pgvector, redis, minio, mailpit (needs Docker)
 
-Status: P0-T1 (monorepo) and P0-T2 (docker-compose, untested: Docker not verified here) done. Next: P0-T3.
+Status: P0-T1 done. P0-T3 (Drizzle schema + migration + seed) done and tested on PGlite; db:migrate/db:seed CLI and docker-compose NOT yet run against real Postgres (Docker engine was not running). Next: P0-T4.
