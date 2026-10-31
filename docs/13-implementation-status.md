@@ -7,7 +7,21 @@ Task IDs come from 10-roadmap-tasks.md.
 - P0-T1 monorepo (commit 0684502): pnpm+turbo, Next 15 web skeleton, packages/{db,sdk,gamekit,recsys,ui}, docker-compose, .env.example, GitHub Actions CI, SDK protocol + parseGuestMessage with tests.
 - P0-T3 schema (commit 77ac817): Drizzle schema (identity incl. Auth.js tables, games+versions+features with pgvector 1024/768 + HNSW, social, AI creation), migration 0000_init.sql (hand-added CREATE EXTENSION vector), idempotent seed, db:generate/db:migrate/db:seed scripts. 6 tests on PGlite.
 
-## Done (batch A)
+## Done (batch B, commit ea0f89b)
+- Play-worker (apps/play-worker): Express 5 serving artifacts by sha256 with the exact spec CSP, immutable caching, nosniff, injected SDK shim, 404/409/500 error contract. 9 tests.
+- Smoke-test runner (packages/gamekit): runSmokeTest on real Playwright chromium with a served-injectShim harness and the real GameHost, blank/crash/never-ready/interactive fixtures, and a gate asserting all 8 templates pass at fps >= 30. 69 tests.
+- Feed UI (apps/web): Reels-style snap feed with IntersectionObserver active tracking, hard 3-iframe cap, tap-to-play overlay, thumb-zone rail, keyboard controls, TanStack Query + zustand. 17 tests. First Load JS 121 kB (under the 150 kB budget).
+
+Verified by the orchestrator: 129 tests across 5 packages, typecheck clean across 7, next build green.
+
+## Done (data layer for phase 2, commit 9d6c315)
+- Events log: `packages/db/events.sql` creates the `events` table PARTITION BY RANGE (ts) with 6 monthly partitions (drizzle-kit cannot express this, so it is raw SQL applied by `pnpm --filter @playloop/db db:events`). `insertEvents` writes through it. Test proves the DDL applies and rows land.
+- Seed now writes each template as a content-addressed artifact (`<sha256>.html`) plus its game + version rows, so the play-worker has real files to serve. Idempotent (deterministic game id per template). Test verifies the sha256 of each file matches its name.
+
+## Bug found and fixed while building the seed
+`games.publishedVersionId` and `game_versions.gameId` reference each other, so inserting the version first violated the FK. Fixed with insert-game (publishedVersionId null) -> insert-version -> update-game. Rule: any code creating a game + version must use this order.
+
+## Done (batch A, commit ad0c33b)
 - SDK host + guest shim (packages/sdk): parseGuestMessage, SHIM_SOURCE IIFE with pause-honouring timer/rAF wrapping and AudioContext suspension, GameHost with source-checked messages and handshake timeout. 28 tests.
 - Validator + 8 template games (packages/gamekit): validateGame with 22 rejection rules, extractManifest from both formats, entropy warning, 8 real playable canvas templates. 54 tests.
 - Auth.js v5 + anon cookie + middleware (apps/web): magic link + Google, handleFromEmail slug, signed anon id, protected-route middleware, /api/auth/[...nextauth]. 13 tests.
