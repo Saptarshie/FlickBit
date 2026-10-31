@@ -1,0 +1,2 @@
+{ "name": "PlayLoop", "short_name": "PlayLoop", "start_url": "/", "display": "standalone",
+  "orientation": "portrait", "background_color": "#0b0b10", "theme_color": "#0b0b10", "icons": [] }
