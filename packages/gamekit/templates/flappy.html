@@ -23,6 +23,7 @@ const pipes = [];
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth; H = window.innerHeight;
+  if (!bird.y) { bird.y = H * 0.4; }
   cv.width = Math.floor(W * dpr); cv.height = Math.floor(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 window.addEventListener('resize', resize); resize();
@@ -48,7 +49,8 @@ function update(dt) {
     if (inX && !inGap) end();
   }
   while (pipes.length > 0 && pipes[0].x + pipes[0].w < -30) pipes.shift();
-  if (bird.y + bird.r > groundY || bird.y - bird.r < 0) end();
+  if (bird.y - bird.r < 0) { bird.y = bird.r; bird.vy = 0; }
+  if (bird.y + bird.r > groundY) end();
 }
 function draw() {
   const sa = PlayLoop.safeArea || { top: 0, bottom: 0 };

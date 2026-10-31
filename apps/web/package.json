@@ -14,6 +14,7 @@
   "dependencies": {
     "@auth/pg-adapter": "^1.11.3",
     "@playloop/db": "workspace:*",
+    "@playloop/gamekit": "workspace:*",
     "@playloop/sdk": "workspace:*",
     "@tanstack/react-query": "^5.105.0",
     "next": "^15",
