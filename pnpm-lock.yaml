@@ -124,6 +124,9 @@ importers:
       '@electric-sql/pglite':
         specifier: ^0.5.13
         version: 0.5.13
+      '@playloop/gamekit':
+        specifier: workspace:*
+        version: link:../gamekit
       drizzle-orm:
         specifier: ^0.45.4
         version: 0.45.4(@electric-sql/pglite@0.5.13)(pg@8.23.1)(postgres@4.0.0)
