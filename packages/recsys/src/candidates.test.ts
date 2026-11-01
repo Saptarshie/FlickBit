@@ -7,7 +7,7 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { eq } from 'drizzle-orm';
 import * as schema from '@playloop/db';
-import { insertEvents } from '@playloop/db';
+import { insertEvents, rollupGameStats } from '@playloop/db';
 import { trending, fresh, social, explore } from './candidates';
 
 describe('candidate generators', () => {
@@ -28,6 +28,8 @@ describe('candidate generators', () => {
 
     const eventsDdl = await readFile(fileURLToPath(new URL('../../db/events.sql', import.meta.url)), 'utf8');
     await client.exec(eventsDdl);
+    const statsDdl = await readFile(fileURLToPath(new URL('../../db/stats.sql', import.meta.url)), 'utf8');
+    await client.exec(statsDdl);
 
     // Insert users
     const [uA] = await db.insert(schema.users).values({
@@ -134,5 +136,43 @@ describe('candidate generators', () => {
   it('filters out seen game IDs', async () => {
     const cands = await trending(db, 10, { seenGameIds: [game1Id] });
     expect(cands.some((c) => c.gameId === game1Id)).toBe(false);
+  });
+
+  it('past-hour events reach trending only through the game_stats_hourly rollup', async () => {
+    const [g] = await db.insert(schema.games).values({
+      creatorId: creatorB,
+      title: 'Rollup Game',
+      status: 'published',
+      moderation: 'approved',
+      publishedAt: new Date(Date.now() - 1000 * 3600 * 48),
+    }).returning();
+
+    const twoHoursAgo = new Date(Date.now() - 1000 * 3600 * 2);
+    await insertEvents(db, [
+      { ts: twoHoursAgo, type: 'play_15s', gameId: g!.id },
+      { ts: twoHoursAgo, type: 'play_15s', gameId: g!.id },
+      { ts: twoHoursAgo, type: 'like', gameId: g!.id },
+      { ts: twoHoursAgo, type: 'impression', gameId: g!.id },
+    ]);
+
+    // Pre-rollup: past-hour events are invisible to trending (raw side only
+    // covers the current hour) — score stays at the 0-impression prior.
+    const before = await trending(db, 50);
+    const beforeCand = before.find((c) => c.gameId === g!.id);
+    expect(beforeCand?.score ?? 0).toBe(0);
+
+    await rollupGameStats(db);
+
+    const after = await trending(db, 50);
+    const afterCand = after.find((c) => c.gameId === g!.id);
+    // (2 * play_15s + 3 * 1 like) / (1 impression + 20) = 5 / 21 > 0
+    expect(afterCand?.score ?? 0).toBeGreaterThan(0);
+  });
+
+  it('explore counts past-hour impressions through the rollup too', async () => {
+    await rollupGameStats(db);
+    const cands = await explore(db, 10);
+    // game3 has zero impressions anywhere -> least explored, ranked first.
+    expect(cands[0]?.gameId).toBe(game3Id);
   });
 });

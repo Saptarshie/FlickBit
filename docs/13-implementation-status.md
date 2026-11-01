@@ -3,6 +3,11 @@
 Update this file at every commit. The next implementing agent resumes from here.
 Task IDs come from 10-roadmap-tasks.md.
 
+## Done (trending/explore switch to game_stats_hourly)
+- `packages/recsys` trending() and explore() now use a hybrid event split: completed hour buckets read `game_stats_hourly`, the current partial hour reads raw `events`. Split at the same TZ-independent UTC hour boundary the rollup truncates with (`to_timestamp(FLOOR(EXTRACT(epoch FROM now())/3600)*3600)`), so the sides never double-count or drop events. Pre-rollup, past-hour events are invisible to trending (documented, tested); a `db:rollup` run picks them up.
+- 2 new candidate tests (rollup-gated visibility, explore sees rolled impressions); recsys 16/16, web 68/68, typecheck + build green.
+- Production note: `db:stats` DDL must run before serving feed traffic, and a periodic `db:rollup` (e.g. every 5-15 min) keeps past-hour buckets fresh.
+
 ## Done (events rollup: game_stats_hourly)
 - `packages/db/stats.sql`: `game_stats_hourly(game_id, hour, impressions, plays, plays15, likes, saves, remixes, comments, skips_fast)` PK (game_id, hour), applied via `pnpm --filter @playloop/db db:stats` (raw SQL like events.sql — not a drizzle-kit migration).
 - `packages/db/src/rollup.ts`: `rollupGameStats(db, {from, to})` recomputes buckets from the events log with UTC hour truncation (`to_timestamp(FLOOR(EXTRACT(epoch FROM ts)/3600)*3600)`), `ON CONFLICT DO UPDATE` replaces counts so re-runs are idempotent and late-arriving events are picked up; ignores null game_id; returns buckets written. `getGameStats(db, gameId)` reads them back. 4 tests (column mapping, idempotency, incremental pickup, window isolation).
@@ -84,6 +89,6 @@ A subagent that cannot run `pnpm install` hand-made `node_modules` symlinks inst
 
 ## Next up (do these in order)
 1. P2-T4/T5 background jobs: embeddings into `game_features` (text/visual/content vectors), poster frame capture (og:image then works end-to-end).
-2. Trending candidates → read `game_stats_hourly` (+ current-hour raw events) and a cron/CLI loop for `db:rollup`.
-3. Real LLM provider client (pluggable behind the `AiProvider` interface; `MockAiProvider` is the offline default).
-4. Collections / saved games page (P2-T1 remainder) + comments sheet UI (P2-T2).
+2. Real LLM provider client (pluggable behind the `AiProvider` interface; `MockAiProvider` is the offline default).
+3. Collections / saved games page (P2-T1 remainder) + comments sheet UI (P2-T2).
+4. Periodic `db:rollup` scheduling (cron job or Inngest) once infra exists.

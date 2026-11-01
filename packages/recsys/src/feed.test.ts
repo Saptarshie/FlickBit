@@ -23,6 +23,8 @@ describe('fetchFeedPage', () => {
 
     const eventsDdl = await readFile(fileURLToPath(new URL('../../db/events.sql', import.meta.url)), 'utf8');
     await client.exec(eventsDdl);
+    const statsDdl = await readFile(fileURLToPath(new URL('../../db/stats.sql', import.meta.url)), 'utf8');
+    await client.exec(statsDdl);
 
     const [creator] = await db.insert(schema.users).values({
       handle: 'game_dev', displayName: 'Game Dev', email: 'dev@playloop.local', role: 'user',
