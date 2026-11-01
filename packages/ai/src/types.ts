@@ -1,4 +1,4 @@
-import type { ValidateReport } from '@playloop/gamekit';
+import type { ValidationResult } from '@playloop/gamekit';
 
 export type PipelineStage =
   | 'idle'
@@ -47,7 +47,7 @@ export type GeneratedGame = {
   bytes: number;
   spec: GameSpec;
   metadata: GameMetadata;
-  validateReport: ValidateReport;
+  validateReport: ValidationResult;
   repairsCount: number;
 };
 

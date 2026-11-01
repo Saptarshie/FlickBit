@@ -5,7 +5,9 @@ import { PGlite } from '@electric-sql/pglite';
 import { vector } from '@electric-sql/pglite-pgvector';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
-import { schema, insertEvents } from '@playloop/db';
+import { eq } from 'drizzle-orm';
+import * as schema from '@playloop/db';
+import { insertEvents } from '@playloop/db';
 import { trending, fresh, social, explore } from './candidates';
 
 describe('candidate generators', () => {
@@ -44,7 +46,7 @@ describe('candidate generators', () => {
     // Viewer follows creatorA
     await db.insert(schema.follows).values({
       followerId: viewer,
-      followingId: creatorA,
+      followeeId: creatorA,
     });
 
     // Insert games
@@ -85,9 +87,9 @@ describe('candidate generators', () => {
       gameId: game3Id, versionNo: 1, artifactSha256: 'sha3', artifactBytes: 100, artifactKey: 'art/3',
     }).returning();
 
-    await db.update(schema.games).set({ publishedVersionId: v1.id }).where(schema.eq(schema.games.id, game1Id));
-    await db.update(schema.games).set({ publishedVersionId: v2.id }).where(schema.eq(schema.games.id, game2Id));
-    await db.update(schema.games).set({ publishedVersionId: v3.id }).where(schema.eq(schema.games.id, game3Id));
+    await db.update(schema.games).set({ publishedVersionId: v1.id }).where(eq(schema.games.id, game1Id));
+    await db.update(schema.games).set({ publishedVersionId: v2.id }).where(eq(schema.games.id, game2Id));
+    await db.update(schema.games).set({ publishedVersionId: v3.id }).where(eq(schema.games.id, game3Id));
 
     // Add events: Game 1 has many plays and impressions
     await insertEvents(db, [

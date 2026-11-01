@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
   resolve: {
@@ -6,6 +7,7 @@ export default defineConfig({
       // next@15 ships no "exports" map, so Node ESM cannot resolve the
       // extension-less `next/server` used by next-auth; point it at the file.
       { find: /^next\/server$/, replacement: 'next/server.js' },
+      { find: /^@\//, replacement: fileURLToPath(new URL('./src/', import.meta.url)) },
     ],
   },
   test: {

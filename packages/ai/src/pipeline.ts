@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { validateGame, type ValidateReport } from '@playloop/gamekit';
+import { validateGame, type ValidationResult } from '@playloop/gamekit';
 import { generateCode } from './generator';
 import { extractOrGenerateMetadata } from './metadata';
 import { planGame } from './planner';
@@ -46,10 +46,10 @@ export async function runGenerationPipeline(
     progressPercent: 70,
   });
 
-  let validateReport: ValidateReport = validateGame(code);
+  let validateReport: ValidationResult = validateGame(code);
   let repairsCount = 0;
 
-  while (!validateReport.valid && repairsCount < maxRepairs) {
+  while (validateReport.errors.length > 0 && repairsCount < maxRepairs) {
     repairsCount++;
     reportProgress({
       stage: 'repairing',
@@ -61,11 +61,8 @@ export async function runGenerationPipeline(
     validateReport = validateGame(code);
   }
 
-  if (!validateReport.valid) {
-    const errors = validateReport.violations
-      .filter((v) => v.severity === 'error')
-      .map((v) => `${v.rule}: ${v.message}`)
-      .join('; ');
+  if (validateReport.errors.length > 0) {
+    const errors = validateReport.errors.join('; ');
     const err = new Error(`Game artifact validation failed after ${repairsCount} repairs: ${errors}`);
     reportProgress({
       stage: 'failed',

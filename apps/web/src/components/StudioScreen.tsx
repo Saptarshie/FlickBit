@@ -70,8 +70,10 @@ export function StudioScreen() {
           const dataMatch = block.match(/^data:\s*(.+)$/m);
           if (!dataMatch) continue;
 
-          const eventType = eventMatch ? eventMatch[1].trim() : 'message';
-          const data = JSON.parse(dataMatch[1].trim());
+          const eventType = eventMatch?.[1]?.trim() ?? 'message';
+          const rawData = dataMatch[1]?.trim();
+          if (!rawData) continue;
+          const data = JSON.parse(rawData);
 
           if (eventType === 'progress') {
             setProgressStage(data.stage);

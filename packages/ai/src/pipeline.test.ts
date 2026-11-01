@@ -35,8 +35,8 @@ describe('packages/ai pipeline', () => {
     };
     const codeWithManifest = `
       <!DOCTYPE html><html><head>
-      <script type="application/json" id="playloop-manifest">
-      {"title":"Embedded Neon Snake","tags":["cyber","arcade"]}
+      <script type="application/json" id="pl-manifest">
+      {"title":"Embedded Neon Snake","description":"A glowing snake eating cyber orbs","controls":"swipe","orientation":"portrait","sdkVersion":1,"tags":["cyber","arcade"],"scoring":"higher"}
       </script></head><body></body></html>
     `;
     const meta = await extractOrGenerateMetadata(codeWithManifest, spec, mockProvider);
@@ -57,7 +57,7 @@ describe('packages/ai pipeline', () => {
     expect(result.code).toBeTruthy();
     expect(result.sha256).toMatch(/^[a-f0-9]{64}$/);
     expect(result.bytes).toBeGreaterThan(0);
-    expect(result.validateReport.valid).toBe(true);
+    expect(result.validateReport.errors).toHaveLength(0);
     expect(result.metadata.title).toBeTruthy();
 
     // Check event stages sequence
@@ -79,7 +79,7 @@ describe('packages/ai pipeline', () => {
           return '<!DOCTYPE html><html><head><script src="https://evil.com/hax.js"></script></head><body><script>window.playloop?.ready();</script></body></html>';
         }
         // Repaired code on subsequent calls
-        return '<!DOCTYPE html><html><head><script type="application/json" id="playloop-manifest">{"title":"Repaired"}</script></head><body><script>window.playloop?.ready();</script></body></html>';
+        return '<!DOCTYPE html><html><head><script type="application/json" id="pl-manifest">{"title":"Repaired","description":"Fixed game","controls":"tap","orientation":"portrait","sdkVersion":1,"tags":["game"],"scoring":"higher"}</script></head><body><script>window.playloop?.ready();</script></body></html>';
       },
     });
 
@@ -92,7 +92,7 @@ describe('packages/ai pipeline', () => {
     );
 
     expect(result.repairsCount).toBeGreaterThanOrEqual(1);
-    expect(result.validateReport.valid).toBe(true);
+    expect(result.validateReport.errors).toHaveLength(0);
     expect(result.code).not.toContain('evil.com');
   });
 });

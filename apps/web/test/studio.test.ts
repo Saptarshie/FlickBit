@@ -9,7 +9,7 @@ import * as schema from '@playloop/db';
 import { setTestDb } from '../src/lib/db';
 
 vi.mock('../auth', () => ({
-  auth: async () => ({ user: { id: 'test-creator-id' } }),
+  auth: async () => ({ user: { id: '11111111-1111-4111-8111-111111111111' } }),
 }));
 
 describe('POST /api/studio/generate', () => {
@@ -24,7 +24,7 @@ describe('POST /api/studio/generate', () => {
     setTestDb(db);
 
     await db.insert(schema.users).values({
-      id: 'test-creator-id',
+      id: '11111111-1111-4111-8111-111111111111',
       handle: 'testcreator',
       displayName: 'Test Creator',
       email: 'creator@test.local',

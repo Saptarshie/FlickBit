@@ -3,7 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { auth } from '../../../../auth';
 import { getDb } from '@/lib/db';
-import { schema } from '@playloop/db';
+import * as schema from '@playloop/db';
 import { eq } from 'drizzle-orm';
 import { MockAiProvider, runGenerationPipeline } from '@playloop/ai';
 

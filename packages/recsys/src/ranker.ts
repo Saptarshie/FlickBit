@@ -6,9 +6,11 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   let normA = 0;
   let normB = 0;
   for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
+    const ai = a[i] ?? 0;
+    const bi = b[i] ?? 0;
+    dot += ai * bi;
+    normA += ai * ai;
+    normB += bi * bi;
   }
   const denom = Math.sqrt(normA) * Math.sqrt(normB);
   if (denom === 0) return 0;
@@ -64,7 +66,12 @@ export function rankCandidates(cands: Candidate[], opts: RankOptions = {}): Cand
     };
   });
 
-  scored.sort((a, b) => b.finalScore - a.finalScore);
+  scored.sort((a, b) => {
+    if (Math.abs(b.finalScore - a.finalScore) > 1e-9) {
+      return b.finalScore - a.finalScore;
+    }
+    return a.candidate.gameId.localeCompare(b.candidate.gameId);
+  });
   return scored.map((s) => s.candidate);
 }
 
@@ -86,8 +93,10 @@ export function mmrRerank(
   // Compute base relevance from ranking position: 1.0 down to 0.5
   const baseRelevance = new Map<string, number>();
   for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (!item) continue;
     const score = 1.0 - (i / Math.max(1, items.length)) * 0.5;
-    baseRelevance.set(items[i].id, score);
+    baseRelevance.set(item.id, score);
   }
 
   while (remaining.length > 0) {
@@ -113,6 +122,7 @@ export function mmrRerank(
 
     for (let i = 0; i < remaining.length; i++) {
       const cand = remaining[i];
+      if (!cand) continue;
       const rel = baseRelevance.get(cand.id) ?? 0.5;
 
       // Calculate max similarity to items in selected
@@ -144,11 +154,12 @@ export function mmrRerank(
     }
 
     if (bestIdx >= 0) {
-      const [chosen] = remaining.splice(bestIdx, 1);
-      selected.push(chosen);
+      const chosen = remaining.splice(bestIdx, 1)[0];
+      if (chosen) selected.push(chosen);
     } else {
       // Fallback in case of edge case
-      selected.push(remaining.shift()!);
+      const fallback = remaining.shift();
+      if (fallback) selected.push(fallback);
     }
   }
 

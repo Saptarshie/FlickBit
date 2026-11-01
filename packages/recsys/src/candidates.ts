@@ -35,7 +35,7 @@ export async function trending(
       )::float /
       (COALESCE(SUM(CASE WHEN e.type = 'impression' THEN 1 ELSE 0 END), 0) + 20)::float AS "score"
     FROM games g
-    LEFT JOIN game_features gf ON gf.game_id = g.id
+    LEFT JOIN game_features gf ON gf.game_version_id = g.published_version_id
     LEFT JOIN events e ON e.game_id = g.id
     WHERE g.status = 'published' AND g.moderation = 'approved'
     GROUP BY g.id, g.tags, g.published_at, gf.quality_score
@@ -79,7 +79,7 @@ export async function fresh(
       g.published_at AS "createdAt",
       gf.quality_score AS "qualityScore"
     FROM games g
-    LEFT JOIN game_features gf ON gf.game_id = g.id
+    LEFT JOIN game_features gf ON gf.game_version_id = g.published_version_id
     WHERE g.status = 'published' AND g.moderation = 'approved'
     ORDER BY g.published_at DESC NULLS LAST
   `;
@@ -123,8 +123,8 @@ export async function social(
       g.published_at AS "createdAt",
       gf.quality_score AS "qualityScore"
     FROM games g
-    JOIN follows f ON f.following_id = g.creator_id AND f.follower_id = ${userId}
-    LEFT JOIN game_features gf ON gf.game_id = g.id
+    JOIN follows f ON f.followee_id = g.creator_id AND f.follower_id = ${userId}
+    LEFT JOIN game_features gf ON gf.game_version_id = g.published_version_id
     WHERE g.status = 'published' AND g.moderation = 'approved'
     ORDER BY g.published_at DESC NULLS LAST
   `;
@@ -167,7 +167,7 @@ export async function explore(
       gf.quality_score AS "qualityScore",
       COALESCE(SUM(CASE WHEN e.type = 'impression' THEN 1 ELSE 0 END), 0) AS impressions
     FROM games g
-    LEFT JOIN game_features gf ON gf.game_id = g.id
+    LEFT JOIN game_features gf ON gf.game_version_id = g.published_version_id
     LEFT JOIN events e ON e.game_id = g.id
     WHERE g.status = 'published' AND g.moderation = 'approved'
     GROUP BY g.id, g.tags, g.published_at, gf.quality_score

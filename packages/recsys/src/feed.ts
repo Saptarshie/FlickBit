@@ -116,14 +116,14 @@ export async function fetchFeedPage(
       db.execute(sql`SELECT game_id FROM likes WHERE user_id = ${opts.userId} AND game_id IN (${idListSql})`),
       db.execute(sql`SELECT game_id FROM saves WHERE user_id = ${opts.userId} AND game_id IN (${idListSql})`),
       db.execute(sql`
-        SELECT following_id FROM follows
+        SELECT followee_id FROM follows
         WHERE follower_id = ${opts.userId}
-        AND following_id IN (SELECT creator_id FROM games WHERE id IN (${idListSql}))
+        AND followee_id IN (SELECT creator_id FROM games WHERE id IN (${idListSql}))
       `),
     ]);
     for (const r of (Array.isArray(likeRows) ? likeRows : likeRows.rows ?? [])) likedSet.add(String(r.game_id));
     for (const r of (Array.isArray(saveRows) ? saveRows : saveRows.rows ?? [])) savedSet.add(String(r.game_id));
-    for (const r of (Array.isArray(followRows) ? followRows : followRows.rows ?? [])) followsSet.add(String(r.following_id));
+    for (const r of (Array.isArray(followRows) ? followRows : followRows.rows ?? [])) followsSet.add(String(r.followee_id));
   }
 
   const cards: GameCard[] = [];

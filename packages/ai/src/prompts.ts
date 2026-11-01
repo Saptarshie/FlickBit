@@ -45,16 +45,8 @@ CRITICAL SPEC & SECURITY RULES (VIOLATION = REJECTION):
        if (e.data?.src === 'playloop' && e.data?.type === 'pause') { isPaused = true; }
        if (e.data?.src === 'playloop' && e.data?.type === 'resume') { isPaused = false; }
      });
-9. Embed a JSON manifest in a script tag:
-   <script type="application/json" id="playloop-manifest">
-   {
-     "title": "Game Title",
-     "description": "Brief description",
-     "tags": ["tag1", "tag2"],
-     "controls": "Tap or drag",
-     "orientation": "portrait"
-   }
-   </script>
+9. Embed the game manifest exactly as <script type="application/json" id="pl-manifest"> with STRICT schema:
+   {"title":"...","description":"...","controls":"tap|drag|swipe|tilt|keys","orientation":"portrait|landscape|any","sdkVersion":1,"tags":["..."],"scoring":"higher|lower|none"}
 
 Deliver complete, working, bug-free HTML with smooth 60fps requestAnimationFrame loop.`;
 

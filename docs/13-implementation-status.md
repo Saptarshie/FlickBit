@@ -3,6 +3,19 @@
 Update this file at every commit. The next implementing agent resumes from here.
 Task IDs come from 10-roadmap-tasks.md.
 
+## Done (Phase 3 AI pipeline & Studio, commit 521175e + fixes)
+- AI Creation Pipeline (`packages/ai`): planner (GameSpec from prompt, archetype pick among the 8), code generator (template-grounded HTML5 output, `extractHtmlArtifact` strips markdown fences), static-validator repair loop (up to 3 attempts on `ValidationResult.errors`), metadata (embedded `pl-manifest` first, LLM/spec fallback), MockAiProvider for offline runs. 5 tests.
+- SSE endpoint `POST /api/studio/generate` (apps/web): streams `progress` events through stages spec→generating→validating→repairing→metadata→done, writes the content-addressed artifact to `.artifacts/` and inserts game + version (game first with null publishedVersionId, then version, then update — the documented FK order). 2 tests.
+- Mobile-first Studio UI (`/studio`): centered 9:16 sandboxed preview iframe (`sandbox="allow-scripts"`), floating prompt drawer with template chips, SSE progress stepper, pause/restart controls, publish modal. First Load JS 108 kB.
+- Feed header launcher: `+ Vibecode` button linking to /studio.
+- Fixed: `@playloop/db` has no `schema` namespace export — import as `import * as schema from '@playloop/db'` and take `eq` from `drizzle-orm` (see test files for the pattern).
+- Fixed: `game_features` keys on `game_version_id` (→ `games.published_version_id`), NOT `game_id`. `follows` columns are `follower_id`/`followee_id`, NOT `following_id`.
+- Fixed: `/api/feed` route handler must be `export const GET = wrap(async (req) => …)` — the wrap-returns-a-function anti-pattern breaks Next's route type contract.
+- apps/web has `@/* → ./src/*` in tsconfig AND vitest.config.ts alias (vitest does not read tsconfig paths).
+- Root `pnpm test` runs turbo with `--concurrency=1`: 8 parallel suites with PGlite WASM + Chromium crash V8 workers (ERR_IPC_CHANNEL_CLOSED) on this machine.
+
+Verified: 184 tests across 7 test suites (sdk 28, gamekit 69 incl. Chromium smoke on 8 templates, ai 5, play-worker 9, db 8, recsys 14, web 51), typecheck clean in 8 workspaces, `next build` green (/studio + /api/studio/generate in route table).
+
 ## Done
 - P0-T1 monorepo (commit 0684502): pnpm+turbo, Next 15 web skeleton, packages/{db,sdk,gamekit,recsys,ui}, docker-compose, .env.example, GitHub Actions CI, SDK protocol + parseGuestMessage with tests.
 - P0-T3 schema (commit 77ac817): Drizzle schema (identity incl. Auth.js tables, games+versions+features with pgvector 1024/768 + HNSW, social, AI creation), migration 0000_init.sql (hand-added CREATE EXTENSION vector), idempotent seed, db:generate/db:migrate/db:seed scripts. 6 tests on PGlite.
@@ -43,9 +56,7 @@ A subagent that cannot run `pnpm install` hand-made `node_modules` symlinks inst
 - pnpm 11 requires explicit `allowBuilds` entries in pnpm-workspace.yaml for packages with install scripts (esbuild, sharp, unrs-resolver).
 
 ## Next up (do these in order)
-1. play-worker: Express app in apps/play-worker serving artifacts by sha256 with CSP + injected SDK shim (depends on the shim string from @playloop/sdk).
-2. smoke-test runner: Playwright headless validation (depends on validator + templates).
-3. Feed UI v1 with seeded games (depends on play-worker for the artifact URL scheme).
-4. Social APIs + events logging.
-5. AI pipeline (gamekit prompts + jobs + SSE), then Studio UI.
-6. Recsys (embeddings, candidates, ranker, reranker).
+1. Phase 4: creator profile pages, game edit/iterate from Studio (`baseCode`/remix path is already in the pipeline), publish/unpublish, remix provenance on cards.
+2. P2-T4/T5 background jobs: embeddings into `game_features` (text/visual/content vectors), poster frame capture.
+3. Events rollup job (`game_stats_hourly`) for the trending candidates.
+4. Real LLM provider client (pluggable behind the `AiProvider` interface; `MockAiProvider` is the offline default).

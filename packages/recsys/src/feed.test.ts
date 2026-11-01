@@ -5,7 +5,8 @@ import { PGlite } from '@electric-sql/pglite';
 import { vector } from '@electric-sql/pglite-pgvector';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
-import { schema } from '@playloop/db';
+import { eq } from 'drizzle-orm';
+import * as schema from '@playloop/db';
 import { fetchFeedPage } from './feed';
 
 describe('fetchFeedPage', () => {
@@ -56,7 +57,7 @@ describe('fetchFeedPage', () => {
 
       await db.update(schema.games)
         .set({ publishedVersionId: v.id })
-        .where(schema.eq(schema.games.id, g.id));
+        .where(eq(schema.games.id, g.id));
     }
 
     // User liked game 1
