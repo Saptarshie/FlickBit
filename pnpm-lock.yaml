@@ -63,6 +63,9 @@ importers:
       '@playloop/gamekit':
         specifier: workspace:*
         version: link:../../packages/gamekit
+      '@playloop/recsys':
+        specifier: workspace:*
+        version: link:../../packages/recsys
       '@playloop/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk

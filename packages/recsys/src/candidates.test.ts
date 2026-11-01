@@ -110,23 +110,23 @@ describe('candidate generators', () => {
   it('trending ranks a game with more plays15 and engagement above one with fewer', async () => {
     const cands = await trending(db, 10);
     expect(cands.length).toBeGreaterThanOrEqual(2);
-    expect(cands[0].gameId).toBe(game1Id);
+    expect(cands[0]?.gameId).toBe(game1Id);
   });
 
   it('fresh returns newest published game first', async () => {
     const cands = await fresh(db, 10);
-    expect(cands[0].gameId).toBe(game2Id);
+    expect(cands[0]?.gameId).toBe(game2Id);
   });
 
   it('explore returns the least-impressed game first', async () => {
     const cands = await explore(db, 10);
-    expect(cands[0].gameId).toBe(game3Id);
+    expect(cands[0]?.gameId).toBe(game3Id);
   });
 
   it('social returns games from a followed creator', async () => {
     const cands = await social(db, viewer, 10);
     expect(cands).toHaveLength(1);
-    expect(cands[0].gameId).toBe(game1Id);
+    expect(cands[0]?.gameId).toBe(game1Id);
   });
 
   it('filters out seen game IDs', async () => {

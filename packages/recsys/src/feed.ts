@@ -171,11 +171,14 @@ export async function fetchFeedPage(
 
   let nextCursor: string | null = null;
   if (pageItems.length > 0 && reranked.length > limit) {
-    const updatedSeen = Array.from(new Set([...seenSet, ...pageItems.map((c) => c.id)]));
-    nextCursor = encodeCursor({
-      seen: updatedSeen,
-      lastId: pageItems[pageItems.length - 1].id,
-    });
+    const lastItem = pageItems[pageItems.length - 1];
+    if (lastItem) {
+      const updatedSeen = Array.from(new Set([...seenSet, ...pageItems.map((c) => c.id)]));
+      nextCursor = encodeCursor({
+        seen: updatedSeen,
+        lastId: lastItem.id,
+      });
+    }
   }
 
   return {
