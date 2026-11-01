@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 const TEMPLATES = [
@@ -26,6 +27,36 @@ export function StudioScreen() {
   const [publishedGameId, setPublishedGameId] = useState<string | null>(null);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [publishBusy, setPublishBusy] = useState(false);
+  const [publishSaved, setPublishSaved] = useState(false);
+
+  // Remix: /studio?remix=<gameId> prefills the generation with the base code.
+  const searchParams = useSearchParams();
+  const remixId = searchParams.get('remix');
+  const [remixBaseCode, setRemixBaseCode] = useState<string | null>(null);
+  const [remixSourceTitle, setRemixSourceTitle] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!remixId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/games/${remixId}/source`);
+        if (!res.ok) return;
+        const body = await res.json();
+        if (!cancelled) {
+          setRemixBaseCode(body.data.code);
+          setRemixSourceTitle(body.data.game.title);
+          setPrompt((p) => (p.trim() ? p : `Remix of ${body.data.game.title}: `));
+        }
+      } catch {
+        // Non-fatal: user can still vibecode from scratch.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [remixId]);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -46,6 +77,9 @@ export function StudioScreen() {
         body: JSON.stringify({
           prompt: prompt.trim(),
           templateId: selectedTemplate,
+          ...(remixId && remixBaseCode
+            ? { forkedFromId: remixId, baseCode: remixBaseCode, isRemix: true }
+            : {}),
         }),
       });
 
@@ -104,6 +138,27 @@ export function StudioScreen() {
     if (iframeRef.current && artifactUrl) {
       iframeRef.current.src = artifactUrl;
       setIsPaused(false);
+    }
+  };
+
+  const saveGameDetails = async () => {
+    if (!publishedGameId || publishBusy) return;
+    setPublishBusy(true);
+    setPublishSaved(false);
+    try {
+      const res = await fetch(`/api/games/${publishedGameId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          title: gameTitle.trim() || undefined,
+          tags: gameTags.split(',').map((t) => t.trim()).filter(Boolean),
+        }),
+      });
+      setPublishSaved(res.ok);
+    } catch {
+      setPublishSaved(false);
+    } finally {
+      setPublishBusy(false);
     }
   };
 
@@ -273,10 +328,11 @@ export function StudioScreen() {
             <div className="flex gap-2 mt-5">
               <button
                 type="button"
-                onClick={() => setShowPublishModal(false)}
-                className="flex-1 py-2 rounded-xl bg-neutral-800 text-sm font-medium hover:bg-neutral-700"
+                onClick={saveGameDetails}
+                disabled={publishBusy}
+                className="flex-1 py-2 rounded-xl bg-neutral-800 text-sm font-medium hover:bg-neutral-700 disabled:opacity-50"
               >
-                Back to Studio
+                {publishBusy ? 'Saving…' : publishSaved ? '✓ Saved' : 'Save details'}
               </button>
               <Link
                 href="/"
@@ -285,6 +341,11 @@ export function StudioScreen() {
                 View in Feed
               </Link>
             </div>
+            {remixSourceTitle ? (
+              <p className="text-[11px] text-neutral-500 mt-3 text-center">
+                🔁 This game is a remix of “{remixSourceTitle}”
+              </p>
+            ) : null}
           </div>
         </div>
       )}

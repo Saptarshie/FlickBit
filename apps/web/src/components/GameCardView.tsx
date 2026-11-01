@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useRouter } from 'next/navigation';
 import { GameHost, type GameHostError } from '@playloop/sdk';
 import type { GameCard } from '../lib/feed';
 import { useFeedStore } from '../lib/feed-store';
@@ -68,6 +69,7 @@ const ICONS = {
  * mirrors for the guest), and the game-over Replay/Next actions.
  */
 export default function GameCardView({ card, live, isActive, onNext }: Props) {
+  const router = useRouter();
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const hostRef = useRef<GameHost | null>(null);
   const isActiveRef = useRef(isActive);
@@ -236,6 +238,11 @@ export default function GameCardView({ card, live, isActive, onNext }: Props) {
       >
         <div style={{ fontSize: 18, fontWeight: 700 }}>{card.title}</div>
         <div style={{ fontSize: 14, opacity: 0.85, marginTop: 4 }}>{card.description}</div>
+        {card.forkedFrom ? (
+          <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
+            🔁 remix of {card.forkedFrom.title}
+          </div>
+        ) : null}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
           {card.tags.map((tag) => (
             <span key={tag} style={{ fontSize: 12, background: 'rgba(255,255,255,0.18)', borderRadius: 999, padding: '3px 10px' }}>
@@ -271,7 +278,9 @@ export default function GameCardView({ card, live, isActive, onNext }: Props) {
           >
             {following ? '✓' : '+'}
           </button>
-          <div style={RAIL_LABEL}>@{card.creator.handle}</div>
+          <div style={RAIL_LABEL}>
+            <a href={`/u/${card.creator.handle}`} style={{ color: '#fff', textDecoration: 'none' }}>@{card.creator.handle}</a>
+          </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
@@ -295,7 +304,7 @@ export default function GameCardView({ card, live, isActive, onNext }: Props) {
           <div style={RAIL_LABEL}>{card.counts.saves + (saved ? 1 : 0)}</div>
         </div>
 
-        <button type="button" aria-label="Remix" style={RAIL_BUTTON}>
+        <button type="button" aria-label="Remix" onClick={() => router.push(`/studio?remix=${card.id}`)} style={RAIL_BUTTON}>
           <Icon path={ICONS.remix} />
         </button>
 

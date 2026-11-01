@@ -3,6 +3,17 @@
 Update this file at every commit. The next implementing agent resumes from here.
 Task IDs come from 10-roadmap-tasks.md.
 
+## Done (Phase 4: profiles, publish lifecycle, remix provenance)
+- `GET /api/users/[id]` (apps/web/app/api/users/[id]/route.ts): creator profile by uuid OR case-insensitive handle — profile fields, follower/following/game counts, viewer.following/isSelf, and published games with counts, artifactUrl, and `forkedFrom: {id, title}` remix provenance (parents resolved in one query). 3 tests.
+- `PATCH /api/games/[id]` (apps/web/app/api/games/[id]/route.ts): creator-only edit of title/description/tags plus lifecycle `status: published|unlisted|draft`. Publish requires an attached artifact version (`no_version` 400 otherwise) and stamps publishedAt only on first publish; unpublish preserves it. 8 tests (401/403/400/404/200s).
+- `GET /api/games/[id]/source` (apps/web/app/api/games/[id]/source/route.ts): returns the published version's artifact HTML from ARTIFACTS_DIR so the Studio can remix it (`baseCode` + `forkedFromId` on /api/studio/generate). 3 tests.
+- Profile UI `/u/[handle]` (ProfileScreen): mobile-first header (avatar, handle, bio, counts), optimistic follow button wired to the existing follow API, 2-col game grid with remix provenance lines and play/like/remix counts.
+- Feed cards: Remix button now routes to `/studio?remix=<gameId>`; creator handle in the rail links to `/u/<handle>`; cards show "🔁 remix of X" when forkedFrom is set.
+- Studio remix flow: `/studio?remix=<gameId>` fetches base code, prefills the prompt, and sends `forkedFromId + baseCode + isRemix` through the generation pipeline. Publish modal's "Save details" PATCHes title/tags; shows remix provenance note.
+- `useSearchParams` in StudioScreen requires the Suspense wrapper in app/studio/page.tsx (Next 15 static-render rule).
+
+Verified: apps/web 65 tests (46 api + 6 anon + 4 feed + 5 auth + 2 db + 2 studio), typecheck clean in 8 workspaces, `next build` green with /u/[handle], /api/games/[id], /api/games/[id]/source in the route table.
+
 ## Done (Phase 3 AI pipeline & Studio, commit 521175e + fixes)
 - AI Creation Pipeline (`packages/ai`): planner (GameSpec from prompt, archetype pick among the 8), code generator (template-grounded HTML5 output, `extractHtmlArtifact` strips markdown fences), static-validator repair loop (up to 3 attempts on `ValidationResult.errors`), metadata (embedded `pl-manifest` first, LLM/spec fallback), MockAiProvider for offline runs. 5 tests.
 - SSE endpoint `POST /api/studio/generate` (apps/web): streams `progress` events through stages spec→generating→validating→repairing→metadata→done, writes the content-addressed artifact to `.artifacts/` and inserts game + version (game first with null publishedVersionId, then version, then update — the documented FK order). 2 tests.
@@ -56,7 +67,7 @@ A subagent that cannot run `pnpm install` hand-made `node_modules` symlinks inst
 - pnpm 11 requires explicit `allowBuilds` entries in pnpm-workspace.yaml for packages with install scripts (esbuild, sharp, unrs-resolver).
 
 ## Next up (do these in order)
-1. Phase 4: creator profile pages, game edit/iterate from Studio (`baseCode`/remix path is already in the pipeline), publish/unpublish, remix provenance on cards.
-2. P2-T4/T5 background jobs: embeddings into `game_features` (text/visual/content vectors), poster frame capture.
-3. Events rollup job (`game_stats_hourly`) for the trending candidates.
-4. Real LLM provider client (pluggable behind the `AiProvider` interface; `MockAiProvider` is the offline default).
+1. P2-T4/T5 background jobs: embeddings into `game_features` (text/visual/content vectors), poster frame capture.
+2. Events rollup job (`game_stats_hourly`) for the trending candidates.
+3. Real LLM provider client (pluggable behind the `AiProvider` interface; `MockAiProvider` is the offline default).
+4. Share page `/g/[id]` with OG poster (P2-T4) + collections (P2-T1 remainder).

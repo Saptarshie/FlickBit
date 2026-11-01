@@ -6,6 +6,10 @@ import { migrate } from 'drizzle-orm/pglite/migrator';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { z } from 'zod';
 import * as schema from '@playloop/db';
 import { getDb, setTestDb, resetTestDb } from '../src/lib/db';
@@ -23,6 +27,9 @@ import * as reportRoute from '../app/api/games/[id]/report/route';
 import * as scoreRoute from '../app/api/games/[id]/score/route';
 import * as leaderboardRoute from '../app/api/games/[id]/leaderboard/route';
 import * as eventsRoute from '../app/api/events/route';
+import * as userProfileRoute from '../app/api/users/[id]/route';
+import * as gameEditRoute from '../app/api/games/[id]/route';
+import * as gameSourceRoute from '../app/api/games/[id]/source/route';
 
 const authState = vi.hoisted(() => ({ session: null as { user: { id: string } } | null }));
 
@@ -686,5 +693,221 @@ describe('POST /api/events', () => {
       .where(eq(schema.events.source, 'mint-batch-1'));
     expect(rows).toHaveLength(1);
     expect(rows[0]?.anonId).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// user profile (GET /api/users/[id] — accepts uuid or handle)
+// ---------------------------------------------------------------------------
+
+describe('GET /api/users/[id] (profile)', () => {
+  it('returns profile, counts, and published games by handle', async () => {
+    // alice: one published game + one draft; bob follows alice
+    const publishedId = await createGame(aliceId);
+    const [pubVersion] = await getDb()
+      .insert(schema.gameVersions)
+      .values({ gameId: publishedId, versionNo: 1, artifactSha256: 'a'.repeat(64), artifactBytes: 10, artifactKey: 'k' })
+      .returning();
+    await getDb()
+      .update(schema.games)
+      .set({ publishedVersionId: pubVersion!.id, status: 'published', publishedAt: new Date() })
+      .where(eq(schema.games.id, publishedId));
+    await createGame(aliceId); // stays draft
+    await getDb().insert(schema.follows).values({ followerId: bobId, followeeId: aliceId });
+
+    asUser(bobId);
+    const res = await userProfileRoute.GET(jsonReq('GET', '/api/users/alice'), ctx('alice'));
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+
+    expect(data.user.handle).toBe('alice');
+    expect(data.counts.followers).toBe(1);
+    expect(data.counts.games).toBe(1);
+    expect(data.games).toHaveLength(1);
+    expect(data.games[0].id).toBe(publishedId);
+    expect(data.viewer.following).toBe(true);
+  });
+
+  it('matches handles case-insensitively and exposes forkedFrom provenance', async () => {
+    const parentId = await createGame(carolId);
+    const [child] = await getDb()
+      .insert(schema.games)
+      .values({
+        creatorId: carolId,
+        title: 'Remixed Game',
+        status: 'published',
+        publishedAt: new Date(),
+        forkedFromGameId: parentId,
+      })
+      .returning();
+    expect(child).toBeTruthy();
+
+    const res = await userProfileRoute.GET(jsonReq('GET', '/api/users/CAROL'), ctx('CAROL'));
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    const remixed = data.games.find((g: { id: string }) => g.id === child!.id);
+    expect(remixed?.forkedFrom?.id).toBe(parentId);
+    expect(remixed?.forkedFrom?.title).toBe('Test Game');
+  });
+
+  it('404s for unknown handles', async () => {
+    const res = await userProfileRoute.GET(jsonReq('GET', '/api/users/nobody-here'), ctx('nobody-here'));
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error.code).toBe('not_found');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// game edit / publish / unpublish (PATCH /api/games/[id])
+// ---------------------------------------------------------------------------
+
+async function attachVersion(gameId: string): Promise<void> {
+  const [v] = await getDb()
+    .insert(schema.gameVersions)
+    .values({ gameId, versionNo: 1, artifactSha256: 'b'.repeat(64), artifactBytes: 10, artifactKey: 'k' })
+    .returning();
+  await getDb().update(schema.games).set({ publishedVersionId: v!.id }).where(eq(schema.games.id, gameId));
+}
+
+describe('PATCH /api/games/[id] (edit + publish/unpublish)', () => {
+  it('401s when unauthenticated', async () => {
+    const gameId = await createGame(aliceId);
+    const res = await gameEditRoute.PATCH(jsonReq('PATCH', `/api/games/${gameId}`, { title: 'x' }), ctx(gameId));
+    expect(res.status).toBe(401);
+  });
+
+  it('403s when the caller is not the creator', async () => {
+    const gameId = await createGame(aliceId);
+    asUser(bobId);
+    const res = await gameEditRoute.PATCH(jsonReq('PATCH', `/api/games/${gameId}`, { title: 'hacked' }), ctx(gameId));
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error.code).toBe('forbidden');
+  });
+
+  it('400s on invalid input', async () => {
+    const gameId = await createGame(aliceId);
+    asUser(aliceId);
+    const res = await gameEditRoute.PATCH(jsonReq('PATCH', `/api/games/${gameId}`, { title: '' }), ctx(gameId));
+    expect(res.status).toBe(400);
+
+    const res2 = await gameEditRoute.PATCH(jsonReq('PATCH', `/api/games/${gameId}`, { status: 'nuked' }), ctx(gameId));
+    expect(res2.status).toBe(400);
+  });
+
+  it('lets the creator edit title, description, and tags', async () => {
+    const gameId = await createGame(aliceId);
+    asUser(aliceId);
+    const res = await gameEditRoute.PATCH(
+      jsonReq('PATCH', `/api/games/${gameId}`, {
+        title: 'Polished Title',
+        description: 'A better description',
+        tags: ['arcade', 'speed'],
+      }),
+      ctx(gameId),
+    );
+    expect(res.status).toBe(200);
+
+    const rows = await getDb().select().from(schema.games).where(eq(schema.games.id, gameId));
+    expect(rows[0]?.title).toBe('Polished Title');
+    expect(rows[0]?.tags).toEqual(['arcade', 'speed']);
+  });
+
+  it('publishes a game with a version, setting publishedAt', async () => {
+    const gameId = await createGame(aliceId);
+    await attachVersion(gameId);
+    asUser(aliceId);
+    const res = await gameEditRoute.PATCH(jsonReq('PATCH', `/api/games/${gameId}`, { status: 'published' }), ctx(gameId));
+    expect(res.status).toBe(200);
+
+    const rows = await getDb().select().from(schema.games).where(eq(schema.games.id, gameId));
+    expect(rows[0]?.status).toBe('published');
+    expect(rows[0]?.publishedAt).toBeTruthy();
+  });
+
+  it('400s when publishing a game with no version', async () => {
+    const gameId = await createGame(aliceId);
+    asUser(aliceId);
+    const res = await gameEditRoute.PATCH(jsonReq('PATCH', `/api/games/${gameId}`, { status: 'published' }), ctx(gameId));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe('no_version');
+  });
+
+  it('unpublishes back to unlisted without losing publishedAt', async () => {
+    const gameId = await createGame(aliceId);
+    await attachVersion(gameId);
+    asUser(aliceId);
+    await gameEditRoute.PATCH(jsonReq('PATCH', `/api/games/${gameId}`, { status: 'published' }), ctx(gameId));
+    const res = await gameEditRoute.PATCH(jsonReq('PATCH', `/api/games/${gameId}`, { status: 'unlisted' }), ctx(gameId));
+    expect(res.status).toBe(200);
+
+    const rows = await getDb().select().from(schema.games).where(eq(schema.games.id, gameId));
+    expect(rows[0]?.status).toBe('unlisted');
+    expect(rows[0]?.publishedAt).toBeTruthy();
+  });
+
+  it('404s for unknown games', async () => {
+    asUser(aliceId);
+    const res = await gameEditRoute.PATCH(
+      jsonReq('PATCH', '/api/games/11111111-1111-4111-8111-111111111111', { title: 'x' }),
+      ctx('11111111-1111-4111-8111-111111111111'),
+    );
+    expect(res.status).toBe(404);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// game source for remix (GET /api/games/[id]/source)
+// ---------------------------------------------------------------------------
+
+describe('GET /api/games/[id]/source (remix base code)', () => {
+  const sourceHtml = '<!DOCTYPE html><html><head><script type="application/json" id="pl-manifest">{"title":"Src","description":"d","controls":"tap","orientation":"portrait","sdkVersion":1,"tags":["t"],"scoring":"higher"}</script></head><body>CODE</body></html>';
+
+  beforeAll(() => {
+    const artifactsDir = mkdtempSync(join(tmpdir(), 'web-source-test-'));
+    process.env.ARTIFACTS_DIR = artifactsDir;
+    const sha = createHash('sha256').update(sourceHtml, 'utf8').digest('hex');
+    writeFileSync(join(artifactsDir, `${sha}.html`), sourceHtml);
+  });
+
+  afterAll(() => {
+    rmSync(process.env.ARTIFACTS_DIR!, { recursive: true, force: true });
+    delete process.env.ARTIFACTS_DIR;
+  });
+
+  it('returns the artifact html for remixing', async () => {
+    const gameId = await createGame(aliceId);
+    const sha = createHash('sha256').update(sourceHtml, 'utf8').digest('hex');
+    const [v] = await getDb()
+      .insert(schema.gameVersions)
+      .values({ gameId, versionNo: 1, artifactSha256: sha, artifactBytes: sourceHtml.length, artifactKey: 'k' })
+      .returning();
+    await getDb().update(schema.games).set({ publishedVersionId: v!.id }).where(eq(schema.games.id, gameId));
+
+    const res = await gameSourceRoute.GET(jsonReq('GET', `/api/games/${gameId}/source`), ctx(gameId));
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data.code).toBe(sourceHtml);
+    expect(data.game.id).toBe(gameId);
+  });
+
+  it('404s when the artifact file is missing on disk', async () => {
+    const gameId = await createGame(bobId);
+    const [v] = await getDb()
+      .insert(schema.gameVersions)
+      .values({ gameId, versionNo: 1, artifactSha256: 'c'.repeat(64), artifactBytes: 1, artifactKey: 'k' })
+      .returning();
+    await getDb().update(schema.games).set({ publishedVersionId: v!.id }).where(eq(schema.games.id, gameId));
+
+    const res = await gameSourceRoute.GET(jsonReq('GET', `/api/games/${gameId}/source`), ctx(gameId));
+    expect(res.status).toBe(404);
+  });
+
+  it('404s for games with no version', async () => {
+    const gameId = await createGame(carolId);
+    const res = await gameSourceRoute.GET(jsonReq('GET', `/api/games/${gameId}/source`), ctx(gameId));
+    expect(res.status).toBe(404);
   });
 });

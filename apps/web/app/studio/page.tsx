@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { StudioScreen } from '@/components/StudioScreen';
 
 export const metadata = {
@@ -6,5 +7,9 @@ export const metadata = {
 };
 
 export default function StudioPage() {
-  return <StudioScreen />;
+  return (
+    <Suspense fallback={null}>
+      <StudioScreen />
+    </Suspense>
+  );
 }
