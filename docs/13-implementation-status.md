@@ -3,6 +3,14 @@
 Update this file at every commit. The next implementing agent resumes from here.
 Task IDs come from 10-roadmap-tasks.md.
 
+## Done (events rollup: game_stats_hourly)
+- `packages/db/stats.sql`: `game_stats_hourly(game_id, hour, impressions, plays, plays15, likes, saves, remixes, comments, skips_fast)` PK (game_id, hour), applied via `pnpm --filter @playloop/db db:stats` (raw SQL like events.sql — not a drizzle-kit migration).
+- `packages/db/src/rollup.ts`: `rollupGameStats(db, {from, to})` recomputes buckets from the events log with UTC hour truncation (`to_timestamp(FLOOR(EXTRACT(epoch FROM ts)/3600)*3600)`), `ON CONFLICT DO UPDATE` replaces counts so re-runs are idempotent and late-arriving events are picked up; ignores null game_id; returns buckets written. `getGameStats(db, gameId)` reads them back. 4 tests (column mapping, idempotency, incremental pickup, window isolation).
+- CLI: `db:stats` (DDL) + `db:rollup` (full recomputation) added; `db:events` script was missing from package.json and is now wired too.
+- Trending candidates in `packages/recsys` still read raw events; switching them to `game_stats_hourly` (or a hybrid for the current hour) is the natural follow-up once a cron drives the rollup.
+
+Verified: packages/db 12 tests, typecheck clean in 8 workspaces, recsys 14 + web 68 still green against the new exports.
+
 ## Done (Phase 4b: share page /g/[id] + game detail API)
 - `GET /api/games/[id]` (apps/web/app/api/games/[id]/route.ts): share detail — game + creator + counts + viewer (liked/saved/followsCreator) + forkedFrom provenance; 404s unknown and soft-deleted. 3 tests (likes bumped through the real route so denormalized counters stay honest).
 - Share page `/g/[id]` (GameShareScreen + app/g/[id]/page.tsx): 9:16 playable sandboxed frame with tap-to-play overlay (posts `resume` to the guest), tags, remix provenance link to the parent's share page, creator row linking to `/u/<handle>`, Remix CTA to `/studio?remix=`, OG/Twitter metadata via generateMetadata (poster as og:image when posterKey exists). 107 kB first load.
@@ -76,6 +84,6 @@ A subagent that cannot run `pnpm install` hand-made `node_modules` symlinks inst
 
 ## Next up (do these in order)
 1. P2-T4/T5 background jobs: embeddings into `game_features` (text/visual/content vectors), poster frame capture (og:image then works end-to-end).
-2. Events rollup job (`game_stats_hourly`) for the trending candidates.
+2. Trending candidates → read `game_stats_hourly` (+ current-hour raw events) and a cron/CLI loop for `db:rollup`.
 3. Real LLM provider client (pluggable behind the `AiProvider` interface; `MockAiProvider` is the offline default).
 4. Collections / saved games page (P2-T1 remainder) + comments sheet UI (P2-T2).

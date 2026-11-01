@@ -11,7 +11,10 @@
     "test": "vitest run --passWithNoTests",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/cli.ts migrate",
-    "db:seed": "tsx src/cli.ts seed"
+    "db:seed": "tsx src/cli.ts seed",
+    "db:events": "tsx src/cli.ts events",
+    "db:stats": "tsx src/cli.ts stats",
+    "db:rollup": "tsx src/cli.ts rollup"
   },
   "devDependencies": {
     "@electric-sql/pglite-pgvector": "^0.0.14",
