@@ -308,7 +308,7 @@ export default function GameCardView({ card, live, isActive, onNext }: Props) {
           <Icon path={ICONS.remix} />
         </button>
 
-        <button type="button" aria-label="Share" style={RAIL_BUTTON}>
+        <button type="button" aria-label="Share" onClick={() => router.push(`/g/${card.id}`)} style={RAIL_BUTTON}>
           <Icon path={ICONS.share} />
         </button>
 

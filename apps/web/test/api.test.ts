@@ -911,3 +911,49 @@ describe('GET /api/games/[id]/source (remix base code)', () => {
     expect(res.status).toBe(404);
   });
 });
+
+// ---------------------------------------------------------------------------
+// game detail for share page (GET /api/games/[id])
+// ---------------------------------------------------------------------------
+
+describe('GET /api/games/[id] (share detail)', () => {
+  it('returns game, creator, counts, viewer state, and remix provenance', async () => {
+    // parent by carol, child remix by alice with a version + a like from bob
+    const parentId = await createGame(carolId);
+    const gameId = await createGame(aliceId);
+    await getDb().update(schema.games).set({ forkedFromGameId: parentId }).where(eq(schema.games.id, gameId));
+    await attachVersion(gameId);
+
+    // Like through the real route so the denormalized counter is bumped too.
+    asUser(bobId);
+    const likeRes = await likeRoute.POST(jsonReq('POST', `/api/games/${gameId}/like`), ctx(gameId));
+    expect(likeRes.ok).toBe(true);
+
+    const res = await gameEditRoute.GET(jsonReq('GET', `/api/games/${gameId}`), ctx(gameId));
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+
+    expect(data.game.id).toBe(gameId);
+    expect(data.game.creator.handle).toBe('alice');
+    expect(data.game.artifactUrl).toMatch(/\/v\/b{64}\.html$/);
+    expect(data.game.counts.likes).toBe(1);
+    expect(data.game.viewer.liked).toBe(true);
+    expect(data.game.forkedFrom?.id).toBe(parentId);
+    expect(data.game.forkedFrom?.title).toBe('Test Game');
+  });
+
+  it('404s for unknown or unpublished-removed games', async () => {
+    const res = await gameEditRoute.GET(
+      jsonReq('GET', '/api/games/22222222-2222-4222-8222-222222222222'),
+      ctx('22222222-2222-4222-8222-222222222222'),
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it('404s for soft-deleted games', async () => {
+    const gameId = await createGame(aliceId);
+    await getDb().update(schema.games).set({ deletedAt: new Date() }).where(eq(schema.games.id, gameId));
+    const res = await gameEditRoute.GET(jsonReq('GET', `/api/games/${gameId}`), ctx(gameId));
+    expect(res.status).toBe(404);
+  });
+});

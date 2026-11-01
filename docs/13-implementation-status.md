@@ -3,6 +3,14 @@
 Update this file at every commit. The next implementing agent resumes from here.
 Task IDs come from 10-roadmap-tasks.md.
 
+## Done (Phase 4b: share page /g/[id] + game detail API)
+- `GET /api/games/[id]` (apps/web/app/api/games/[id]/route.ts): share detail — game + creator + counts + viewer (liked/saved/followsCreator) + forkedFrom provenance; 404s unknown and soft-deleted. 3 tests (likes bumped through the real route so denormalized counters stay honest).
+- Share page `/g/[id]` (GameShareScreen + app/g/[id]/page.tsx): 9:16 playable sandboxed frame with tap-to-play overlay (posts `resume` to the guest), tags, remix provenance link to the parent's share page, creator row linking to `/u/<handle>`, Remix CTA to `/studio?remix=`, OG/Twitter metadata via generateMetadata (poster as og:image when posterKey exists). 107 kB first load.
+- Feed card Share button routes to `/g/<id>`.
+- Note: like/save denormalized counters (`games.likeCount` etc.) are maintained by their API routes — tests must go through those routes, not raw inserts, when asserting counts.
+
+Verified: apps/web 68 tests, typecheck clean, `next build` green with /g/[id] in the route table.
+
 ## Done (Phase 4: profiles, publish lifecycle, remix provenance)
 - `GET /api/users/[id]` (apps/web/app/api/users/[id]/route.ts): creator profile by uuid OR case-insensitive handle — profile fields, follower/following/game counts, viewer.following/isSelf, and published games with counts, artifactUrl, and `forkedFrom: {id, title}` remix provenance (parents resolved in one query). 3 tests.
 - `PATCH /api/games/[id]` (apps/web/app/api/games/[id]/route.ts): creator-only edit of title/description/tags plus lifecycle `status: published|unlisted|draft`. Publish requires an attached artifact version (`no_version` 400 otherwise) and stamps publishedAt only on first publish; unpublish preserves it. 8 tests (401/403/400/404/200s).
@@ -67,7 +75,7 @@ A subagent that cannot run `pnpm install` hand-made `node_modules` symlinks inst
 - pnpm 11 requires explicit `allowBuilds` entries in pnpm-workspace.yaml for packages with install scripts (esbuild, sharp, unrs-resolver).
 
 ## Next up (do these in order)
-1. P2-T4/T5 background jobs: embeddings into `game_features` (text/visual/content vectors), poster frame capture.
+1. P2-T4/T5 background jobs: embeddings into `game_features` (text/visual/content vectors), poster frame capture (og:image then works end-to-end).
 2. Events rollup job (`game_stats_hourly`) for the trending candidates.
 3. Real LLM provider client (pluggable behind the `AiProvider` interface; `MockAiProvider` is the offline default).
-4. Share page `/g/[id]` with OG poster (P2-T4) + collections (P2-T1 remainder).
+4. Collections / saved games page (P2-T1 remainder) + comments sheet UI (P2-T2).
