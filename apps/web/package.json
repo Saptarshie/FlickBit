@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@auth/pg-adapter": "^1.11.3",
+    "@playloop/ai": "workspace:*",
     "@playloop/db": "workspace:*",
     "@playloop/gamekit": "workspace:*",
     "@playloop/recsys": "workspace:*",
