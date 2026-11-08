@@ -102,25 +102,49 @@ export default function FeedScreen() {
   const goNext = useCallback(() => goTo(useFeedStore.getState().activeIndex + 1), [goTo]);
   const goPrev = useCallback(() => goTo(useFeedStore.getState().activeIndex - 1), [goTo]);
 
-  // Home/End and PageUp/PageDown also navigate (desktop comfort).
+  // Desktop keys: arrows / PageUp / PageDown / Home / End navigate, Space
+  // pauses, M mutes. Ignored while typing in a field.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
-      if (event.key === 'PageDown') {
-        event.preventDefault();
-        goNext();
-      } else if (event.key === 'PageUp') {
-        event.preventDefault();
-        goPrev();
-      } else if (event.key === 'Home') {
-        event.preventDefault();
-        goTo(0);
+      switch (event.key) {
+        case 'ArrowDown':
+        case 'PageDown':
+          event.preventDefault();
+          goNext();
+          break;
+        case 'ArrowUp':
+        case 'PageUp':
+          event.preventDefault();
+          goPrev();
+          break;
+        case 'Home':
+          event.preventDefault();
+          goTo(0);
+          break;
+        case 'End':
+          event.preventDefault();
+          goTo(itemCount - 1);
+          break;
+        case ' ':
+        case 'Spacebar': {
+          event.preventDefault();
+          const state = useFeedStore.getState();
+          state.setPlaying(!state.isPlaying);
+          break;
+        }
+        case 'm':
+        case 'M':
+          useFeedStore.getState().toggleMuted();
+          break;
+        default:
+          break;
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [goNext, goPrev, goTo]);
+  }, [goNext, goPrev, goTo, itemCount]);
 
   const toggleMute = () => useFeedStore.getState().toggleMuted();
 
