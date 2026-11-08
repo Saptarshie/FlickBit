@@ -79,18 +79,40 @@ export async function POST(req: NextRequest) {
         progressPercent: 5,
       });
 
-      const result = await runGenerationPipeline(
-        {
-          prompt,
-          templateId: body.templateId,
-          baseCode: body.baseCode,
-          isRemix: Boolean(body.forkedFromId),
-          onProgress: async (progress) => {
-            await sendEvent('progress', progress);
+      const startedAt = Date.now();
+      let lastProgress: { stage: string; message: string; progressPercent?: number } = {
+        stage: 'generating',
+        message: 'Generating…',
+        progressPercent: 40,
+      };
+      // Long generations can sit in one stage for minutes; a periodic tick keeps
+      // the UI alive and proves the job is not hung.
+      const heartbeat = setInterval(() => {
+        const elapsed = Math.round((Date.now() - startedAt) / 1000);
+        void sendEvent('progress', {
+          ...lastProgress,
+          message: `${lastProgress.message.replace(/ \(\d+s\)$/, '')} (${elapsed}s)`,
+        }).catch(() => undefined);
+      }, 5000);
+
+      let result;
+      try {
+        result = await runGenerationPipeline(
+          {
+            prompt,
+            templateId: body.templateId,
+            baseCode: body.baseCode,
+            isRemix: Boolean(body.forkedFromId),
+            onProgress: async (progress) => {
+              lastProgress = progress;
+              await sendEvent('progress', progress);
+            },
           },
-        },
-        provider
-      );
+          provider
+        );
+      } finally {
+        clearInterval(heartbeat);
+      }
 
       // Write artifact to disk for play-worker
       await mkdir(artifactsDir, { recursive: true });

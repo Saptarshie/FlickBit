@@ -39,6 +39,28 @@ describe('OpenAiCompatProvider', () => {
     expect(second.max_tokens).toBeGreaterThan((f.calls[0] as { max_tokens: number }).max_tokens);
   });
 
+  it('assembles a streamed (SSE) completion', async () => {
+    const chunks = [
+      'data: {"choices":[{"delta":{"content":"<html>"}}]}\n\n',
+      'data: {"choices":[{"delta":{"content":"<body>streamed"}}]}\n\n',
+      'data: {"choices":[{"delta":{"content":"</body></html>"},"finish_reason":"stop"}]}\n\n',
+      'data: [DONE]\n\n',
+    ];
+    const impl = (async () => {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          const enc = new TextEncoder();
+          for (const c of chunks) controller.enqueue(enc.encode(c));
+          controller.close();
+        },
+      });
+      return new Response(stream, { status: 200, headers: { 'content-type': 'text/event-stream' } });
+    }) as unknown as typeof fetch;
+
+    const p = new OpenAiCompatProvider({ ...base, fetchImpl: impl });
+    await expect(p.generateText('hi')).resolves.toBe('<html><body>streamed</body></html>');
+  });
+
   it('splices continuation chunks when finish_reason is length', async () => {
     const f = fakeFetch([
       { content: '<html><body>part one', finish_reason: 'length' },

@@ -50,8 +50,10 @@ export class OpenAiCompatProvider implements AiProvider {
     this.baseUrl = opts.baseUrl.replace(/\/+$/, '');
     this.apiKey = opts.apiKey;
     this.model = opts.model;
-    this.maxTokens = opts.maxTokens ?? 16_000;
-    this.timeoutMs = opts.timeoutMs ?? 180_000;
+    this.maxTokens = opts.maxTokens ?? 24_000;
+    // Idle timeout between streamed chunks. Long games stream for minutes, so
+    // this must be generous; a dead socket still aborts promptly.
+    this.timeoutMs = opts.timeoutMs ?? 120_000;
     this.fetchImpl = opts.fetchImpl ?? fetch;
   }
 
@@ -77,7 +79,8 @@ export class OpenAiCompatProvider implements AiProvider {
 
     // Truncated mid-file: ask for the continuation and splice it on.
     let full = result.content;
-    for (let i = 0; i < 3 && result.finishReason === 'length'; i += 1) {
+    const looksComplete = () => /<\/html>\s*$/i.test(full.trim());
+    for (let i = 0; i < 3 && result.finishReason === 'length' && !looksComplete(); i += 1) {
       const continuation = await this.complete(
         [
           ...messages,
@@ -98,7 +101,10 @@ export class OpenAiCompatProvider implements AiProvider {
       if (continuation.finishReason === 'stop') break;
     }
 
-    if (result.finishReason === 'length') {
+    // Accept a document that closes properly even if the model was still
+    // nominally "writing" when the budget ran out. The validator has the final
+    // say; only a genuinely unterminated artifact is fatal.
+    if (result.finishReason === 'length' && !looksComplete()) {
       throw new Error(
         `LLM output still truncated after continuations (model=${this.model}). ` +
           'The requested artifact is too large for one completion; lower the scope or raise max_tokens.'
@@ -113,45 +119,111 @@ export class OpenAiCompatProvider implements AiProvider {
     maxTokens: number
   ): Promise<{ content: string; finishReason: string }> {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    // Idle timeout: a long artifact can stream for many minutes, but a stalled
+    // socket should not hang the job. Every chunk re-arms the timer.
+    let timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    const bump = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    };
+
     try {
       const res = await this.fetchImpl(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          authorization: `Bearer ${this.apiKey}`,
+          authorization: 'Bearer ' + this.apiKey,
         },
         body: JSON.stringify({
           model: this.model,
           messages,
           max_tokens: maxTokens,
+          stream: true,
           ...(temperature === undefined ? {} : { temperature }),
         }),
         signal: controller.signal,
       });
 
-      const text = await res.text();
       if (!res.ok) {
+        const text = await res.text().catch(() => '');
         throw new Error(`LLM request failed (${res.status}): ${text.slice(0, 400)}`);
       }
 
-      let json: ChatResponse;
-      try {
-        json = JSON.parse(text) as ChatResponse;
-      } catch {
-        throw new Error(`LLM returned non-JSON response: ${text.slice(0, 300)}`);
-      }
-      if (json.error?.message) throw new Error(`LLM error: ${json.error.message}`);
+      const contentType = res.headers?.get?.('content-type') ?? '';
+      const isStream = Boolean(res.body) && /event-stream|octet-stream|text\/plain/i.test(contentType || 'event-stream');
 
-      const choice = json.choices?.[0];
-      return {
-        content: choice?.message?.content ?? '',
-        finishReason: choice?.finish_reason ?? 'stop',
-      };
+      if (!isStream) {
+        const text = await res.text();
+        return parseChatResponse(text);
+      }
+
+      const reader = (res.body as ReadableStream<Uint8Array>).getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let content = '';
+      let finishReason = 'stop';
+      let sawEvent = false;
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        bump();
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const raw of lines) {
+          const line = raw.trim();
+          if (!line.startsWith('data:')) continue;
+          const payload = line.slice(5).trim();
+          if (!payload || payload === '[DONE]') continue;
+          sawEvent = true;
+          let chunk: StreamChunk;
+          try {
+            chunk = JSON.parse(payload) as StreamChunk;
+          } catch {
+            continue;
+          }
+          if (chunk.error?.message) throw new Error(`LLM error: ${chunk.error.message}`);
+          const choice = chunk.choices?.[0];
+          const delta = choice?.delta?.content;
+          if (delta) content += delta;
+          if (choice?.finish_reason) finishReason = choice.finish_reason;
+        }
+      }
+
+      // Some gateways answer a `stream: true` request with a single JSON body.
+      if (!sawEvent) {
+        const trimmed = buffer.trim() || content.trim();
+        if (trimmed.startsWith('{')) return parseChatResponse(trimmed);
+      }
+
+      return { content, finishReason };
     } finally {
       clearTimeout(timer);
     }
   }
+}
+
+type StreamChunk = {
+  choices?: { delta?: { content?: string | null; reasoning_content?: string | null }; finish_reason?: string | null }[];
+  error?: { message?: string };
+};
+
+/** Parse a non-streamed chat-completions body. */
+function parseChatResponse(text: string): { content: string; finishReason: string } {
+  let json: ChatResponse;
+  try {
+    json = JSON.parse(text) as ChatResponse;
+  } catch {
+    throw new Error(`LLM returned non-JSON response: ${text.slice(0, 300)}`);
+  }
+  if (json.error?.message) throw new Error(`LLM error: ${json.error.message}`);
+  const choice = json.choices?.[0];
+  return {
+    content: choice?.message?.content ?? '',
+    finishReason: choice?.finish_reason ?? 'stop',
+  };
 }
 
 /** Build a provider from LLM_* env vars, or null when they are not configured. */

@@ -35,7 +35,11 @@ Data persists in `.data/pglite/` (delete it to start fresh). Artifacts live in
 
 ## What works today
 
-- **Feed** — DB-backed recommendations (`@playloop/recsys`: trending / fresh / social / explore → ranker → MMR tag diversity), full-bleed vertical snap, mobile-first.
+- **Feed** — DB-backed recommendations (`@playloop/recsys`: trending / fresh / social / explore → ranker → MMR tag diversity), full-bleed vertical snap that scrolls both ways (touch, wheel, keyboard), one card per gesture.
+- **Account** — passwordless "pick a handle" sign-in (`/login`); likes, saves, comments and follows are stored against that user.
+- **Social** — like/unlike, save/unsave, comments sheet, share (Web Share + copy link + `/g/<id>` OG page), follow/unfollow, report.
+- **Profiles** — `/u/<handle>` with follower/following counts and a playable game grid; your own profile offers Create and Saved.
+- **Discovery** — `/explore` search across titles, tags and creators, trending tag chips, `/t/<tag>`, `/saved`, `/notifications` with an unread badge.
 - **Vibecoding** — `/studio`: describe a game, the AI planner picks an archetype, the coder writes a self-contained HTML artifact, the validator (sandbox security + manifest + completeness) gates it, and it is content-addressed, published and immediately playable in the feed.
 - **Remix** — `/studio?remix=<gameId>` loads the source artifact and generates a variant, with provenance shown on the card.
 - **Social** — likes, saves, comments API, follows, creator profiles (`/u/<handle>`), share pages (`/g/<id>`) with OG metadata.
