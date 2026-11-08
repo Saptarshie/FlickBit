@@ -4,8 +4,8 @@ import path from 'node:path';
 import { auth } from '../../../../auth';
 import { getDb } from '@/lib/db';
 import * as schema from '@playloop/db';
-import { eq } from 'drizzle-orm';
-import { MockAiProvider, runGenerationPipeline } from '@playloop/ai';
+import { eq, sql } from 'drizzle-orm';
+import { MockAiProvider, providerFromEnv, runGenerationPipeline, embedText, toVectorLiteral } from '@playloop/ai';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,10 +48,14 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const artifactsDir =
-    process.env.ARTIFACTS_DIR || path.resolve(process.cwd(), '../../.artifacts');
+  // ARTIFACTS_DIR may be relative ("./apps/play-worker/artifacts" from the repo
+  // root); Next's cwd is apps/web, so resolve relative paths against the repo.
+  const repoRoot = path.resolve(process.cwd(), '../..');
+  const artifactsDir = process.env.ARTIFACTS_DIR
+    ? path.resolve(repoRoot, process.env.ARTIFACTS_DIR)
+    : path.resolve(process.cwd(), '../play-worker/artifacts');
   const playOrigin =
-    process.env.NEXT_PUBLIC_PLAY_ORIGIN || 'http://play.localhost:3001';
+    process.env.NEXT_PUBLIC_PLAY_ORIGIN || 'http://localhost:3001';
 
   const encoder = new TextEncoder();
   const stream = new TransformStream();
@@ -65,7 +69,15 @@ export async function POST(req: NextRequest) {
   // Run background generation pipeline while streaming SSE
   (async () => {
     try {
-      const provider = new MockAiProvider();
+      const provider = providerFromEnv() ?? new MockAiProvider();
+      const usingRealLlm = provider instanceof Object && !(provider instanceof MockAiProvider);
+      await sendEvent('progress', {
+        stage: 'spec',
+        message: usingRealLlm
+          ? `Using ${process.env.LLM_MODEL}`
+          : 'LLM not configured — using the offline template provider',
+        progressPercent: 5,
+      });
 
       const result = await runGenerationPipeline(
         {
@@ -109,6 +121,22 @@ export async function POST(req: NextRequest) {
       await db.update(schema.games)
         .set({ publishedVersionId: v!.id })
         .where(eq(schema.games.id, g!.id));
+
+      // Embed the description for recommendations. Best-effort: when Ollama is
+      // down the game still publishes, it just stays out of the vector index.
+      try {
+        const embedTextInput = `${result.metadata.title}. ${result.metadata.description} ${result.metadata.tags.join(' ')}`;
+        const vec = await embedText(embedTextInput);
+        if (vec) {
+          await db.execute(
+            sql`INSERT INTO game_features (game_version_id, description_text, text_vec, content_vec, feed_eligible, embedded_at, model_versions)
+                VALUES (${v!.id}, ${embedTextInput}, ${toVectorLiteral(vec)}::vector, ${toVectorLiteral(vec)}::vector, true, now(), ${JSON.stringify({ embed: process.env.EMBED_MODEL ?? 'embeddinggemma' })}::jsonb)
+                ON CONFLICT (game_version_id) DO UPDATE SET text_vec = EXCLUDED.text_vec, content_vec = EXCLUDED.content_vec, feed_eligible = true, embedded_at = now()`
+          );
+        }
+      } catch (embedErr) {
+        console.warn('[studio] embedding skipped:', embedErr instanceof Error ? embedErr.message : embedErr);
+      }
 
       const artifactUrl = `${playOrigin}/v/${result.sha256}.html`;
 

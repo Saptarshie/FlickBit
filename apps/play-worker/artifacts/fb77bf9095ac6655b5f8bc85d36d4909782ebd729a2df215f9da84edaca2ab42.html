@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Match 3</title>
+<script type="application/json" id="pl-manifest">
+{"title":"Match 3","description":"Tap two neighboring tiles to swap them and line up three or more before time runs out.","controls":"tap","orientation":"portrait","sdkVersion":1,"tags":["puzzle","match3"],"scoring":"higher"}
+</script>
+<style>
+html,body{margin:0;height:100%;background:#1b1430;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+canvas{display:block;width:100%;height:100%}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+if (!window.PlayLoop) window.PlayLoop = { ready() {}, gameOver() {}, haptic() {}, safeArea: { top: 0, bottom: 0 } };
+const cv = document.getElementById('c'); const ctx = cv.getContext('2d');
+const N = 6, COLORS = ['#ef476f', '#ffd166', '#06d6a0', '#4cc9f0', '#9b5de5', '#f77f00'];
+let W = 0, H = 0, last = 0, over = false, ready = false, score = 0, timeLeft = 60, sel = -1, cur = 0, board = Array.from({ length: N * N }, () => Math.floor(Math.random() * COLORS.length));
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.floor(W * dpr); cv.height = Math.floor(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function gridRect() {
+  const sa = PlayLoop.safeArea || { top: 0, bottom: 0 };
+  const c = Math.min((W - 24) / N, (H - sa.top - sa.bottom - 130) / N);
+  return { x: (W - c * N) / 2, y: sa.top + (H - sa.top - sa.bottom - c * N) / 2 + 8, c: c };
+}
+function findMatches() {
+  const kill = [];
+  const mark = (i) => { if (kill.indexOf(i) < 0) kill.push(i); };
+  for (const step of [1, N]) for (let i = 0; i < N * N; i += 1) { const edge = step === 1 ? i % N > N - 3 : i >= N * (N - 2); const c = board[i]; if (!edge && c >= 0 && c === board[i + step] && c === board[i + 2 * step]) { mark(i); mark(i + step); mark(i + 2 * step); } }
+  return kill;
+}
+function collapse() {
+  for (let x = 0; x < N; x += 1) { const col = []; for (let y = N - 1; y >= 0; y -= 1) if (board[y * N + x] >= 0) col.push(board[y * N + x]); for (let y = N - 1, k = 0; y >= 0; y -= 1, k += 1) board[y * N + x] = k < col.length ? col[k] : Math.floor(Math.random() * COLORS.length); }
+}
+function resolve() {
+  let kill = findMatches();
+  while (kill.length > 0) { score += kill.length * 10; for (const i of kill) board[i] = -1; collapse(); kill = findMatches(); }
+}
+while (findMatches().length > 0) for (const i of findMatches()) board[i] = Math.floor(Math.random() * COLORS.length);
+function tapAt(px, py) {
+  if (over) return;
+  const g = gridRect(); const x = Math.floor((px - g.x) / g.c), y = Math.floor((py - g.y) / g.c);
+  if (x < 0 || y < 0 || x >= N || y >= N) return;
+  const i = y * N + x; cur = i;
+  if (sel < 0 || sel === i) { sel = sel === i ? -1 : i; PlayLoop.haptic('light'); return; }
+  const dx = Math.abs((sel % N) - x), dy = Math.abs(Math.floor(sel / N) - y);
+  if (dx + dy !== 1) { sel = i; return; }
+  const tmp = board[sel]; board[sel] = board[i]; board[i] = tmp;
+  if (findMatches().length > 0) { sel = -1; resolve(); PlayLoop.haptic('medium'); return; }
+  const back = board[sel]; board[sel] = board[i]; board[i] = back; sel = -1; PlayLoop.haptic('heavy');
+}
+window.addEventListener('resize', resize); resize();
+window.addEventListener('pointerdown', (e) => tapAt(e.clientX, e.clientY));
+window.addEventListener('keydown', (e) => { const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -N, ArrowDown: N }[e.code]; if (step !== undefined) cur = Math.max(0, Math.min(N * N - 1, cur + step)); if (e.code === 'Space') { const g = gridRect(); tapAt(g.x + (cur % N) * g.c + g.c / 2, g.y + Math.floor(cur / N) * g.c + g.c / 2); } });
+function update(dt) { timeLeft -= dt; if (timeLeft <= 0 && !over) { over = true; PlayLoop.gameOver({ score: score }); } }
+function draw() {
+  const g = gridRect(); const sa = PlayLoop.safeArea || { top: 0, bottom: 0 };
+  ctx.fillStyle = '#1b1430'; ctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < N * N; i += 1) { const x = g.x + (i % N) * g.c, y = g.y + Math.floor(i / N) * g.c; ctx.fillStyle = COLORS[Math.max(0, board[i])]; ctx.fillRect(x + 3, y + 3, g.c - 6, g.c - 6); if (i === sel || i === cur) { ctx.strokeStyle = i === sel ? '#ffffff' : '#ffd166'; ctx.lineWidth = 3; ctx.strokeRect(x + 3, y + 3, g.c - 6, g.c - 6); } }
+  ctx.fillStyle = '#e9f0ff'; ctx.font = '600 20px system-ui, sans-serif';
+  ctx.textAlign = 'left'; ctx.fillText('Score ' + score + '  Time ' + Math.ceil(timeLeft), 14, sa.top + 30);
+  ctx.textAlign = 'center'; ctx.fillText('TAP TWO NEIGHBORS TO SWAP', W / 2, H - sa.bottom - 22);
+}
+function frame(t) {
+  const dt = Math.min((t - last) / 1000, 0.05); last = t; if (!over) update(dt); draw();
+  if (!ready) { ready = true; PlayLoop.ready(); } if (!over) requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

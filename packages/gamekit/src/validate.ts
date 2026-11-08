@@ -302,6 +302,22 @@ export function validateGame(code: string): ValidationResult {
     um = urlRe.exec(scanText);
   }
 
+  // Structural completeness: a truncated completion must never be published.
+  // (Models sometimes stop mid-file; the artifact is then unplayable.)
+  if (!/<html[\s>]/i.test(code)) {
+    errors.push('truncated/invalid artifact: missing <html> root element');
+  }
+  if (!/<\/html\s*>/i.test(code)) {
+    errors.push('truncated artifact: missing closing </html> (the file was cut off)');
+  }
+  // Compare counts, not presence: an artifact can contain a closed manifest
+  // script and still have its main script cut off.
+  const openTags = (code.match(/<script\b/gi) ?? []).length;
+  const closeTags = (code.match(/<\/script\s*>/gi) ?? []).length;
+  if (openTags > closeTags) {
+    errors.push(`truncated artifact: ${openTags - closeTags} unclosed <script> tag(s)`);
+  }
+
   // Manifest: must exist and parse (strict JSON + structure).
   let manifest: Manifest | null = null;
   const src = findManifestSource(code);

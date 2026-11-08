@@ -5,4 +5,6 @@ export * from './generator';
 export * from './repair';
 export * from './metadata';
 export * from './mock-provider';
+export * from './openai-provider';
+export * from './embeddings';
 export * from './pipeline';

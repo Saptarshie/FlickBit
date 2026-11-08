@@ -3,7 +3,8 @@
   "private": true,
   "packageManager": "pnpm@11.19.0",
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "node scripts/dev.mjs",
+    "dev:db": "tsx scripts/dev-db.ts",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
@@ -12,6 +13,9 @@
     "infra:down": "docker compose down"
   },
   "devDependencies": {
+    "@electric-sql/pglite-socket": "^0.2.18",
+    "dotenv": "^18.0.9",
+    "tsx": "^4.23.15",
     "turbo": "^2",
     "typescript": "^5"
   }

@@ -73,6 +73,11 @@ describe('validateGame — hard errors (one fixture per rule)', () => {
         '<body><canvas id="c"></canvas><script>PlayLoop.ready(); PlayLoop.gameOver({ score: 1 });</script></body></html>',
       error: 'missing pl-manifest',
     },
+    {
+      name: 'truncated file (no closing html)',
+      code: withManifest('var a = 1;').replace('</html>', ''),
+      error: 'truncated artifact: missing closing </html>',
+    },
   ];
 
   for (const bad of BAD) {
@@ -87,6 +92,18 @@ describe('validateGame — hard errors (one fixture per rule)', () => {
     const code = withManifest('var x = 1;');
     expect(validateGame(code).bytes).toBe(new TextEncoder().encode(code).length);
     expect(validateGame('x'.repeat(600 * 1024)).bytes).toBeGreaterThan(500 * 1024);
+  });
+
+  it('rejects a truncated document even when everything else is valid', () => {
+    const cut = withManifest('var a = 1;').replace('</html>', '');
+    const errors = validateGame(cut).errors;
+    expect(errors.some((e) => e.includes('missing closing </html>'))).toBe(true);
+
+    const noScriptClose = withManifest('var a = 1;').replace('</script></body></html>', '</body></html>');
+    expect(validateGame(noScriptClose).errors.some((e) => e.includes('unclosed <script>'))).toBe(true);
+
+    const prose = "Here's a complete game with many fun features and levels.";
+    expect(validateGame(prose).errors.some((e) => e.includes('missing <html> root element'))).toBe(true);
   });
 
   it('allows URLs in HTML and JS comments but not in code or strings', () => {
@@ -183,12 +200,14 @@ describe('extractManifest', () => {
   });
 
   it('validateGame reports invalid pl-manifest with a reason', () => {
-    const html = '<!-- pl-manifest: {"title":"T"} -->';
+    const html =
+      '<!doctype html><html><head><script type="application/json" id="pl-manifest">{"title":"T"}</script></head>' +
+      '<body><canvas></canvas><script>var a=1;</script></body></html>';
     const result = validateGame(html);
     expect(result.manifest).toBeNull();
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toContain('invalid pl-manifest');
-    expect(result.errors[0]).toContain('controls');
+    const manifestErrors = result.errors.filter((e) => e.includes('invalid pl-manifest'));
+    expect(manifestErrors).toHaveLength(1);
+    expect(manifestErrors[0]).toContain('controls');
   });
 });
 

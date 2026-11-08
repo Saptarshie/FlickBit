@@ -2,10 +2,17 @@ import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { eq } from 'drizzle-orm';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
-import { TEMPLATES } from '@playloop/gamekit';
+import { TEMPLATES, extractManifest } from '@playloop/gamekit';
 import * as schema from './schema';
 
 export const SYSTEM_HANDLE = 'playloop';
+
+/** Manifest tags for a template artifact (fallback keeps seeded rows filterable). */
+function manifestTags(code: string): string[] {
+  const manifest = extractManifest(code);
+  const tags = manifest?.tags?.filter((t) => typeof t === 'string' && t.length > 0) ?? [];
+  return tags.length > 0 ? tags : ['template'];
+}
 
 type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
@@ -44,18 +51,21 @@ export async function seed(db: Db, opts: SeedOptions = {}): Promise<SeedResult> 
       const bytes = Buffer.from(t.code, 'utf8');
       const sha = createHash('sha256').update(bytes).digest('hex');
       await writeFile(`${opts.artifactsDir}/${sha}.html`, bytes);
+      const manifest = extractManifest(t.code);
+      const title = manifest?.title ?? t.id;
+      const description = manifest?.description ?? `Template game: ${t.id}`;
 
       // games.publishedVersionId -> game_versions.id and game_versions.gameId -> games.id
       // reference each other, so the game row goes in first (publishedVersionId null),
       // then the version, then the game is updated to point at it.
       await db.insert(schema.games).values({
-        id: gameId, creatorId: systemUserId, title: t.id, description: `Template game: ${t.id}`,
-        tags: ['template'], status: 'processing', moderation: 'approved', publishedAt: new Date(),
+        id: gameId, creatorId: systemUserId, title, description,
+        tags: manifestTags(t.code), status: 'processing', moderation: 'approved', publishedAt: new Date(),
       });
 
       const [v] = await db.insert(schema.gameVersions).values({
         gameId, versionNo: 1, artifactSha256: sha, artifactBytes: bytes.byteLength,
-        artifactKey: `artifacts/${sha}.html`, manifest: {}, createdBy: 'ai',
+        artifactKey: `artifacts/${sha}.html`, manifest: manifest ?? {}, createdBy: 'ai',
       }).returning();
 
       await db.update(schema.games)

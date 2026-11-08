@@ -1,0 +1,111 @@
+Here's a complete mobile-first HTML5 game built with Canvas 2D and WebAudio. It's a neon snake where you swipe to steer, devour glowing data cubes, and grow your tail while avoiding walls and your own body.
+```html
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Neon Serpent</title>
+<script type="application/json" id="pl-manifest">
+{"title":"Neon Serpent","description":"Slither through a neon cyberpunk grid, devouring glowing data cubes while your tail grows ever longer.","controls":"swipe","orientation":"portrait","sdkVersion":1,"tags":["arcade","snake","neon","cyberpunk"],"scoring":"higher"}
+</script>
+<style>
+html,body{margin:0;height:100%;background:#0a0014;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+canvas{display:block;width:100%;height:100%}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+(function () {
+  'use strict';
+
+  /* ---------------- Canvas & sizing ---------------- */
+  var cv = document.getElementById('c');
+  var ctx = cv.getContext('2d', { alpha: false });
+
+  var COLS = 14, ROWS = 22;
+  var C_CYAN = [0, 240, 255], C_MAG = [255, 0, 168], C_PUR = [123, 45, 255], C_YEL = [234, 255, 0];
+  var BG = '#0a0014';
+
+  var W = 0, H = 0, DPR = 1;
+  var cell = 20, ox = 0, oy = 0, boardW = 0, boardH = 0;
+
+  /* ---------------- Game state ---------------- */
+  var state = 'menu';           // menu | play | pause | over
+  var snake = [], prevSnake = [];
+  var dir = { x: 1, y: 0 };
+  var queue = [];
+  var food = { x: 0, y: 0 };
+  var score = 0, best = 0, newRecord = false;
+  var stepTime = 0.17, acc = 0, interp = 1;
+  var shake = 0, flash = 0, glitch = 0, overDelay = 0;
+  var particles = [];
+  var readyCalled = false;
+
+  /* ---------------- Helpers ---------------- */
+  function safeArea() {
+    var p = window.playloop || window.PlayLoop;
+    return (p && p.safeArea) || { top: 0, bottom: 0 };
+  }
+
+  function lerpC(a, b, t) {
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  }
+  function snakeColor(f) {
+    if (f < 0.5) return lerpC(C_CYAN, C_MAG, f * 2);
+    return lerpC(C_MAG, C_PUR, (f - 0.5) * 2);
+  }
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    if (ctx.roundRect) { ctx.roundRect(x, y, w, h, r); return; }
+    r = Math.min(r, w / 2, h / 2);
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  /* ---------------- Glow sprites ---------------- */
+  function makeGlow(r, g, b, size) {
+    var c = document.createElement('canvas');
+    c.width = c.height = size;
+    var g2 = c.getContext('2d');
+    var rad = size / 2;
+    var grd = g2.createRadialGradient(rad, rad, 0, rad, rad, rad);
+    grd.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',1)');
+    grd.addColorStop(0.22, 'rgba(' + r + ',' + g + ',' + b + ',0.55)');
+    grd.addColorStop(0.55, 'rgba(' + r + ',' + g + ',' + b + ',0.15)');
+    grd.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0)');
+    g2.fillStyle = grd;
+    g2.fillRect(0, 0, size, size);
+    return c;
+  }
+  var GLOW = {
+    cyan: makeGlow(0, 240, 255, 128),
+    mag: makeGlow(255, 0, 168, 128),
+    pur: makeGlow(123, 45, 255, 128),
+    yel: makeGlow(234, 255, 0, 128)
+  };
+
+  var scanPattern = null;
+  (function buildScan() {
+    var sc = document.createElement('canvas');
+    sc.width = 4; sc.height = 4;
+    var g = sc.getContext('2d');
+    g.fillStyle = 'rgba(0,0,0,0.16)';
+    g.fillRect(0, 0, 4, 1);
+    scanPattern = ctx.createPattern(sc, 'repeat');
+  })();
+
+  /* ---------------- Audio ---------------- */
+  var actx = null;
+  function initAudio() {
+    if (actx) {
+      if (actx.state === 'suspended') { try { actx.resume(); } catch (e) {} }
+      return;
+    }
+    try {
+      var AC = window.AudioContext || window.webkitAudio

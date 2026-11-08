@@ -13,3 +13,4 @@ playwright-report
 *.tsbuildinfo
 .tmp-seed-artifacts/
 .artifacts/
+.data/

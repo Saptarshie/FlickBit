@@ -3,6 +3,24 @@
 Update this file at every commit. The next implementing agent resumes from here.
 Task IDs come from 10-roadmap-tasks.md.
 
+## Done (run it: real dev stack, real feed, real LLM, embeddings)
+
+**The app is now runnable with one command and works end-to-end.**
+
+- `pnpm dev` (new `scripts/dev.mjs`): starts the database first, waits for port 5432, then `turbo run dev` (web :3000 + play-worker :3001). Ctrl-C tears all three down.
+- `scripts/dev-db.ts`: PGlite + pgvector served over the **Postgres wire protocol** (`@electric-sql/pglite-socket`) on 5432 — no Docker required. On boot it runs drizzle migrations, applies `events.sql` + `stats.sql`, and seeds the 8 template games + their artifacts into `apps/play-worker/artifacts`. Data persists in `.data/pglite/`.
+- `apps/web/src/lib/feed.ts`: the mock is gone. The feed now calls `fetchFeedPage(getDb(), …)` (recsys) and returns an honest empty page instead of fabricated games.
+- `packages/ai/src/openai-provider.ts`: `OpenAiCompatProvider` + `providerFromEnv()` — real `/chat/completions` against `LLM_BASE_URL`/`LLM_API_KEY`/`LLM_MODEL`. Handles null `content` from reasoning models (retry with bigger budget) and **continues truncated completions** (`finish_reason: length`) up to 3 times, then throws rather than publishing a half file.
+- `packages/ai/src/embeddings.ts`: Ollama `/api/embed` (`EMBED_MODEL`, default embeddinggemma), zero-padded to the 1024-dim `text_vec`/`content_vec`; the studio route embeds on publish, best-effort (Ollama down ⇒ game still publishes, just not vector-indexed).
+- `packages/gamekit/src/validate.ts`: new hard errors for **truncated artifacts** (missing `<html>` root, missing `</html>`, unclosed `<script>` count mismatch). This is what let a cut-off file reach the feed before.
+- `packages/ai/src/generator.ts`: `extractHtmlArtifact` now handles unterminated fences and prose prefixes; the coder prompt asks for a bare `<!doctype html>` start.
+- `apps/web/src/lib/db.ts`: postgres client memoised on `globalThis` (Next HMR was opening a new pool per edit and exhausting the dev DB's connections → ECONNRESET).
+- `apps/web/next.config.ts`: loads the repo-root `.env` (Next only reads `apps/web`), transpiles the workspace packages.
+- `scripts/audit-artifacts.ts`: audits every published game against the validator (missing file / sha mismatch / invalid) and `--fix` unlists the broken ones. Used to purge the truncated first generation.
+- Tests: `apps/web/src/lib/feed.test.ts` rewritten for the DB-backed feed (seeded PGlite, empty-page-on-DB-failure); `packages/ai/src/openai-provider.test.ts` (10 tests: content, null-content retry, continuation splice, truncation throw, HTTP errors, env factory, extraction cases); gamekit truncation tests.
+
+Verified end-to-end in a browser: `pnpm dev` → feed lists 9 real games → tapping a card loads the sandboxed artifact and the game plays → `/studio` generates a new game with `deepseek/deepseek-v4.1-flash`, validates it, publishes it, and it appears first in the feed. Suites: gamekit 71, ai 15, web 67, recsys 16, db 12, sdk 28, play-worker 9; typecheck clean in 8 workspaces.
+
 ## Done (trending/explore switch to game_stats_hourly)
 - `packages/recsys` trending() and explore() now use a hybrid event split: completed hour buckets read `game_stats_hourly`, the current partial hour reads raw `events`. Split at the same TZ-independent UTC hour boundary the rollup truncates with (`to_timestamp(FLOOR(EXTRACT(epoch FROM now())/3600)*3600)`), so the sides never double-count or drop events. Pre-rollup, past-hour events are invisible to trending (documented, tested); a `db:rollup` run picks them up.
 - 2 new candidate tests (rollup-gated visibility, explore sees rolled impressions); recsys 16/16, web 68/68, typecheck + build green.

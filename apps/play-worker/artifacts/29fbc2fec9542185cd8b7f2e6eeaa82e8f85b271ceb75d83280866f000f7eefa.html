@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Shooter</title>
+<script type="application/json" id="pl-manifest">
+{"title":"Shooter","description":"Drag the ship to dodge and aim, it fires automatically. Shoot down the descending blocks.","controls":"drag","orientation":"portrait","sdkVersion":1,"tags":["arcade","shooter","endless"],"scoring":"higher"}
+</script>
+<style>
+html,body{margin:0;height:100%;background:#0b1320;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+canvas{display:block;width:100%;height:100%}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+if (!window.PlayLoop) window.PlayLoop = { ready() {}, gameOver() {}, haptic() {}, safeArea: { top: 0, bottom: 0 } };
+const cv = document.getElementById('c'); const ctx = cv.getContext('2d');
+let W = 0, H = 0, last = 0, over = false, ready = false, score = 0, fireT = 0, spawnT = 1.2, dragging = false;
+const ship = { x: 0, y: 0, w: 40, h: 26 };
+let bullets = [], enemies = [];
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.floor(W * dpr); cv.height = Math.floor(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function clampShip() {
+  const sa = PlayLoop.safeArea || { top: 0, bottom: 0 };
+  ship.x = Math.max(6, Math.min(W - ship.w - 6, ship.x));
+  ship.y = Math.max(H * 0.45, Math.min(H - 90 - sa.bottom, ship.y));
+}
+window.addEventListener('resize', resize); resize(); clampShip();
+window.addEventListener('pointerdown', (e) => { dragging = true; ship.x = e.clientX - ship.w / 2; ship.y = e.clientY - ship.h / 2; clampShip(); });
+window.addEventListener('pointermove', (e) => { if (dragging) { ship.x = e.clientX - ship.w / 2; ship.y = e.clientY - ship.h / 2; clampShip(); } });
+window.addEventListener('pointerup', () => { dragging = false; });
+window.addEventListener('keydown', (e) => { const m = { ArrowLeft: [-30, 0], ArrowRight: [30, 0], ArrowUp: [0, -24], ArrowDown: [0, 24] }[e.code]; if (m) { ship.x += m[0]; ship.y += m[1]; clampShip(); } });
+function end() { over = true; PlayLoop.gameOver({ score: score }); }
+function update(dt) {
+  const sa = PlayLoop.safeArea || { top: 0, bottom: 0 };
+  fireT -= dt; if (fireT <= 0) { bullets.push({ x: ship.x + ship.w / 2, y: ship.y }); fireT = 0.3; }
+  spawnT -= dt;
+  if (spawnT <= 0) {
+    enemies.push({ x: 12 + Math.random() * (W - 60), y: sa.top - 40, vy: 90 + Math.random() * 90 + score * 0.3, s: 30 + Math.random() * 14, wob: Math.random() * 6.283 });
+    spawnT = Math.max(0.5, 1.4 - score * 0.01);
+  }
+  for (const b of bullets) b.y -= 640 * dt; bullets = bullets.filter((b) => b.y > -20);
+  for (const e of enemies) { e.y += e.vy * dt; e.x += Math.sin(e.y * 0.02 + e.wob) * 40 * dt; }
+  for (let i = enemies.length - 1; i >= 0; i -= 1) {
+    const e = enemies[i];
+    if (e.y > H + 20) { end(); return; }
+    let dead = false; for (let j = bullets.length - 1; j >= 0; j -= 1) { const b = bullets[j]; if (Math.abs(b.x - (e.x + e.s / 2)) < e.s / 2 + 4 && Math.abs(b.y - (e.y + e.s / 2)) < e.s / 2 + 6) { bullets.splice(j, 1); dead = true; } }
+    if (dead) { enemies.splice(i, 1); score += 10; PlayLoop.haptic('light'); continue; }
+    if (e.y + e.s > ship.y && e.x < ship.x + ship.w && e.x + e.s > ship.x) { end(); return; }
+  }
+}
+function draw() {
+  const sa = PlayLoop.safeArea || { top: 0, bottom: 0 };
+  ctx.fillStyle = '#0b1320'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#4cc9f0';
+  ctx.beginPath(); ctx.moveTo(ship.x, ship.y + ship.h); ctx.lineTo(ship.x + ship.w / 2, ship.y); ctx.lineTo(ship.x + ship.w, ship.y + ship.h); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ffd166';
+  for (const b of bullets) ctx.fillRect(b.x - 2, b.y - 10, 4, 12);
+  ctx.fillStyle = '#ef476f';
+  for (const e of enemies) ctx.fillRect(e.x, e.y, e.s, e.s);
+  ctx.fillStyle = '#e9f0ff'; ctx.font = '600 20px system-ui, sans-serif';
+  ctx.textAlign = 'left'; ctx.fillText('Score ' + score, 14, sa.top + 30);
+  ctx.textAlign = 'center'; ctx.fillText('DRAG TO MOVE, AUTO-FIRE', W / 2, H - sa.bottom - 22);
+}
+function frame(t) {
+  const dt = Math.min((t - last) / 1000, 0.05); last = t; if (!over) update(dt); draw();
+  if (!ready) { ready = true; PlayLoop.ready(); } if (!over) requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
