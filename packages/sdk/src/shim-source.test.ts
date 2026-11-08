@@ -50,7 +50,7 @@ function makeFakeWindow() {
         posted.push({ data, origin });
       },
     },
-    location: { search: '?seed=42' },
+    location: { search: '?seed=42', ancestorOrigins: ['http://host.test'] },
     addEventListener: (type: string, cb: (ev: unknown) => void) => {
       (listeners[type] ??= []).push(cb);
     },
@@ -115,6 +115,53 @@ describe('SHIM_SOURCE execution smoke', () => {
     });
   });
 
+  it('pauses a running game and resumes it on host resume', async () => {
+    const { fakeWin, listeners } = makeFakeWindow();
+    (globalThis as Record<string, unknown>).window = fakeWin;
+    (globalThis as Record<string, unknown>).document = makeFakeDocument();
+    new Function(SHIM_SOURCE)();
+    const fire = (type: string) => {
+      for (const fn of listeners['message'] ?? []) fn({ data: { v: 1, src: 'playloop', type }, origin: 'http://host.test', source: fakeWin['parent'] });
+    };
+
+    // Paint one frame so a pause is honoured (never freeze before first paint).
+    await new Promise<void>((resolve) => {
+      (fakeWin['requestAnimationFrame'] as (cb: () => void) => number)(() => resolve());
+    });
+
+    fire('pause');
+    let ranWhilePaused = false;
+    (fakeWin['setTimeout'] as (cb: () => void, ms: number) => number)(() => { ranWhilePaused = true; }, 0);
+    await new Promise((r) => setTimeout(r, 25));
+    expect(ranWhilePaused).toBe(false);
+
+    fire('resume');
+    let ranAfterResume = false;
+    (fakeWin['setTimeout'] as (cb: () => void, ms: number) => number)(() => { ranAfterResume = true; }, 0);
+    await new Promise((r) => setTimeout(r, 25));
+    expect(ranAfterResume).toBe(true);
+  });
+
+  it('a resume cancels a pause that arrived before the first frame', async () => {
+    const { fakeWin, listeners } = makeFakeWindow();
+    (globalThis as Record<string, unknown>).window = fakeWin;
+    (globalThis as Record<string, unknown>).document = makeFakeDocument();
+    new Function(SHIM_SOURCE)();
+    const fire = (type: string) => {
+      for (const fn of listeners['message'] ?? []) fn({ data: { v: 1, src: 'playloop', type }, origin: 'http://host.test', source: fakeWin['parent'] });
+    };
+
+    // Mount order: the host pauses before the game ever painted, then the card
+    // becomes active and resumes. The deferred pause must not survive.
+    fire('pause');
+    fire('resume');
+
+    let ran = false;
+    (fakeWin['setTimeout'] as (cb: () => void, ms: number) => number)(() => { ran = true; }, 0);
+    await new Promise((r) => setTimeout(r, 25));
+    expect(ran).toBe(true);
+  });
+
   it('a game calling ready() earlier suppresses the load fallback', () => {
     const { fakeWin, posted, listeners } = makeFakeWindow();
     (globalThis as Record<string, unknown>).window = fakeWin;
@@ -139,7 +186,7 @@ describe('SHIM_SOURCE execution smoke', () => {
     const id = (req?.data as { id?: string }).id;
     expect(typeof id).toBe('string');
     for (const fn of listeners['message'] ?? []) {
-      fn({ source: fakeWin['parent'], data: { v: 1, src: 'playloop', type: 'storage:result', id, payload: 7 } });
+      fn({ source: fakeWin['parent'], origin: 'http://host.test', data: { v: 1, src: 'playloop', type: 'storage:result', id, payload: 7 } });
     }
     await expect(p).resolves.toBe(7);
 
@@ -156,7 +203,7 @@ describe('SHIM_SOURCE execution smoke', () => {
     new Function(SHIM_SOURCE)();
 
     const fire = (type: string, data: unknown) => {
-      for (const fn of listeners['message'] ?? []) fn({ source: fakeWin['parent'], data });
+      for (const fn of listeners['message'] ?? []) fn({ source: fakeWin['parent'], origin: 'http://host.test', data });
     };
 
     let fired = 0;
@@ -165,14 +212,14 @@ describe('SHIM_SOURCE execution smoke', () => {
     fire('message', undefined); // noise, ignored
     fire('pause-malformed', {});
     for (const fn of listeners['message'] ?? []) {
-      fn({ source: fakeWin['parent'], data: { v: 1, src: 'playloop', type: 'pause' } });
+      fn({ source: fakeWin['parent'], origin: 'http://host.test', data: { v: 1, src: 'playloop', type: 'pause' } });
     }
     raf(() => {
       fired += 1;
     });
     expect(fired).toBe(0);
     for (const fn of listeners['message'] ?? []) {
-      fn({ source: fakeWin['parent'], data: { v: 1, src: 'playloop', type: 'resume' } });
+      fn({ source: fakeWin['parent'], origin: 'http://host.test', data: { v: 1, src: 'playloop', type: 'resume' } });
     }
     // queued rAF fires on resume (via a real rAF -> timer)
     return new Promise<void>((resolve) => {

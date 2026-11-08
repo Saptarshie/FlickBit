@@ -9,6 +9,14 @@ export const SHIM_SOURCE = String.raw`
   var w = window;
   if (w.PlayLoop && w.PlayLoop.__shim) { return; }
 
+  // Origin of the page embedding this frame. ancestorOrigins survives the
+  // opaque origin that sandbox="allow-scripts" gives us.
+  var parentOrigin = null;
+  try {
+    var ancestors = w.location && w.location.ancestorOrigins;
+    if (ancestors && ancestors.length) { parentOrigin = ancestors[0]; }
+  } catch (e) { parentOrigin = null; }
+
   var realDateNow = Date.now;
   var realPerfNow = null;
   try {
@@ -229,10 +237,10 @@ export const SHIM_SOURCE = String.raw`
     }
   }
   function setPaused(next) {
+    // A resume always cancels a deferred pause; otherwise the game would paint
+    // its first frame and then freeze forever (inputs land, nothing redraws).
+    if (!next) { pendingPause = false; }
     if (next === paused) { return; }
-    // Never freeze before the first frame: a game that is paused on mount draws
-    // nothing at all, so the card looks broken. Defer the pause until the game
-    // has painted once (its own start screen), then honour it.
     if (next && !hasPainted) { pendingPause = true; return; }
     if (next) {
       pendingPause = false;
@@ -374,21 +382,36 @@ export const SHIM_SOURCE = String.raw`
   w.PlayLoop = api;
 
   /* ---- host to guest messages ---- */
+  var activeTarget = null;
+  var activePointerId = 1;
+
   function dispatchInput(p) {
     var kind = String(p.kind || 'tap');
     var x = Number(p.x) || 0;
     var y = Number(p.y) || 0;
+    var pointerId = Number(p.pointerId) || 1;
+    var pointerType = p.pointerType || 'touch';
+    var buttons = p.buttons === 0 ? 0 : 1;
     var doc = w.document;
-    var el = null;
-    try { el = doc.elementFromPoint(x, y) || doc.body; } catch (e) { el = doc.body; }
-    if (!el) { return; }
+    var hit = null;
+    try { hit = doc.elementFromPoint(x, y) || doc.body; } catch (e) { hit = doc.body; }
+    if (!hit) { return; }
+
+    // Pointer capture by hand: a game listening on its canvas keeps receiving
+    // move/up even when the finger travels outside it, exactly like the native
+    // setPointerCapture behaviour games expect.
+    var el = (kind === 'move' || kind === 'up' || kind === 'cancel') && activeTarget ? activeTarget : hit;
+    if (kind === 'down' || kind === 'tap') { activeTarget = hit; activePointerId = pointerId; }
+    if (kind === 'up' || kind === 'cancel') { activeTarget = null; }
+
     function pointer(type) {
       var ev;
       try {
         ev = new w.PointerEvent(type, {
           clientX: x, clientY: y, bubbles: true, cancelable: true,
-          pointerId: 1, pointerType: 'touch', isPrimary: true,
-          buttons: type === 'pointerup' ? 0 : 1
+          pointerId: pointerId, pointerType: pointerType, isPrimary: pointerId === 1,
+          buttons: type === 'pointerup' || type === 'pointercancel' ? 0 : buttons,
+          pressure: type === 'pointerup' || type === 'pointercancel' ? 0 : 0.5
         });
       } catch (e) {
         var name = type === 'pointerdown' ? 'mousedown' : (type === 'pointerup' ? 'mouseup' : 'mousemove');
@@ -399,7 +422,7 @@ export const SHIM_SOURCE = String.raw`
     function touch(type) {
       try {
         if (!w.Touch || !w.TouchEvent) { return; }
-        var t = new w.Touch({ identifier: 1, target: el, clientX: x, clientY: y });
+        var t = new w.Touch({ identifier: pointerId, target: el, clientX: x, clientY: y });
         var ended = type === 'touchend' || type === 'touchcancel';
         el.dispatchEvent(new w.TouchEvent(type, {
           touches: ended ? [] : [t],
@@ -408,6 +431,7 @@ export const SHIM_SOURCE = String.raw`
         }));
       } catch (e) {}
     }
+
     if (kind === 'tap') {
       touch('touchstart'); pointer('pointerdown'); pointer('pointerup'); touch('touchend');
     } else if (kind === 'down') {
@@ -416,6 +440,8 @@ export const SHIM_SOURCE = String.raw`
       touch('touchmove'); pointer('pointermove');
     } else if (kind === 'up') {
       pointer('pointerup'); touch('touchend');
+    } else if (kind === 'cancel') {
+      pointer('pointercancel'); touch('touchcancel');
     }
   }
 
@@ -423,7 +449,15 @@ export const SHIM_SOURCE = String.raw`
     try {
       var d = ev.data;
       if (!d || d.v !== 1 || d.src !== 'playloop' || typeof d.type !== 'string') { return; }
-      if (ev.source !== w.parent) { return; }
+      // Sandboxed frames (allow-scripts, opaque origin) hand back a different
+      // WindowProxy for the parent, so identity comparison is not reliable and
+      // dropped every host message — pause/resume/input never arrived. Anchor
+      // on the embedding origin instead, which ancestorOrigins still exposes.
+      if (parentOrigin) {
+        if (ev.origin !== parentOrigin) { return; }
+      } else if (ev.source && w.parent && ev.source !== w.parent) {
+        return;
+      }
       if (d.type === 'init') {
         var p = d.payload || {};
         if (p.safeArea) {

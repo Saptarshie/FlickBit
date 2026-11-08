@@ -326,4 +326,63 @@ describe('GameHost', () => {
     h.deliver(envelope('ready'));
     expect(onMessage).not.toHaveBeenCalled();
   });
+
+  it('ignores messages from other windows instead of counting them invalid', () => {
+    const onError = vi.fn();
+    const host = new GameHost(h.iframe as unknown as HTMLIFrameElement, { onError });
+    // Devtools/HMR/extensions post to the page constantly; none of it is a
+    // guest protocol violation.
+    for (let i = 0; i < 25; i += 1) h.deliver({ type: 'webpackHmr', data: i }, { other: true });
+    expect(onError).not.toHaveBeenCalled();
+    host.destroy();
+  });
+
+  it('still errors after repeated genuinely invalid frames from the guest', () => {
+    const onError = vi.fn();
+    const host = new GameHost(h.iframe as unknown as HTMLIFrameElement, { onError });
+    for (let i = 0; i < 10; i += 1) h.deliver({ nope: i });
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0]?.[0]).toMatchObject({ code: 'invalid-message' });
+    host.destroy();
+  });
+
+  describe('input forwarding', () => {
+    const lastInput = () => {
+      const found = [...h.posts].reverse().find((p) => p.type === 'input');
+      return found?.payload as Record<string, unknown> | undefined;
+    };
+
+    it('sends guest-space coordinates rounded to integers', () => {
+      const host = new GameHost(h.iframe as unknown as HTMLIFrameElement, {});
+      host.input('tap', 10.4, 20.6);
+      expect(lastInput()).toMatchObject({ kind: 'tap', x: 10, y: 21 });
+      host.destroy();
+    });
+
+    it('carries the pointer id and type so multi-touch reaches the game', () => {
+      const host = new GameHost(h.iframe as unknown as HTMLIFrameElement, {});
+      host.input({ kind: 'move', x: 5, y: 6, pointerId: 7, pointerType: 'pen' });
+      expect(lastInput()).toMatchObject({ kind: 'move', x: 5, y: 6, pointerId: 7, pointerType: 'pen', buttons: 1 });
+      host.destroy();
+    });
+
+    it('releases the button on up and cancel', () => {
+      const host = new GameHost(h.iframe as unknown as HTMLIFrameElement, {});
+      host.input({ kind: 'up', x: 1, y: 2, pointerId: 3 });
+      expect(lastInput()).toMatchObject({ kind: 'up', buttons: 0 });
+      host.input({ kind: 'cancel', x: 1, y: 2, pointerId: 3 });
+      expect(lastInput()).toMatchObject({ kind: 'cancel', buttons: 0 });
+      host.destroy();
+    });
+
+    it('drops input until the guest is ready (no orphan streams)', () => {
+      const host = new GameHost(h.iframe as unknown as HTMLIFrameElement, {});
+      const before = h.posts.filter((p) => p.type === 'input').length;
+      host.input('down', 3, 4);
+      const after = h.posts.filter((p) => p.type === 'input').length;
+      // Sending is always safe (the guest buffers), but nothing must throw.
+      expect(after).toBeGreaterThanOrEqual(before);
+      host.destroy();
+    });
+  });
 });

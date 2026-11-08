@@ -1,4 +1,12 @@
-import { parseGuestMessage, SDK_VERSION, MAX_PAYLOAD_BYTES, type Envelope, type HostToGuest } from './protocol';
+import {
+  parseGuestMessage,
+  SDK_VERSION,
+  MAX_PAYLOAD_BYTES,
+  type Envelope,
+  type HostToGuest,
+  type InputKind,
+  type InputPayload,
+} from './protocol';
 
 /** Storage requests reuse the guest-side request type names when proxied. */
 type PostedType = HostToGuest | 'storage:get' | 'storage:set';
@@ -170,13 +178,29 @@ export class GameHost {
   }
 
   /**
-   * Forward a gesture into the guest. The host renders a transparent gesture
-   * layer above the iframe (so vertical swipes can scroll the feed); taps and
-   * non-vertical drags are replayed inside the game as real pointer/touch
-   * events, which keeps sandboxed games fully playable without same-origin.
+   * Forward a pointer event into the guest.
+   *
+   * The host renders a transparent gesture layer above the iframe so the feed
+   * keeps its own vertical scroll. When a card is engaged for play, every
+   * pointer message is replayed inside the game as a real pointer/touch event,
+   * which keeps sandboxed games fully playable without same-origin access.
+   *
+   * `x`/`y` MUST be guest CSS pixels: subtract the iframe's bounding rect on
+   * the host side (the frame is rendered 1:1, so no scale factor is needed).
    */
-  input(kind: 'tap' | 'down' | 'move' | 'up', x: number, y: number): void {
-    this.post('input', { kind, x: Math.round(x), y: Math.round(y) });
+  input(payload: InputPayload | InputKind, x?: number, y?: number): void {
+    const message: InputPayload =
+      typeof payload === 'string'
+        ? { kind: payload, x: Number(x) || 0, y: Number(y) || 0 }
+        : payload;
+    this.post('input', {
+      kind: message.kind,
+      x: Math.round(message.x),
+      y: Math.round(message.y),
+      ...(message.pointerId === undefined ? {} : { pointerId: message.pointerId }),
+      ...(message.pointerType === undefined ? {} : { pointerType: message.pointerType }),
+      buttons: message.buttons ?? (message.kind === 'up' || message.kind === 'cancel' ? 0 : 1),
+    });
   }
 
   /** Re-arm the handshake timer (used when a frame is reloaded/retried). */
@@ -270,14 +294,17 @@ export class GameHost {
   private handleMessage = (event: MessageLike): void => {
     if (this.destroyed) return;
     const cw = this.iframe.contentWindow;
+    // Only our frame may talk to us. Everything else (React DevTools, HMR,
+    // extensions, other iframes) is noise and must NOT be counted as a guest
+    // protocol violation — doing that killed live cards after 10 stray posts.
     const fromFrame = cw != null && (event.source as unknown) === (cw as unknown);
+    if (!fromFrame) return;
 
-    if (fromFrame) {
-      const env = parseGuestMessage(event.data);
-      if (env) {
-        this.dispatch(env);
-        return;
-      }
+    const env = parseGuestMessage(event.data);
+    if (env) {
+      this.invalidCount = 0;
+      this.dispatch(env);
+      return;
     }
 
     const result = parseStorageResult(event.data);

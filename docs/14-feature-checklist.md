@@ -19,11 +19,20 @@ Update this file whenever a feature lands or regresses.
 ## 2. Feed (Instagram-Reels behaviour)
 - [x] Vertical scroll in BOTH directions (swipe up AND down, mouse wheel, trackpad)
 - [x] Snap one card per gesture, momentum, no overscroll bounce into nothing
-- [x] Keyboard: ↑/↓ navigate, Space pause, M mute, PageUp/PageDown/Home
+- [x] Keyboard: ↑/↓ navigate, Space pause, M mute, PageUp/PageDown/Home/End
 - [x] Up and Down rail buttons (thumb zone), not just Down
 - [x] Infinite pagination (cursor from the API) with a loading card at the end
 - [x] Only the active card plays; neighbours are posters (memory rule: ≤3 iframes)
 - [x] Retry when the feed is empty / failed
+
+## 2b. Game input (touch/mouse inside a sandboxed card)
+- [x] Real pointer stream forwarded to the game: down / move / up / cancel
+- [x] Guest-space coordinates (iframe-local), so taps land where you press
+- [x] Multi-touch pointer ids and pointer type forwarded
+- [x] Swipe controls work (snake steering, toss) — verified by flipping a Memory card and steering a snake
+- [x] Play-mode engagement: one tap enters the game, ✕ / Esc / wheel / rail returns to browsing
+- [x] Pause/resume/mute reach the guest (origin-checked, sandbox-safe)
+- [x] A game never freezes after its first frame (deferred pause is cleared on resume)
 
 ## 3. Card interactions (all persisted to the DB)
 - [x] Like / unlike (optimistic, revert on error, count updates)
@@ -72,3 +81,28 @@ Update this file whenever a feature lands or regresses.
 - Tests: sdk 28, gamekit 71, ai 16, db 12, recsys 16, play-worker 9, web 71 = 223 green; typecheck 8/8.
 
 Known slow path: a real generation takes ~7–10 min on `deepseek/deepseek-v4.1-flash` (streaming, one repair). The UI shows elapsed time; it is not hung.
+
+## Session 2 — game input (2026-11-08)
+
+"Game-touch control is not working" turned out to be three separate faults:
+
+1. **The shim dropped every host message.** It validated senders with
+   `event.source !== window.parent`, which is not stable for an opaque-origin
+   sandbox, so `init`, `pause`, `resume`, `mute` and `input` never arrived. Now
+   validated by embedding origin (`location.ancestorOrigins[0]`).
+2. **Stray window messages killed live cards.** The host counted *any* message
+   from a non-frame source as a protocol violation; React DevTools/HMR noise hit
+   the limit of 10 and the card showed `too many invalid messages from guest`.
+   Foreign sources are now ignored (regression test added).
+3. **Games froze after their first frame.** A pause that arrived before the first
+   `requestAnimationFrame` was deferred — but `resume` never cleared it, so the
+   game paused itself right after painting. Fixed + two tests.
+
+Input routing was also rebuilt: vertical drags are no longer stolen by the feed
+once a card is engaged, coordinates are translated to guest space, pointer ids /
+types / cancel are forwarded, and the guest implements manual pointer capture so
+drags keep landing on the element that received the down.
+
+Verified in a real sandboxed card: a tap flips the correct Memory cell (♣
+revealed) and a probe artifact beacons `pointerdown → pointerup → message:input`
+back to the host. Architecture/debugging docs: `docs/development_docs/`.

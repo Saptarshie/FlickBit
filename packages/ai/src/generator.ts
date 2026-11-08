@@ -57,7 +57,9 @@ export async function generateCode(
   }
 
   const template = TEMPLATES.find((t) => t.id === spec.templateId) || TEMPLATES[0];
-  const promptWithSpec = `Create a complete mobile-first HTML5 game based on this specification:\n\nConcept: ${spec.concept}\nArchetype: ${spec.templateId}\nMechanics: ${spec.coreMechanic}\nControls: ${spec.controls}\nPalette: ${spec.palette.join(', ')}\nLoss Condition: ${spec.loseCondition}\n\nRules:\n- Start your reply with <!doctype html> — no preamble, no explanation, no markdown fences.\n- One self-contained file under 30 KB (~700 lines). No external URLs, fonts, images or libraries.\n- Keep it DRY: no comments, no duplicated blocks, no placeholder code.\n- Always close every script tag and end with </html>.\n\nReference Archetype Code:\n${template?.code || ''}`;
+  const promptWithSpec = `Create a complete mobile-first HTML5 game based on this specification:\n\nConcept: ${spec.concept}\nArchetype: ${spec.templateId}\nMechanics: ${spec.coreMechanic}\nControls: ${spec.controls}\nPalette: ${spec.palette.join(', ')}\nLoss Condition: ${spec.loseCondition}\n\nRules:\n- Start your reply with <!doctype html> — no preamble, no explanation, no markdown fences.\n- One self-contained file under 30 KB (~700 lines). No external URLs, fonts, images or libraries.\n- Keep it DRY: no comments, no duplicated blocks, no placeholder code.\n- Always close every script tag and end with </html>.\n- Show a start screen and wait for the player's first input before the simulation begins; never start moving on load.
+
+Reference Archetype Code:\n${template?.code || ''}`;
 
   const response = await provider.generateText(promptWithSpec, {
     systemPrompt: CODER_SYSTEM_PROMPT,

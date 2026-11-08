@@ -79,6 +79,7 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const hostRef = useRef<GameHost | null>(null);
   const isActiveRef = useRef(isActive);
+  const cardRef = useRef(card.id);
   const gameOverRef = useRef(false);
 
   const [gameOver, setGameOver] = useState(false);
@@ -92,6 +93,8 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
   const [frameKey, setFrameKey] = useState(0);
 
   const isPlaying = useFeedStore((s) => s.isPlaying);
+  /** True when this card owns touch input (play mode). */
+  const engaged = useFeedStore((s) => s.engagedGameId === card.id);
   const muted = useFeedStore((s) => s.muted);
   const audioUnlocked = useFeedStore((s) => s.audioUnlocked);
 
@@ -175,15 +178,21 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
     }
   };
 
-  /** Single source of truth for pause/resume: active + playing. Audio stays
-   *  locked until the first tap (browser policy) but the game itself runs right
-   *  away — a Reels feed never shows a poster waiting for a gesture. */
+  /** Single source of truth for pause/resume. A card only runs while it is
+   *  the active card AND the viewer has entered play mode — so games never burn
+   *  a life (or a battery) while someone is still browsing. Audio stays locked
+   *  until the first gesture (browser policy). */
   const syncPlayback = useCallback(() => {
     const host = hostRef.current;
     if (!host) return;
     const state = useFeedStore.getState();
     const hidden = typeof document !== 'undefined' && document.hidden;
-    const shouldPlay = isActiveRef.current && state.isPlaying && !gameOverRef.current && !hidden;
+    const shouldPlay =
+      isActiveRef.current &&
+      state.isPlaying &&
+      state.engagedGameId === cardRef.current &&
+      !gameOverRef.current &&
+      !hidden;
     if (shouldPlay) host.resume();
     else host.pause();
   }, []);
@@ -207,8 +216,11 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
       onError: (error: GameHostError) => {
         // A handshake timeout is NOT fatal: games can take seconds to boot.
         // Never auto-skip a game the viewer is watching — offer Retry instead.
+        // Surface the actual message so a broken artifact is debuggable from
+        // the card itself (and in devtools).
+        console.error('[playloop] game frame error', error);
         if (error.code === 'timeout') setLoadIssue('Still loading…');
-        else setLoadIssue('Game error');
+        else setLoadIssue(error.message?.slice(0, 90) || 'Game error');
       },
     });
     hostRef.current = host;
@@ -224,7 +236,7 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
   // Re-drive playback whenever the view state changes.
   useEffect(() => {
     syncPlayback();
-  }, [live, isActive, isPlaying, audioUnlocked, gameOver, syncPlayback]);
+  }, [live, isActive, isPlaying, audioUnlocked, gameOver, engaged, syncPlayback]);
 
   // Mute follows the global toggle.
   useEffect(() => {
@@ -238,35 +250,111 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, [syncPlayback]);
 
+  // Leaving the card (or the feed scrolling) ends play mode.
+  useEffect(() => {
+    if (!isActive && useFeedStore.getState().engagedGameId === card.id) {
+      useFeedStore.getState().setEngaged(null);
+    }
+  }, [isActive, card.id]);
+
+  // Keep the refs the pause/resume callback reads in sync with the new id.
+  useEffect(() => {
+    cardRef.current = card.id;
+    syncPlayback();
+  }, [card.id, syncPlayback]);
+
   /* ------------------------------------------------------------------ */
-  /* Gesture layer: vertical swipes scroll the feed; taps and other      */
-  /* drags are replayed inside the sandboxed game as real pointer events.*/
+  /*                                                                      */
+  /* Browse mode (default): vertical drags move the feed, a tap enters   */
+  /* play mode. Play mode (engaged): EVERY pointer event is replayed      */
+  /* inside the game with iframe-local coordinates, so swipe/drag/hold    */
+  /* controls work exactly as they do natively. Leaving play mode (✕,     */
+  /* Esc, wheel, rail arrows, or scrolling away) restores feed scrolling. */
   /* ------------------------------------------------------------------ */
+
 
   const gesture = useRef({
     active: false,
+    pointerId: -1,
     startX: 0,
     startY: 0,
+    lastX: 0,
+    lastY: 0,
+    rectLeft: 0,
+    rectTop: 0,
     mode: 'undecided' as 'undecided' | 'scroll' | 'game',
     moved: false,
     lastWheel: 0,
   });
 
+  /** Host viewport -> guest CSS pixels (the frame is rendered 1:1). */
+  const toGuest = (g: typeof gesture.current, clientX: number, clientY: number) => ({
+    x: clientX - g.rectLeft,
+    y: clientY - g.rectTop,
+  });
+
+  const enterPlay = () => {
+    const state = useFeedStore.getState();
+    if (!state.audioUnlocked) state.unlockAudio();
+    if (!state.isPlaying) state.setPlaying(true);
+    if (state.engagedGameId !== card.id) state.setEngaged(card.id);
+    syncPlayback();
+  };
+
+  const forward = (kind: 'down' | 'move' | 'up' | 'cancel' | 'tap', clientX: number, clientY: number) => {
+    const g = gesture.current;
+    const { x, y } = toGuest(g, clientX, clientY);
+    const pointerId = g.pointerId > 0 ? g.pointerId : 1;
+    const host = hostRef.current;
+    host?.input({ kind, x, y, pointerId, pointerType: 'touch' });
+    // Dev-only trace: `window.__PLAYLOOP_DEBUG__ = true` then every forwarded
+    // pointer lands in window.__plInput — the fastest way to tell "the game
+    // never got the event" from "the game ignored it".
+    if (typeof window !== 'undefined' && (window as unknown as { __PLAYLOOP_DEBUG__?: boolean }).__PLAYLOOP_DEBUG__) {
+      (window as unknown as { __plInput?: unknown }).__plInput = {
+        gameId: card.id,
+        kind,
+        x,
+        y,
+        pointerId,
+        host: host ? 'live' : 'missing',
+        at: Date.now(),
+      };
+    }
+  };
+
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!isActive) return;
+    const rect = iframeRef.current?.getBoundingClientRect();
     gesture.current = {
       ...gesture.current,
       active: true,
+      pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
+      lastX: event.clientX,
+      lastY: event.clientY,
+      rectLeft: rect?.left ?? 0,
+      rectTop: rect?.top ?? 0,
       mode: 'undecided',
       moved: false,
     };
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      /* not critical: pointerup still fires on the element */
+    }
+    if (engaged) {
+      gesture.current.mode = 'game';
+      forward('down', event.clientX, event.clientY);
+    }
   };
 
   const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     const g = gesture.current;
     if (!g.active) return;
+    g.lastX = event.clientX;
+    g.lastY = event.clientY;
     const dx = event.clientX - g.startX;
     const dy = event.clientY - g.startY;
     if (Math.abs(dx) > 6 || Math.abs(dy) > 6) g.moved = true;
@@ -274,21 +362,28 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
     if (g.mode === 'undecided') {
       if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx) * 1.15) {
         g.mode = 'scroll';
-      } else if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-        g.mode = 'game';
-        hostRef.current?.input('down', g.startX, g.startY);
-      } else {
         return;
       }
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 12) return;
+      // Any deliberate drag belongs to the game from here on.
+      g.mode = 'game';
+      enterPlay();
+      forward('down', g.startX, g.startY);
     }
-    if (g.mode === 'game') hostRef.current?.input('move', event.clientX, event.clientY);
+    if (g.mode === 'game') forward('move', event.clientX, event.clientY);
   };
 
-  const endGesture = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const endGesture = (event: ReactPointerEvent<HTMLDivElement>, cancelled = false) => {
     const g = gesture.current;
     if (!g.active) return;
     g.active = false;
     const dy = event.clientY - g.startY;
+
+    try {
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+    } catch {
+      /* ignore */
+    }
 
     if (g.mode === 'scroll') {
       if (dy <= -SCROLL_THRESHOLD) onNext();
@@ -296,16 +391,13 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
       return;
     }
     if (g.mode === 'game') {
-      hostRef.current?.input('up', event.clientX, event.clientY);
+      forward(cancelled ? 'cancel' : 'up', event.clientX, event.clientY);
       return;
     }
-    if (!g.moved) {
-      // A tap unlocks audio (first gesture) and is replayed inside the game.
-      const state = useFeedStore.getState();
-      if (!state.audioUnlocked) state.unlockAudio();
-      if (!state.isPlaying) state.setPlaying(true);
-      hostRef.current?.input('tap', event.clientX, event.clientY);
-      syncPlayback();
+    if (!g.moved && !cancelled) {
+      // A tap is a real game input: enter play mode and replay it.
+      enterPlay();
+      forward('tap', event.clientX, event.clientY);
     }
   };
 
@@ -314,6 +406,9 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
     if (now - gesture.current.lastWheel < WHEEL_COOLDOWN_MS) return;
     if (Math.abs(event.deltaY) < 18) return;
     gesture.current.lastWheel = now;
+    // Wheeling is a browse gesture: leave play mode so the rail and cards stay
+    // reachable, then move one card.
+    if (useFeedStore.getState().engagedGameId) useFeedStore.getState().setEngaged(null);
     if (event.deltaY > 0) onNext();
     else onPrev();
   };
@@ -381,15 +476,65 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
       />
 
       {/* Gesture layer sits above the poster so scroll works immediately; taps
-          both unlock audio and are replayed inside the sandboxed game. */}
+          enter play mode and are replayed inside the sandboxed game. */}
       <div
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
-        onPointerUp={endGesture}
-        onPointerCancel={endGesture}
+        onPointerUp={(e) => endGesture(e)}
+        onPointerCancel={(e) => endGesture(e, true)}
         onWheel={onWheel}
-        style={{ position: 'absolute', inset: 0, zIndex: 2, touchAction: 'pan-x' }}
+        style={{ position: 'absolute', inset: 0, zIndex: 2, touchAction: 'none' }}
       />
+
+      {/* Play state chip: while browsing a game is loaded but paused, so it
+          cannot burn a life before the viewer engages; in play mode it shows
+          that the game owns touch and how to get back to browsing. */}
+      {isActive && !gameOver ? (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: engaged ? '6px 8px 6px 12px' : '6px 12px',
+            borderRadius: 999,
+            background: 'rgba(0,0,0,0.6)',
+            border: '1px solid rgba(255,255,255,0.14)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 6,
+            fontSize: 12,
+            fontWeight: 600,
+          }}
+        >
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 6, height: 6, borderRadius: 3, background: engaged ? '#4ade80' : '#a3a3a3' }} />
+            {engaged ? 'Playing' : 'Tap to play'}
+          </span>
+          {engaged ? (
+            <button
+              type="button"
+              aria-label="Stop playing and browse the feed"
+              onClick={() => useFeedStore.getState().setEngaged(null)}
+              style={{
+                minWidth: 28,
+                minHeight: 28,
+                borderRadius: 14,
+                border: 'none',
+                background: 'rgba(255,255,255,0.16)',
+                color: '#fff',
+                fontSize: 13,
+                lineHeight: 1,
+                cursor: 'pointer',
+              }}
+            >
+              ✕
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       {/* Creator row + follow, top of the card. */}
       <div

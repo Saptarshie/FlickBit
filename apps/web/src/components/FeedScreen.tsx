@@ -138,6 +138,12 @@ export default function FeedScreen() {
         case 'M':
           useFeedStore.getState().toggleMuted();
           break;
+        case 'Escape':
+          if (useFeedStore.getState().engagedGameId) {
+            event.preventDefault();
+            useFeedStore.getState().setEngaged(null);
+          }
+          break;
         default:
           break;
       }

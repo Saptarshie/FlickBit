@@ -33,6 +33,12 @@ Data persists in `.data/pglite/` (delete it to start fresh). Artifacts live in
 | `ARTIFACTS_DIR` | studio + play-worker | Where generated artifacts are written (default `apps/play-worker/artifacts`). |
 | `AUTH_SECRET` | NextAuth | Dev value is fine locally. |
 
+## Docs
+
+- `docs/00…14` — product, design and roadmap decisions.
+- `docs/development_docs/` — how it actually works: architecture, input pipeline,
+  feed/scroll, generation, data model, debugging, testing, extending.
+
 ## What works today
 
 - **Feed** — DB-backed recommendations (`@playloop/recsys`: trending / fresh / social / explore → ranker → MMR tag diversity), full-bleed vertical snap that scrolls both ways (touch, wheel, keyboard), one card per gesture.

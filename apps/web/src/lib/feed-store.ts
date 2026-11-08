@@ -15,6 +15,13 @@ export type FeedState = {
   itemCount: number;
   /** True once the user tapped at least once (audio unlock gesture). */
   audioUnlocked: boolean;
+  /**
+   * Id of the card whose game currently owns touch input ("engaged"). While a
+   * card is engaged every pointer event is replayed inside the game and the
+   * feed does not scroll from the play area; scrolling resumes from the rail,
+   * wheel, keyboard, or by leaving play mode (✕ / Esc). Null = browse mode.
+   */
+  engagedGameId: string | null;
   /** Registered by FeedScreen so keyboard/Next can scroll the snap container. */
   scrollToIndex: ((index: number) => void) | null;
 
@@ -25,6 +32,7 @@ export type FeedState = {
   toggleMuted: () => void;
   setItemCount: (count: number) => void;
   unlockAudio: () => void;
+  setEngaged: (gameId: string | null) => void;
   registerScrollToIndex: (fn: ((index: number) => void) | null) => void;
 };
 
@@ -34,6 +42,7 @@ export const useFeedStore = create<FeedState>((set) => ({
   muted: false,
   itemCount: 0,
   audioUnlocked: false,
+  engagedGameId: null,
   scrollToIndex: null,
 
   setActiveIndex: (index) => set({ activeIndex: index }),
@@ -43,5 +52,6 @@ export const useFeedStore = create<FeedState>((set) => ({
   toggleMuted: () => set((s) => ({ muted: !s.muted })),
   setItemCount: (count) => set({ itemCount: count }),
   unlockAudio: () => set({ audioUnlocked: true }),
+  setEngaged: (gameId) => set({ engagedGameId: gameId }),
   registerScrollToIndex: (fn) => set({ scrollToIndex: fn }),
 }));
