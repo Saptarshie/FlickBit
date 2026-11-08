@@ -144,6 +144,8 @@ export const SHIM_SOURCE = String.raw`
   var rafSeq = 0;
   var frameCount = 0;
   var perfWindow = 0;
+  var hasPainted = false;
+  var pendingPause = false;
   var realRaf = w.requestAnimationFrame
     ? w.requestAnimationFrame.bind(w)
     : function (fn) { return realSetTimeout(function () { fn(vTimestamp()); }, 16); };
@@ -170,8 +172,10 @@ export const SHIM_SOURCE = String.raw`
       if (rafs[id] !== entry) { return; }
       if (paused) { entry.queued = true; entry.realId = null; return; }
       delete rafs[id];
+      hasPainted = true;
       sampleFps();
       entry.fn(vTimestamp());
+      if (pendingPause && !paused) { setPaused(true); }
     });
   }
   /* fps probe: sample frames and post perf about every 2s */
@@ -226,7 +230,12 @@ export const SHIM_SOURCE = String.raw`
   }
   function setPaused(next) {
     if (next === paused) { return; }
+    // Never freeze before the first frame: a game that is paused on mount draws
+    // nothing at all, so the card looks broken. Defer the pause until the game
+    // has painted once (its own start screen), then honour it.
+    if (next && !hasPainted) { pendingPause = true; return; }
     if (next) {
+      pendingPause = false;
       paused = true;
       pauseStartReal = realDateNow.call(Date);
       pauseStartPerf = realPerfNow ? realPerfNow() : pauseStartReal;

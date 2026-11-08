@@ -175,14 +175,15 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
     }
   };
 
-  /** Single source of truth for pause/resume: active + playing + unlocked. */
+  /** Single source of truth for pause/resume: active + playing. Audio stays
+   *  locked until the first tap (browser policy) but the game itself runs right
+   *  away — a Reels feed never shows a poster waiting for a gesture. */
   const syncPlayback = useCallback(() => {
     const host = hostRef.current;
     if (!host) return;
     const state = useFeedStore.getState();
     const hidden = typeof document !== 'undefined' && document.hidden;
-    const shouldPlay =
-      isActiveRef.current && state.isPlaying && state.audioUnlocked && !gameOverRef.current && !hidden;
+    const shouldPlay = isActiveRef.current && state.isPlaying && !gameOverRef.current && !hidden;
     if (shouldPlay) host.resume();
     else host.pause();
   }, []);
@@ -600,42 +601,6 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
             Next <Icon path={ICONS.chevronDown} />
           </button>
         </div>
-      ) : !audioUnlocked ? (
-        <button
-          type="button"
-          onClick={() => {
-            const state = useFeedStore.getState();
-            state.unlockAudio();
-            state.setPlaying(true);
-            hostRef.current?.resume();
-            syncPlayback();
-          }}
-          aria-label={`Tap to play ${card.title}`}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            border: 'none',
-            padding: 0,
-            width: '100%',
-            background: 'linear-gradient(160deg, rgba(23,32,58,0.55) 0%, rgba(11,11,16,0.35) 70%)',
-            color: '#fff',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            cursor: 'pointer',
-            zIndex: 1,
-            pointerEvents: 'none',
-            WebkitTapHighlightColor: 'transparent',
-          }}
-        >
-          <div style={{ ...RAIL_BUTTON, width: 68, height: 68, borderRadius: 34, background: 'rgba(255,255,255,0.22)' }}>
-            <Icon path={ICONS.play} filled />
-          </div>
-          <div style={{ fontSize: 17, fontWeight: 700 }}>{card.title}</div>
-          <div style={{ fontSize: 13, opacity: 0.85 }}>Tap to play</div>
-        </button>
       ) : !isPlaying ? (
         <button
           type="button"

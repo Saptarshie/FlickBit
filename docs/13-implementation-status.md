@@ -91,6 +91,20 @@ Verified by the orchestrator: 129 tests across 5 packages, typecheck clean acros
 
 Verified by the orchestrator after the batch: 101 tests pass across 4 packages, typecheck clean across 6, `next build` succeeds. `*.tsbuildinfo` added to .gitignore and untracked (was committed by accident, 260KB of churn).
 
+## Session update — social shell + generation stability (2026-11-08)
+
+The app is now a complete social product, not just a feed:
+
+- **Accounts**: passwordless handle sign-in (`/login`, Credentials provider upserts a real `users` row), sign-out, session-backed likes/saves/comments/follows.
+- **Chrome**: bottom nav (Home / Explore / Create / Activity / Profile) on every screen; feed top bar with a Create shortcut; Tailwind v4 finally installed so the studio renders styled (it was written in Tailwind classes but the package was never installed — the create page was raw HTML).
+- **Scrolling**: bidirectional (vertical swipe, wheel, keyboard ↑/↓/PageUp/PageDown/Home), one card per gesture. The old "tap to play" overlay sat above the gesture layer and swallowed every swipe — that is why only the rail arrow worked.
+- **Interactions**: like/save/follow with optimistic updates and 401 → sign in, comments sheet, native share + copy link, remix, report (`/g/<id>`).
+- **Discovery**: `/explore` search over titles/tags/creators, `/t/<tag>`, `/saved`, `/notifications`, `/u/<handle>` with follow state and a playable grid.
+- **Generation**: the provider now streams (`stream: true`, SSE deltas, idle timeout re-armed per chunk) instead of buffering behind a 180 s abort — that abort was the "it fails to load/generate" reports. A complete `</html>` is accepted even when `finish_reason=length`; the coder prompt now demands a compact (<30 KB), comment-free, fully closed file. The studio SSE emits a 5 s heartbeat with elapsed seconds so a 9-minute run never looks hung.
+- **Cards**: a cover backdrop (title + creator on a gradient) sits behind the iframe, so a slow first paint never reads as a broken black frame; load failures offer Retry instead of auto-skipping.
+
+Measured: real LLM run = ~7 min generation + 1 repair + metadata ≈ 9.5 min end-to-end on `deepseek/deepseek-v4.1-flash`; the run publishes and appears in the feed.
+
 ## Pitfall learned (batch A)
 A subagent that cannot run `pnpm install` hand-made `node_modules` symlinks instead. One of them (pglite-pgvector) pointed into a pnpm store entry that pnpm had renamed to `.ignored_pglite-pgvector`, leaving a self-referential symlink that made `pnpm install`/`pnpm test` fail with ELOOP and "Cannot find package". Repair: restore the store dir name, delete the self-referential links, re-run pnpm install. Rule for future batches: NEVER hand-make node_modules links. If deps are missing, report it and stop. Pre-install deps centrally before dispatching.
 
