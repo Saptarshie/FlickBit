@@ -30,6 +30,9 @@ import * as eventsRoute from '../app/api/events/route';
 import * as userProfileRoute from '../app/api/users/[id]/route';
 import * as gameEditRoute from '../app/api/games/[id]/route';
 import * as gameSourceRoute from '../app/api/games/[id]/source/route';
+import * as meRoute from '../app/api/me/route';
+import * as searchRoute from '../app/api/search/route';
+import * as savedRoute from '../app/api/me/saved/route';
 
 const authState = vi.hoisted(() => ({ session: null as { user: { id: string } } | null }));
 
@@ -955,5 +958,59 @@ describe('GET /api/games/[id] (share detail)', () => {
     await getDb().update(schema.games).set({ deletedAt: new Date() }).where(eq(schema.games.id, gameId));
     const res = await gameEditRoute.GET(jsonReq('GET', `/api/games/${gameId}`), ctx(gameId));
     expect(res.status).toBe(404);
+  });
+});
+
+describe('app shell APIs (me / search / saved)', () => {
+  beforeEach(() => asUser(null));
+
+  it('GET /api/me returns a null viewer when signed out and the viewer when signed in', async () => {
+    const anon = await (await meRoute.GET(jsonReq('GET', '/api/me'), { params: Promise.resolve({}) })).json();
+    expect(anon.data.viewer).toBeNull();
+
+    asUser(aliceId);
+    const signedIn = await (await meRoute.GET(jsonReq('GET', '/api/me'), { params: Promise.resolve({}) })).json();
+    expect(signedIn.data.viewer.id).toBe(aliceId);
+    expect(signedIn.data.viewer.handle).toBe('alice');
+    expect(typeof signedIn.data.unread).toBe('number');
+  });
+
+  it('GET /api/search matches published games by title and by tag, and lists tags', async () => {
+    const gameId = await createGame(aliceId);
+    await getDb()
+      .update(schema.games)
+      .set({ title: 'Neon Serpent Quest', tags: ['neon', 'snake'], status: 'published' })
+      .where(eq(schema.games.id, gameId));
+    await attachVersion(gameId);
+
+    const byTitle = await (await searchRoute.GET(jsonReq('GET', '/api/search?q=Serpent'), { params: Promise.resolve({}) })).json();
+    expect(byTitle.data.games.some((g: { id: string }) => g.id === gameId)).toBe(true);
+
+    const byTag = await (await searchRoute.GET(jsonReq('GET', '/api/search?tag=neon'), { params: Promise.resolve({}) })).json();
+    expect(byTag.data.games.some((g: { id: string }) => g.id === gameId)).toBe(true);
+    expect(byTag.data.tags.some((t: { tag: string }) => t.tag === 'neon')).toBe(true);
+  });
+
+  it('GET /api/search never returns drafts or deleted games', async () => {
+    const draftId = await createGame(aliceId);
+    await getDb().update(schema.games).set({ title: 'Secret Draft', status: 'draft' }).where(eq(schema.games.id, draftId));
+    const res = await (await searchRoute.GET(jsonReq('GET', '/api/search?q=Secret'), { params: Promise.resolve({}) })).json();
+    expect(res.data.games.some((g: { id: string }) => g.id === draftId)).toBe(false);
+  });
+
+  it('GET /api/me/saved 401s signed out and lists saved games when signed in', async () => {
+    const unsigned = await savedRoute.GET(jsonReq('GET', '/api/me/saved'), { params: Promise.resolve({}) });
+    expect(unsigned.status).toBe(401);
+
+    const gameId = await createGame(aliceId);
+    await attachVersion(gameId);
+    asUser(bobId);
+    const saveRes = await saveRoute.POST(jsonReq('POST', `/api/games/${gameId}/save`), ctx(gameId));
+    expect(saveRes.ok).toBe(true);
+
+    const res = await savedRoute.GET(jsonReq('GET', '/api/me/saved'), { params: Promise.resolve({}) });
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data.games.some((g: { id: string }) => g.id === gameId)).toBe(true);
   });
 });

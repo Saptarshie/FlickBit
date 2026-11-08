@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import Link from 'next/link';
+import { BottomNav, TopBar } from './AppNav';
 
 type ProfileGame = {
   id: string;
@@ -87,15 +88,17 @@ export function ProfileScreen({ handle }: { handle: string }) {
         minHeight: '100dvh',
         background: '#0b0b10',
         color: '#fff',
-        maxWidth: 480,
+        maxWidth: 560,
         margin: '0 auto',
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',
+        paddingTop: 'calc(48px + env(safe-area-inset-top, 0px))',
+        paddingBottom: 'calc(56px + env(safe-area-inset-bottom, 0px) + 24px)',
       }}
     >
+      <TopBar title={`@${data.user.handle}`} />
       {/* Header */}
       <header
         style={{
-          padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 16px 16px',
+          padding: '16px 16px 12px',
           display: 'flex',
           flexDirection: 'column',
           gap: 12,
@@ -129,6 +132,30 @@ export function ProfileScreen({ handle }: { handle: string }) {
 
         {data.user.bio ? <p style={{ fontSize: 14, opacity: 0.85, margin: 0, lineHeight: 1.5 }}>{data.user.bio}</p> : null}
 
+        {data.viewer.isSelf ? (
+          <button
+            type="button"
+            onClick={async () => {
+              const { signOut } = await import('next-auth/react');
+              await signOut({ redirect: false });
+              window.location.href = '/';
+            }}
+            style={{
+              alignSelf: 'flex-start',
+              minHeight: 36,
+              padding: '0 14px',
+              borderRadius: 18,
+              border: '1px solid rgba(255,255,255,0.16)',
+              background: 'transparent',
+              color: 'rgba(255,255,255,0.7)',
+              fontSize: 13,
+              cursor: 'pointer',
+            }}
+          >
+            Sign out
+          </button>
+        ) : null}
+
         {/* Counts */}
         <div style={{ display: 'flex', gap: 20 }}>
           {[
@@ -145,23 +172,44 @@ export function ProfileScreen({ handle }: { handle: string }) {
 
         {/* Follow / own-profile CTAs */}
         {data.viewer.isSelf ? (
-          <Link
-            href="/studio"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: 48,
-              borderRadius: 24,
-              background: 'rgba(255,255,255,0.12)',
-              color: '#fff',
-              fontSize: 15,
-              fontWeight: 700,
-              textDecoration: 'none',
-            }}
-          >
-            ✨ Create a game
-          </Link>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <Link
+              href="/studio"
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: 48,
+                borderRadius: 24,
+                background: 'linear-gradient(90deg, #6366f1, #ec4899)',
+                color: '#fff',
+                fontSize: 15,
+                fontWeight: 700,
+                textDecoration: 'none',
+              }}
+            >
+              ✨ Create a game
+            </Link>
+            <Link
+              href="/saved"
+              aria-label="Saved games"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: 48,
+                minHeight: 48,
+                borderRadius: 24,
+                background: 'rgba(255,255,255,0.12)',
+                color: '#fff',
+                textDecoration: 'none',
+                fontSize: 18,
+              }}
+            >
+              🔖
+            </Link>
+          </div>
         ) : (
           <button
             type="button"
@@ -187,13 +235,16 @@ export function ProfileScreen({ handle }: { handle: string }) {
       {/* Game grid */}
       <section style={{ padding: '8px 16px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
         {data.games.map((game) => (
-          <article
+          <Link
             key={game.id}
+            href={`/g/${game.id}`}
             style={{
               background: 'rgba(255,255,255,0.06)',
               borderRadius: 14,
               overflow: 'hidden',
               border: '1px solid rgba(255,255,255,0.08)',
+              color: '#fff',
+              textDecoration: 'none',
             }}
           >
             <div
@@ -218,7 +269,7 @@ export function ProfileScreen({ handle }: { handle: string }) {
                 <span>🔁 {game.counts.remixes}</span>
               </div>
             </div>
-          </article>
+          </Link>
         ))}
         {data.games.length === 0 ? (
           <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '32px 0', opacity: 0.6, fontSize: 14 }}>
@@ -226,6 +277,7 @@ export function ProfileScreen({ handle }: { handle: string }) {
           </div>
         ) : null}
       </section>
+      <BottomNav />
     </main>
   );
 }

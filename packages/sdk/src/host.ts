@@ -57,7 +57,7 @@ interface PendingStorage {
   timer: ReturnType<typeof setTimeout>;
 }
 
-const DEFAULT_HANDSHAKE_TIMEOUT_MS = 3000;
+const DEFAULT_HANDSHAKE_TIMEOUT_MS = 12_000;
 const STORAGE_TIMEOUT_MS = 5000;
 
 /**
@@ -167,6 +167,25 @@ export class GameHost {
   /** Mute or unmute the guest's audio. */
   mute(muted: boolean): void {
     this.post('mute', { muted });
+  }
+
+  /**
+   * Forward a gesture into the guest. The host renders a transparent gesture
+   * layer above the iframe (so vertical swipes can scroll the feed); taps and
+   * non-vertical drags are replayed inside the game as real pointer/touch
+   * events, which keeps sandboxed games fully playable without same-origin.
+   */
+  input(kind: 'tap' | 'down' | 'move' | 'up', x: number, y: number): void {
+    this.post('input', { kind, x: Math.round(x), y: Math.round(y) });
+  }
+
+  /** Re-arm the handshake timer (used when a frame is reloaded/retried). */
+  armHandshake(timeoutMs: number = DEFAULT_HANDSHAKE_TIMEOUT_MS): void {
+    this.clearHandshake();
+    this.handshakeTimer = setTimeout(() => {
+      this.handshakeTimer = null;
+      this.raiseError({ message: 'handshake timeout: guest never sent ready', code: 'timeout' });
+    }, timeoutMs);
   }
 
   /** Resolve a guest storage key through the host. Resolves null on timeout. */

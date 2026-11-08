@@ -1,19 +1,21 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { fetchFeedGames, type GameCard } from '../lib/feed';
 import { useFeedStore } from '../lib/feed-store';
 import GameCardView from './GameCardView';
+import { BottomNav } from './AppNav';
 
 /** Hard memory rule (docs 08/12): at most 3 iframes — active ±1. */
 const MOUNT_RADIUS = 1;
+/** Fetch the next page when the viewer is this close to the end. */
+const PREFETCH_WITHIN = 3;
 
 /**
- * Reels-style vertical feed: snap scrolling, IntersectionObserver-driven
- * active card, and aggressive unmounting — only the active card and its
- * immediate neighbours keep a live game iframe; the rest render a poster
- * placeholder. Keyboard handling (↑/↓, Space, M) lives in app/page.tsx.
+ * Reels-style vertical feed: snap scrolling in both directions, active card by
+ * IntersectionObserver, cursor pagination, and at most 3 live iframes.
  */
 export default function FeedScreen() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -21,32 +23,40 @@ export default function FeedScreen() {
   const ratioByIndex = useRef<Map<number, number>>(new Map());
 
   const activeIndex = useFeedStore((s) => s.activeIndex);
+  const muted = useFeedStore((s) => s.muted);
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['feed'],
-    queryFn: () => fetchFeedGames(),
-    staleTime: 60_000,
+    queryFn: ({ pageParam }) => fetchFeedGames(pageParam as string | undefined),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.cursor ?? undefined,
+    staleTime: 30_000,
   });
 
-  const items: GameCard[] = data?.items ?? [];
+  const items: GameCard[] = data?.pages.flatMap((p) => p.items) ?? [];
   const itemCount = items.length;
 
-  // Feed length into the store (keyboard navigation clamps on it).
   useEffect(() => {
     useFeedStore.getState().setItemCount(itemCount);
   }, [itemCount]);
 
-  // Register the scroll hook used by keyboard nav and the Next chevron.
   useEffect(() => {
-    const state = useFeedStore.getState();
-    state.registerScrollToIndex((index) => {
+    useFeedStore.getState().registerScrollToIndex((index) => {
       const el = cardRefs.current[index];
-      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (el && containerRef.current) {
+        containerRef.current.scrollTo({ top: el.offsetTop, behavior: 'smooth' });
+      }
     });
     return () => useFeedStore.getState().registerScrollToIndex(null);
   }, []);
 
-  // IntersectionObserver (threshold 0.6) decides the active card.
+  // Prefetch more cards as the viewer approaches the end.
+  useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage) return;
+    if (itemCount > 0 && activeIndex >= itemCount - PREFETCH_WITHIN) void fetchNextPage();
+  }, [activeIndex, itemCount, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // IntersectionObserver decides the active card.
   useEffect(() => {
     const container = containerRef.current;
     if (!container || itemCount === 0) return;
@@ -65,11 +75,11 @@ export default function FeedScreen() {
             best = index;
           }
         }
-        if (best >= 0 && bestRatio >= 0.6 && useFeedStore.getState().activeIndex !== best) {
+        if (best >= 0 && bestRatio >= 0.55 && useFeedStore.getState().activeIndex !== best) {
           useFeedStore.getState().setActiveIndex(best);
         }
       },
-      { root: container, threshold: [0, 0.6, 1] },
+      { root: container, threshold: [0, 0.55, 1] },
     );
 
     for (const el of cardRefs.current) {
@@ -78,21 +88,48 @@ export default function FeedScreen() {
     return () => io.disconnect();
   }, [itemCount]);
 
-  const goTo = (index: number) => {
-    const state = useFeedStore.getState();
-    const clamped = Math.max(0, Math.min(index, Math.max(itemCount - 1, 0)));
-    if (clamped !== state.activeIndex) state.setActiveIndex(clamped);
-    state.scrollToIndex?.(clamped);
-  };
+  const goTo = useCallback(
+    (index: number) => {
+      const state = useFeedStore.getState();
+      const clamped = Math.max(0, Math.min(index, Math.max(itemCount - 1, 0)));
+      if (clamped !== state.activeIndex) state.setActiveIndex(clamped);
+      const el = cardRefs.current[clamped];
+      if (el && containerRef.current) containerRef.current.scrollTo({ top: el.offsetTop, behavior: 'smooth' });
+    },
+    [itemCount],
+  );
 
-  const goNext = () => goTo(useFeedStore.getState().activeIndex + 1);
+  const goNext = useCallback(() => goTo(useFeedStore.getState().activeIndex + 1), [goTo]);
+  const goPrev = useCallback(() => goTo(useFeedStore.getState().activeIndex - 1), [goTo]);
+
+  // Home/End and PageUp/PageDown also navigate (desktop comfort).
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      if (event.key === 'PageDown') {
+        event.preventDefault();
+        goNext();
+      } else if (event.key === 'PageUp') {
+        event.preventDefault();
+        goPrev();
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        goTo(0);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [goNext, goPrev, goTo]);
+
+  const toggleMute = () => useFeedStore.getState().toggleMuted();
 
   if (isLoading) {
     return (
       <div style={{ height: '100dvh', display: 'flex', alignItems: 'flex-end', background: '#0b0b10' }}>
-        <div style={{ padding: '0 16px calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
+        <div style={{ padding: '0 16px calc(env(safe-area-inset-bottom, 0px) + 96px)', width: '100%' }}>
           <div style={{ width: 240, height: 22, borderRadius: 6, background: 'rgba(255,255,255,0.14)' }} />
-          <div style={{ width: 320, height: 16, borderRadius: 6, background: 'rgba(255,255,255,0.10)', marginTop: 10 }} />
+          <div style={{ width: '80%', height: 16, borderRadius: 6, background: 'rgba(255,255,255,0.10)', marginTop: 10 }} />
           <div style={{ width: 180, height: 16, borderRadius: 6, background: 'rgba(255,255,255,0.10)', marginTop: 10 }} />
         </div>
       </div>
@@ -102,68 +139,148 @@ export default function FeedScreen() {
   if (isError || itemCount === 0) {
     return (
       <div style={{ height: '100dvh', display: 'grid', placeItems: 'center', background: '#0b0b10', color: '#fff' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 18, fontWeight: 700 }}>No games yet</div>
+        <div style={{ textAlign: 'center', padding: 24 }}>
+          <div style={{ fontSize: 18, fontWeight: 700 }}>{isError ? 'Could not load the feed' : 'No games yet'}</div>
+          <div style={{ opacity: 0.65, fontSize: 14, marginTop: 6 }}>
+            {isError ? 'Check the server and try again.' : 'Be the first: create a game in the studio.'}
+          </div>
           <button
             type="button"
             onClick={() => refetch()}
-            style={{
-              marginTop: 16,
-              minWidth: 120,
-              minHeight: 48,
-              borderRadius: 24,
-              border: 'none',
-              background: '#fff',
-              color: '#0b0b10',
-              fontSize: 16,
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
+            style={{ marginTop: 16, minWidth: 120, minHeight: 48, borderRadius: 24, border: 'none', background: '#fff', color: '#0b0b10', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}
           >
             Retry
           </button>
+          <div style={{ marginTop: 12 }}>
+            <Link href="/studio" style={{ color: '#8ab4ff', fontSize: 14 }}>
+              Open the studio →
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div
-      ref={containerRef}
-      data-testid="feed-scroll"
-      style={{
-        height: '100dvh',
-        overflowY: 'scroll',
-        scrollSnapType: 'y mandatory',
-        overscrollBehavior: 'none',
-        WebkitOverflowScrolling: 'touch',
-        scrollbarWidth: 'none',
-      }}
-    >
-      {items.map((card, index) => (
+    <>
+      {/* Transparent top bar over the feed. */}
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 'calc(44px + env(safe-area-inset-top, 0px))',
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingLeft: 14,
+          paddingRight: 12,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          zIndex: 30,
+          pointerEvents: 'none',
+        }}
+      >
+        <Link href="/" style={{ color: '#fff', fontWeight: 800, fontSize: 17, textDecoration: 'none', pointerEvents: 'auto', textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>
+          PlayLoop
+        </Link>
+        <div style={{ display: 'flex', gap: 8, pointerEvents: 'auto' }}>
+          <button
+            type="button"
+            onClick={toggleMute}
+            aria-label={muted ? 'Unmute' : 'Mute'}
+            style={{ width: 38, height: 38, borderRadius: 19, border: 'none', background: 'rgba(0,0,0,0.42)', color: '#fff', fontSize: 15, cursor: 'pointer' }}
+          >
+            {muted ? '🔇' : '🔊'}
+          </button>
+          <Link
+            href="/studio"
+            aria-label="Create a game"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              background: 'linear-gradient(135deg,#7b5cff,#ff3b8d)',
+              color: '#fff',
+              display: 'grid',
+              placeItems: 'center',
+              fontSize: 22,
+              fontWeight: 700,
+              textDecoration: 'none',
+              lineHeight: '38px',
+            }}
+          >
+            +
+          </Link>
+        </div>
+      </div>
+
+      <div
+        ref={containerRef}
+        data-testid="feed-scroll"
+        style={{
+          height: '100dvh',
+          overflowY: 'scroll',
+          scrollSnapType: 'y mandatory',
+          overscrollBehavior: 'none',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+        }}
+      >
+        {items.map((card, index) => (
+          <section
+            key={card.id}
+            ref={(el) => {
+              cardRefs.current[index] = el;
+            }}
+            aria-label={card.title}
+            style={{
+              height: '100dvh',
+              scrollSnapAlign: 'start',
+              scrollSnapStop: 'always',
+              position: 'relative',
+              overflow: 'hidden',
+              background: '#0b0b10',
+            }}
+          >
+            <GameCardView
+              card={card}
+              live={Math.abs(index - activeIndex) <= MOUNT_RADIUS}
+              isActive={index === activeIndex}
+              onNext={goNext}
+              onPrev={goPrev}
+            />
+          </section>
+        ))}
+
+        {/* End-of-feed sentinel: fetches the next page, or says you're done. */}
         <section
-          key={card.id}
-          ref={(el) => {
-            cardRefs.current[index] = el;
-          }}
-          aria-label={card.title}
-          style={{
-            height: '100dvh',
-            scrollSnapAlign: 'start',
-            scrollSnapStop: 'always',
-            position: 'relative',
-            overflow: 'hidden',
-            background: '#0b0b10',
-          }}
+          aria-label="End of feed"
+          style={{ height: '100dvh', display: 'grid', placeItems: 'center', color: 'rgba(255,255,255,0.7)', background: '#0b0b10' }}
         >
-          <GameCardView
-            card={card}
-            live={Math.abs(index - activeIndex) <= MOUNT_RADIUS}
-            isActive={index === activeIndex}
-            onNext={goNext}
-          />
+          <div style={{ textAlign: 'center' }}>
+            {hasNextPage ? (
+              <button
+                type="button"
+                onClick={() => void fetchNextPage()}
+                disabled={isFetchingNextPage}
+                style={{ minHeight: 48, padding: '0 22px', borderRadius: 24, border: 'none', background: '#fff', color: '#0b0b10', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
+              >
+                {isFetchingNextPage ? 'Loading…' : 'Load more'}
+              </button>
+            ) : (
+              <>
+                <div style={{ fontSize: 16, fontWeight: 700 }}>You’re all caught up</div>
+                <Link href="/studio" style={{ display: 'inline-block', marginTop: 12, color: '#8ab4ff', fontSize: 14 }}>
+                  Create the next one →
+                </Link>
+              </>
+            )}
+          </div>
         </section>
-      ))}
-    </div>
+      </div>
+
+      <BottomNav transparent />
+    </>
   );
 }

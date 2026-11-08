@@ -2,7 +2,7 @@ export const SDK_VERSION = 1 as const;
 export const MAX_PAYLOAD_BYTES = 8 * 1024;
 
 export type GuestToHost = 'ready' | 'gameOver' | 'score' | 'storage:get' | 'storage:set' | 'haptic' | 'share' | 'log' | 'error' | 'perf';
-export type HostToGuest = 'init' | 'pause' | 'resume' | 'restart' | 'mute' | 'storage:result';
+export type HostToGuest = 'init' | 'pause' | 'resume' | 'restart' | 'mute' | 'storage:result' | 'input';
 
 export interface Envelope<T = unknown> { v: 1; src: 'playloop'; type: string; id?: string; payload?: T }
 

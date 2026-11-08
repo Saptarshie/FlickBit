@@ -1,0 +1,18 @@
+@import 'tailwindcss';
+
+/* The app shell paints its own surfaces; keep the Tailwind reset from flashing
+   white on first paint. */
+html,
+body {
+  background: #0b0b10;
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hide scrollbars inside the snap feed without disabling scrolling. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

@@ -365,6 +365,51 @@ export const SHIM_SOURCE = String.raw`
   w.PlayLoop = api;
 
   /* ---- host to guest messages ---- */
+  function dispatchInput(p) {
+    var kind = String(p.kind || 'tap');
+    var x = Number(p.x) || 0;
+    var y = Number(p.y) || 0;
+    var doc = w.document;
+    var el = null;
+    try { el = doc.elementFromPoint(x, y) || doc.body; } catch (e) { el = doc.body; }
+    if (!el) { return; }
+    function pointer(type) {
+      var ev;
+      try {
+        ev = new w.PointerEvent(type, {
+          clientX: x, clientY: y, bubbles: true, cancelable: true,
+          pointerId: 1, pointerType: 'touch', isPrimary: true,
+          buttons: type === 'pointerup' ? 0 : 1
+        });
+      } catch (e) {
+        var name = type === 'pointerdown' ? 'mousedown' : (type === 'pointerup' ? 'mouseup' : 'mousemove');
+        ev = new w.MouseEvent(name, { clientX: x, clientY: y, bubbles: true, cancelable: true });
+      }
+      try { el.dispatchEvent(ev); } catch (e) {}
+    }
+    function touch(type) {
+      try {
+        if (!w.Touch || !w.TouchEvent) { return; }
+        var t = new w.Touch({ identifier: 1, target: el, clientX: x, clientY: y });
+        var ended = type === 'touchend' || type === 'touchcancel';
+        el.dispatchEvent(new w.TouchEvent(type, {
+          touches: ended ? [] : [t],
+          targetTouches: ended ? [] : [t],
+          changedTouches: [t], bubbles: true, cancelable: true
+        }));
+      } catch (e) {}
+    }
+    if (kind === 'tap') {
+      touch('touchstart'); pointer('pointerdown'); pointer('pointerup'); touch('touchend');
+    } else if (kind === 'down') {
+      touch('touchstart'); pointer('pointerdown');
+    } else if (kind === 'move') {
+      touch('touchmove'); pointer('pointermove');
+    } else if (kind === 'up') {
+      pointer('pointerup'); touch('touchend');
+    }
+  }
+
   w.addEventListener('message', function (ev) {
     try {
       var d = ev.data;
@@ -390,6 +435,8 @@ export const SHIM_SOURCE = String.raw`
         fireCbs(restartCbs);
       } else if (d.type === 'mute') {
         muted = !!(d.payload && d.payload.muted);
+      } else if (d.type === 'input') {
+        dispatchInput(d.payload || {});
       } else if (d.type === 'storage:result') {
         var pend = d.id ? pending[d.id] : null;
         if (pend) {

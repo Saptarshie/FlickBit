@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { QueryProvider } from '../src/lib/query';
+import './globals.css';
 
 export const metadata: Metadata = { title: 'PlayLoop', description: 'Scroll. Play. Remix.' };
 export const viewport: Viewport = {

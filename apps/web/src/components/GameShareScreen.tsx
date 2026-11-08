@@ -191,6 +191,102 @@ export function GameShareScreen({ game }: { game: ShareGame }) {
           More games on PlayLoop →
         </Link>
       </div>
+
+      <div style={{ padding: '4px 16px 24px' }}>
+        <ReportGame gameId={game.id} />
+      </div>
     </main>
+  );
+}
+
+/** Report control for the share page (writes a row the moderation queue reads). */
+function ReportGame({ gameId }: { gameId: string }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState('');
+  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error' | 'auth'>('idle');
+
+  const submit = async () => {
+    if (!reason.trim()) return;
+    setState('sending');
+    try {
+      const res = await fetch(`/api/games/${gameId}/report`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      if (res.status === 401) {
+        setState('auth');
+        return;
+      }
+      if (!res.ok) throw new Error('failed');
+      setState('sent');
+      setOpen(false);
+    } catch {
+      setState('error');
+    }
+  };
+
+  if (state === 'sent') {
+    return <div style={{ fontSize: 13, opacity: 0.6 }}>Thanks — this game was reported for review.</div>;
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, padding: 0, cursor: 'pointer' }}
+      >
+        ⚑ Report this game
+      </button>
+      {open ? (
+        <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+          <input
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="What's wrong with it?"
+            maxLength={200}
+            style={{
+              flex: 1,
+              minHeight: 42,
+              borderRadius: 21,
+              border: '1px solid rgba(255,255,255,0.16)',
+              background: 'rgba(255,255,255,0.06)',
+              color: '#fff',
+              fontSize: 14,
+              padding: '0 14px',
+              outline: 'none',
+            }}
+          />
+          <button
+            type="button"
+            onClick={submit}
+            disabled={state === 'sending' || !reason.trim()}
+            style={{
+              minHeight: 42,
+              padding: '0 16px',
+              borderRadius: 21,
+              border: 'none',
+              background: reason.trim() ? '#fff' : 'rgba(255,255,255,0.15)',
+              color: reason.trim() ? '#0b0b10' : '#fff',
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: reason.trim() ? 'pointer' : 'default',
+            }}
+          >
+            {state === 'sending' ? '…' : 'Send'}
+          </button>
+        </div>
+      ) : null}
+      {state === 'auth' ? (
+        <div style={{ fontSize: 12, color: '#ff8fa3', marginTop: 6 }}>
+          <a href="/login?next=/" style={{ color: '#8ab4ff' }}>
+            Sign in
+          </a>{' '}
+          to report a game.
+        </div>
+      ) : null}
+      {state === 'error' ? <div style={{ fontSize: 12, color: '#ff8fa3', marginTop: 6 }}>Could not send the report — try again.</div> : null}
+    </div>
   );
 }

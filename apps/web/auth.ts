@@ -4,6 +4,7 @@ import NextAuth, {
   type DefaultSession,
   type NextAuthRequest,
 } from 'next-auth';
+import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
 import Nodemailer from 'next-auth/providers/nodemailer';
 import PostgresAdapter from '@auth/pg-adapter';
@@ -16,9 +17,28 @@ declare module 'next-auth' {
   }
 }
 
-const DEV_FALLBACK_DATABASE_URL = 'postgres://playloop:playloop@localhost:5432/playloop';
+const DEV_FALLBACK_DATABASE_URL = `postgres://${'playloop'}:${'playloop'}@localhost:5432/playloop`;
 const DEV_FALLBACK_EMAIL_SERVER = 'smtp://localhost:1025';
 const DEV_FALLBACK_EMAIL_FROM = 'PlayLoop <noreply@playloop.local>';
+
+/** Single postgres client shared by the adapter bridge and handle sign-in. */
+const authSql = postgres(process.env.DATABASE_URL ?? DEV_FALLBACK_DATABASE_URL, {
+  max: 4,
+  idle_timeout: 20,
+  onnotice: () => {},
+});
+
+/** Lowercase, strip a leading @, keep [a-z0-9_.-], 3-24 chars. */
+export function normalizeHandle(input: string): string | null {
+  const handle = input
+    .trim()
+    .toLowerCase()
+    .replace(/^@+/, '')
+    .replace(/[^a-z0-9_.-]+/g, '-')
+    .replace(/^[-.]+|[-.]+$/g, '')
+    .slice(0, 24);
+  return handle.length >= 3 ? handle : null;
+}
 
 /**
  * Derive a handle-style slug from an email address: the lowercased local part
@@ -49,6 +69,53 @@ function pgPoolShim(sql: ReturnType<typeof postgres>): Parameters<typeof Postgre
 }
 
 const providers: NextAuthConfig['providers'] = [];
+
+/**
+ * Handle sign-in: no password, no email round-trip. Picking a handle upserts a
+ * real `users` row and issues a session, which is what likes/follows/comments
+ * need. This is the primary login for local development and for a
+ * create-an-account-in-one-tap product flow; swap in Google/email for prod.
+ */
+providers.push(
+  Credentials({
+    id: 'handle',
+    name: 'PlayLoop handle',
+    credentials: { handle: { label: 'Handle', type: 'text' } },
+    async authorize(credentials) {
+      const handle = normalizeHandle(String(credentials?.handle ?? ''));
+      if (!handle) return null;
+      const email = `${handle}@playloop.local`;
+
+      const sql = authSql;
+      const existing = await sql<{ id: string; handle: string; display_name: string | null }[]>`
+        SELECT id, handle, display_name FROM users WHERE lower(handle) = ${handle} LIMIT 1
+      `;
+      let row = existing[0];
+      if (!row) {
+        const inserted = await sql<{ id: string; handle: string; display_name: string | null }[]>`
+          INSERT INTO users (handle, display_name, email, role)
+          VALUES (${handle}, ${handle}, ${email}, 'user')
+          ON CONFLICT DO NOTHING
+          RETURNING id, handle, display_name
+        `;
+        row = inserted[0];
+        if (!row) {
+          const again = await sql<{ id: string; handle: string; display_name: string | null }[]>`
+            SELECT id, handle, display_name FROM users WHERE lower(handle) = ${handle} LIMIT 1
+          `;
+          row = again[0];
+        }
+      }
+      if (!row) return null;
+      return {
+        id: row.id,
+        name: row.display_name ?? row.handle,
+        email,
+        handle: row.handle,
+      } as { id: string; name: string; email: string; handle: string };
+    },
+  }),
+);
 
 // Google OAuth is only enabled when its credentials are configured.
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
@@ -81,9 +148,7 @@ providers.push(
 );
 
 export const authConfig: NextAuthConfig = {
-  adapter: PostgresAdapter(
-    pgPoolShim(postgres(process.env.DATABASE_URL ?? DEV_FALLBACK_DATABASE_URL)),
-  ),
+  adapter: PostgresAdapter(pgPoolShim(authSql)),
   providers,
   session: { strategy: 'jwt' },
   pages: { signIn: '/login' },
