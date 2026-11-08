@@ -62,3 +62,13 @@ Update this file whenever a feature lands or regresses.
 - [x] Hourly rollups feeding trending
 - [ ] Moderation queue for generated games (auto-approve stays fine for dev)
 - [ ] Poster capture for cards/OG images
+
+## Verified in the browser (390×844 + desktop)
+
+- Feed: 11 cards, full-bleed 844 px card, game start screen painted, tap starts gameplay, wheel/arrow/PageUp/PageDown/Home navigate, ≥3 cards mounted max.
+- Sign-in with a handle → session persists across navigation; like count 1, comment posted, follow shows on the profile (`1 follower · ✓ Following`), saved game appears in `/saved`.
+- Studio: styled (Tailwind installed), real LLM run streamed progress with a 5 s heartbeat, published "Neon Serpent", ranked #1 in the feed, artifact served at 28 KB (12.8 KB game + SDK shim).
+- `pnpm --filter @playloop/web run build` succeeds; `/`, `/explore`, `/login`, `/studio`, `/saved`, `/notifications` all 200.
+- Tests: sdk 28, gamekit 71, ai 16, db 12, recsys 16, play-worker 9, web 71 = 223 green; typecheck 8/8.
+
+Known slow path: a real generation takes ~7–10 min on `deepseek/deepseek-v4.1-flash` (streaming, one repair). The UI shows elapsed time; it is not hung.
