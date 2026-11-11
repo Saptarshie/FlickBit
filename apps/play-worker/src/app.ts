@@ -6,10 +6,15 @@ import { extractManifest } from '@playloop/gamekit';
 import { SHIM_SOURCE } from '@playloop/sdk';
 
 /** The exact CSP required on the play origin (docs/03-game-artifact-spec.md). */
+// `frame-ancestors` pins who may embed an artifact: without it any site could
+// frame a game and click-jack the player.
+const ALLOWED_EMBEDDER = process.env.PLAYER_ORIGIN || process.env.PLAY_ORIGIN || 'http://localhost:3000';
+
 const CSP =
   "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' blob:; style-src 'unsafe-inline'; " +
   "img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; " +
-  "frame-src 'none'; form-action 'none'; base-uri 'none'";
+  "frame-src 'none'; form-action 'none'; base-uri 'none'; " +
+  `frame-ancestors ${ALLOWED_EMBEDDER}`;
 
 const CACHE_CONTROL = 'public, max-age=31536000, immutable';
 

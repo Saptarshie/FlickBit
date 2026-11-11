@@ -1,4 +1,4 @@
-import { and, eq, ilike, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import * as schema from '@playloop/db';
 import { getDb } from '../../../../src/lib/db';
@@ -6,6 +6,16 @@ import { auth } from '../../../../auth';
 import { jsonError, jsonOk, wrap } from '../../../../src/lib/api-helpers';
 
 const paramsSchema = z.object({ id: z.string().min(1) });
+
+/**
+ * Handles are matched exactly (case-insensitively), never with LIKE: `/api/users/%`
+ * used to return an arbitrary profile because `%` is an ILIKE wildcard. Anything
+ * that is not a plain handle is treated as "not found".
+ */
+function asHandle(value: string): string | null {
+  const handle = value.replace(/^@+/, '').toLowerCase();
+  return /^[a-z0-9_.-]{3,24}$/.test(handle) ? handle : null;
+}
 
 const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -23,9 +33,7 @@ export const GET = wrap<{ id: string }>(async (req, ctx) => {
     .select()
     .from(schema.users)
     .where(
-      isUuid
-        ? eq(schema.users.id, id)
-        : ilike(schema.users.handle, id),
+      isUuid ? eq(schema.users.id, id) : sql`lower(${schema.users.handle}) = ${asHandle(id) ?? ''}`,
     )
     .limit(1);
   const user = userRows[0];

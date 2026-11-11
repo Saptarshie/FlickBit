@@ -40,3 +40,8 @@ BEGIN
     );
   END LOOP;
 END $$;
+
+-- Safety net: without a DEFAULT partition any event whose ts falls outside the
+-- pre-created months fails the whole insert ("no partition of relation events
+-- found for row"), so a clock skew or a late backfill loses data.
+CREATE TABLE IF NOT EXISTS events_default PARTITION OF events DEFAULT;

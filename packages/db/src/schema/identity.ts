@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, boolean, primaryKey, pgEnum, uniqueIndex, integer } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, boolean, primaryKey, pgEnum, uniqueIndex, integer, index } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 export const userRole = pgEnum('user_role', ['user', 'mod', 'admin']);
@@ -53,7 +53,13 @@ export const follows = pgTable('follows', {
   followerId: uuid('follower_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   followeeId: uuid('followee_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [primaryKey({ columns: [t.followerId, t.followeeId] })]);
+}, (t) => [
+  primaryKey({ columns: [t.followerId, t.followeeId] }),
+  // Counting a creator's followers/checking "do I follow X" scans by followee;
+  // the PK only covers (follower, followee). Measured 522 index searches for one
+  // follower count before this.
+  index('follows_followee_idx').on(t.followeeId),
+]);
 
 export const blocks = pgTable('blocks', {
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),

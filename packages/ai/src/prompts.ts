@@ -44,7 +44,9 @@ PLAYLOOP SDK — the host injects exactly this global (the name is case-sensitiv
   window.PlayLoop.haptic('light'|'medium'|'heavy')
   window.PlayLoop.safeArea                    // { top, bottom } — keep HUD clear of these
   window.PlayLoop.onPause(fn) / window.PlayLoop.onResume(fn) / window.PlayLoop.onRestart(fn)
-  window.PlayLoop.storage.get(key)/set(key, value), window.PlayLoop.rng(), window.PlayLoop.log(msg)
+  window.PlayLoop.storage.get(key)   // returns a Promise — always await it
+  window.PlayLoop.storage.set(key, value)   // returns a Promise
+  window.PlayLoop.rng(), window.PlayLoop.log(msg)
 Never call window.playloop, sendScore or sendGameOver — they do not exist. Guard with
 "if (window.PlayLoop)" so the file also runs standalone.
 
@@ -69,7 +71,7 @@ Fix the errors while preserving the gameplay and visual design.
 Ensure strict compliance:
 - No external scripts, styles, or media URLs.
 - No fetch, XHR, WebSocket, localStorage, cookies, alert, or window.open.
-- Include window.playloop?.ready(); on startup.
+- Include window.PlayLoop.ready() on startup. The global is PlayLoop (capital P and L); window.playloop, sendScore and sendGameOver do not exist.
 - Output ONLY the fixed complete HTML document.`;
 
 export const METADATA_SYSTEM_PROMPT = `Generate concise metadata for the provided HTML5 game.

@@ -7,10 +7,12 @@ import request from 'supertest';
 import { SHIM_SOURCE } from '@playloop/sdk';
 import { artifactUrl, createApp, injectShim } from '../src/app';
 
+// frame-ancestors pins who may embed an artifact (see src/app.ts).
 const CSP =
   "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' blob:; style-src 'unsafe-inline'; " +
   "img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; " +
-  "frame-src 'none'; form-action 'none'; base-uri 'none'";
+  "frame-src 'none'; form-action 'none'; base-uri 'none'; " +
+  'frame-ancestors http://localhost:3000';
 
 function sha256Hex(bytes: Buffer | string): string {
   return createHash('sha256').update(bytes).digest('hex');
