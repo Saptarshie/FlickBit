@@ -10,3 +10,10 @@ jobs:
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck && pnpm lint && pnpm test
+      # The production build was never exercised in CI, so a broken build could
+      # ship green. Env is only needed to import the auth/db modules at build
+      # time; nothing connects.
+      - run: pnpm build
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          AUTH_SECRET: ci-build-only-not-a-real-secret
