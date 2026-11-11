@@ -115,6 +115,30 @@ delete `game_versions`, then the game.
 - The postgres pool is memoised on `globalThis` to survive HMR. If you change
   `src/lib/db.ts`, restart dev rather than hot-reloading.
 
+## 7b. The dev database accepts exactly ONE connection
+
+Symptom: `/api/feed` sometimes 500s, or hangs, under a handful of concurrent
+requests; the dev log shows `bind message supplies 11 parameters, but prepared
+statement requires 10`, `unnamed prepared statement does not exist`, or
+`read ECONNRESET`.
+
+Cause: PGlite is a single-threaded WASM Postgres behind a socket server. Every
+socket shares one engine and one unnamed prepared statement, so as soon as two
+clients interleave `Parse`/`Bind` frames the statements cross over. It is not a
+load problem — two connections are enough.
+
+Rules:
+- `scripts/dev-db.ts` sets `maxConnections: 1`; leave it there.
+- One `postgres-js` client per process with `prepare: false` (`getSql()` in
+  `apps/web/src/lib/db.ts`, shared by Auth.js). Do not create a second pool.
+- Admin scripts cannot connect while `pnpm dev` holds the socket. Either stop
+  the dev server, or let the dev-db boot do the work (it publishes
+  `.artifacts/seeds/*.html` automatically).
+- Production uses real Postgres and must not depend on any of this: the only
+  production-relevant setting is the same single shared client.
+
+Diagnose with `pnpm smoke:load` (24 concurrent requests; any non-200 fails).
+
 ## 8. Browser-harness quirks (automation only)
 
 - A hidden tab does not run `requestAnimationFrame`, so smooth scrolling and

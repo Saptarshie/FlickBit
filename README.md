@@ -22,6 +22,13 @@ Then open **http://localhost:3000**.
 Data persists in `.data/pglite/` (delete it to start fresh). Artifacts live in
 `apps/play-worker/artifacts/`.
 
+> **One connection only.** PGlite runs every statement on a single WASM engine,
+> so the dev database accepts exactly one socket. Two clients interleaving
+> `Parse`/`Bind` frames make it answer `bind message supplies 11 parameters, but
+> prepared statement requires 10` — random 500s. The app therefore uses one
+> `postgres-js` client with `prepare: false`, and admin scripts wait until the
+> dev server is stopped. Production (real Postgres) has no such limit.
+
 ### Configuration (`.env` at the repo root)
 
 | Variable | Used by | Notes |
@@ -52,12 +59,27 @@ Data persists in `.data/pglite/` (delete it to start fresh). Artifacts live in
 - **Event pipeline** — partitioned event log, hourly rollups (`game_stats_hourly`) feeding trending; CLI: `pnpm --filter @playloop/db run db:rollup`.
 - **Sandbox** — `sandbox="allow-scripts"` iframe (no same-origin), strict CSP, `connect-src 'none'`, postMessage-only SDK.
 
+## Seed games
+
+The feed starts with **8 hand-written template games** plus every AI game in
+`.artifacts/seeds/`. Generating another is a two-minute job:
+
+```bash
+pnpm gen:seed my-slug "a neon rhythm game with four lanes and combos"
+# restart `pnpm dev` — the dev database publishes .artifacts/seeds/*.html on boot
+```
+
+`pnpm dev` validates each seed (sandbox rules + `pl-manifest` + completeness),
+copies it into the artifact store and publishes it idempotently: re-running with
+unchanged bytes is a no-op, changed bytes become a new version.
+
 ## Verify
 
 ```bash
 pnpm typecheck
 pnpm test          # serialized: PGlite + Chromium suites
-pnpm build
+pnpm build         # stop `pnpm dev` first: build and dev share apps/web/.next
+pnpm smoke:load    # 24 concurrent feed/search requests, fails on any non-200
 ```
 
 Per package (faster): `pnpm --filter @playloop/gamekit run test`, etc.

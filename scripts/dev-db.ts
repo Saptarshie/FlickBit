@@ -22,6 +22,7 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import * as schema from '@playloop/db';
 import { seed } from '@playloop/db/seed';
+import { publishPendingSeeds } from './seeds';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
@@ -59,6 +60,21 @@ async function main(): Promise<void> {
 
   const result = await seed(db as never, { artifactsDir });
   console.log(`[db] seeded: systemUser=${result.systemUserId} newTemplateGames=${result.templateGames}`);
+
+  // Any game produced by `pnpm gen:seed` is published here, inside the process
+  // that owns the database — a separate script cannot connect while this server
+  // holds the single allowed socket.
+  try {
+    const pending = await publishPendingSeeds(db, {
+      seedsDir: path.join(root, '.artifacts', 'seeds'),
+      artifactsDir,
+      log: console.log,
+    });
+    if (pending.published) console.log(`[db] generated seeds published: ${pending.published}`);
+  } catch (err) {
+    // Best effort: a bad seed file must never stop the dev stack from booting.
+    console.error('[db] seed publish failed:', err instanceof Error ? err.message : err);
+  }
 
   // EXACTLY ONE connection. PGlite runs every statement on a single engine and
   // keeps one unnamed prepared statement per session; with two sockets the

@@ -106,3 +106,58 @@ drags keep landing on the element that received the down.
 Verified in a real sandboxed card: a tap flips the correct Memory cell (♣
 revealed) and a probe artifact beacons `pointerdown → pointerup → message:input`
 back to the host. Architecture/debugging docs: `docs/development_docs/`.
+
+
+## Stability pass — 2026-11-11
+
+Reported symptom: "nothing is working". Three independent faults were found,
+all reproducible, all fixed:
+
+1. **Random 500s / hangs on `/api/feed`.** The dev database (PGlite behind the
+   socket server) shares one engine and one unnamed prepared statement across
+   sockets; two clients interleave `Parse`/`Bind` and it answers
+   `bind message supplies 11 parameters, but prepared statement requires 10`.
+   Measured before the fix: 24 concurrent requests → 8–13 × HTTP 500 and a
+   p50 of 11 s. After (`maxConnections: 1`, one `postgres-js` client with
+   `prepare: false`): **24/24 → 200, zero failures**, p50 ≈ 0.5 s, and
+   `pnpm smoke:load` passes.
+2. **Auth opened a second pool.** `apps/web/auth.ts` had its own `postgres()`
+   with `max: 4`, starving the app connection — every authenticated request
+   500'd with `ECONNRESET` (`/api/me` was dead). Both now share `getSql()`.
+3. **The coder prompt documented a non-existent SDK.** It told the model to
+   call `window.playloop.ready() / sendScore() / sendGameOver()`. The real API
+   is `window.PlayLoop.ready() / submitScore() / gameOver()`, so generated
+   games never reported score or game over. The prompt now documents the real
+   API and a quality bar (start screen, HUD, game-over + restart, juice,
+   WebAudio, difficulty curve).
+
+Also fixed: `pnpm dev` now deletes a leftover production `.next` (which made
+every route 500 with `routes-manifest.json` missing), the studio preview sent
+`pause`/`resume` without `v: 1` (dropped by the guest), and seed publishing is
+idempotent instead of re-inserting version 1 on every boot.
+
+### Seed games
+
+`pnpm gen:seed <slug> "<prompt>"` generates a game with the corrected prompt and
+`pnpm dev` publishes anything in `.artifacts/seeds/` on boot. Four were
+generated and published this pass (≈2–4 min each, 0 repairs):
+
+| Game | Prompt | Bytes |
+| --- | --- | --- |
+| Neon Skater | neon synthwave endless runner | 17 122 |
+| Tether Miner | drag-to-grapple space miner | 16 459 |
+| Neon Beat | four-lane rhythm tapper | 13 892 |
+| Magma Hop | one-button lava slime platformer | 17 717 |
+
+Each renders a designed start screen (title, how-to-play, tap to start), and
+they sit at the top of the feed alongside the 8 template games.
+
+### Verified this pass
+
+- `pnpm build` at the repo root: green.
+- Suites: sdk 36, gamekit 71, ai 16, db 12, recsys 16, play-worker 9, web 71 =
+  **231 passing**; `pnpm typecheck` clean.
+- Browser (390×844): feed renders the new seeds, "Tap to play" → gameplay,
+  like/save/comment (counts 1/1/1 in the API), handle sign-in, `/u/playloop`
+  grid with 13 games, `/explore`, `/saved`, `/notifications`, `/g/<id>`,
+  `/t/physics` all 200.
