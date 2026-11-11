@@ -43,13 +43,15 @@ Data persists in `.data/pglite/` (delete it to start fresh). Artifacts live in
 ## Docs
 
 - `docs/00…14` — product, design and roadmap decisions.
+- `docs/reviews/` — the three independent critic reports (feed/social, generation
+  quality, platform/security) that drove the last hardening pass.
 - `docs/development_docs/` — how it actually works: architecture, input pipeline,
   feed/scroll, generation, data model, debugging, testing, extending.
 
 ## What works today
 
 - **Feed** — DB-backed recommendations (`@playloop/recsys`: trending / fresh / social / explore → ranker → MMR tag diversity), full-bleed vertical snap that scrolls both ways (touch, wheel, keyboard), one card per gesture.
-- **Account** — passwordless "pick a handle" sign-in (`/login`); likes, saves, comments and follows are stored against that user.
+- **Account** — handle + password sign-in (`/login`, scrypt hashes). A handle is public (it is in every URL), so it is never the credential on its own. New handle = new account; existing handle must match its password.
 - **Social** — like/unlike, save/unsave, comments sheet, share (Web Share + copy link + `/g/<id>` OG page), follow/unfollow, report.
 - **Profiles** — `/u/<handle>` with follower/following counts and a playable game grid; your own profile offers Create and Saved.
 - **Discovery** — `/explore` search across titles, tags and creators, trending tag chips, `/t/<tag>`, `/saved`, `/notifications` with an unread badge.
@@ -58,6 +60,7 @@ Data persists in `.data/pglite/` (delete it to start fresh). Artifacts live in
 - **Social** — likes, saves, comments API, follows, creator profiles (`/u/<handle>`), share pages (`/g/<id>`) with OG metadata.
 - **Event pipeline** — partitioned event log, hourly rollups (`game_stats_hourly`) feeding trending; CLI: `pnpm --filter @playloop/db run db:rollup`.
 - **Sandbox** — `sandbox="allow-scripts"` iframe (no same-origin), strict CSP, `connect-src 'none'`, postMessage-only SDK.
+- **Generation guardrails** — `/api/studio/generate` requires a session, caps the prompt at 600 characters and allows 12 generations per user per hour.
 
 ## Seed games
 

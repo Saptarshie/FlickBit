@@ -218,6 +218,46 @@ export const SHIM_SOURCE = String.raw`
       w.webkitAudioContext = ShimmedAudio;
     }
   } catch (e) {}
+  /* ---- mute: route every connection to the destination through one gain ---- */
+  // Games create their own oscillators and connect them straight to
+  // ctx.destination, so setting a flag was never going to silence them. Patch
+  // AudioNode.connect so any connection to the destination goes through a
+  // master gain we control.
+  var masterGain = null;
+  function masterFor(ctx) {
+    if (!ctx || typeof ctx.createGain !== 'function') { return null; }
+    if (masterGain && masterGain.context === ctx) { return masterGain; }
+    try {
+      masterGain = ctx.createGain();
+      masterGain.gain.value = muted ? 0 : 1;
+      masterGain.connect(ctx.destination);
+      return masterGain;
+    } catch (e) {
+      masterGain = null;
+      return null;
+    }
+  }
+  function applyMute() {
+    if (!masterGain) { return; }
+    try { masterGain.gain.value = muted ? 0 : 1; } catch (e) {}
+  }
+  try {
+    var AudioNodeProto = w.AudioNode && w.AudioNode.prototype;
+    var originalConnect = AudioNodeProto && AudioNodeProto.connect;
+    if (originalConnect) {
+      AudioNodeProto.connect = function connect(destination) {
+        if (destination && this && this.context && destination === this.context.destination) {
+          var master = masterFor(this.context);
+          if (master && master !== this) {
+            var args = Array.prototype.slice.call(arguments, 1);
+            return originalConnect.apply(this, [master].concat(args));
+          }
+        }
+        return originalConnect.apply(this, arguments);
+      };
+    }
+  } catch (e) {}
+
   function eachAudio(fn) {
     for (var i = 0; i < audioCtxs.length; i += 1) {
       try {
@@ -467,7 +507,7 @@ export const SHIM_SOURCE = String.raw`
           safeArea.bottom = isFinite(bottom) ? bottom : 0;
         }
         if (p.seed !== undefined && p.seed !== null) { initSeed = seedToInt(p.seed); }
-        if (typeof p.muted === 'boolean') { muted = p.muted; }
+        if (typeof p.muted === 'boolean') { muted = p.muted; applyMute(); }
       } else if (d.type === 'pause') {
         setPaused(true);
         fireCbs(pauseCbs);
@@ -478,6 +518,7 @@ export const SHIM_SOURCE = String.raw`
         fireCbs(restartCbs);
       } else if (d.type === 'mute') {
         muted = !!(d.payload && d.payload.muted);
+        applyMute();
       } else if (d.type === 'input') {
         dispatchInput(d.payload || {});
       } else if (d.type === 'storage:result') {

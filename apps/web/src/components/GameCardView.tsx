@@ -84,6 +84,8 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
   const gameOverRef = useRef(false);
 
   const [gameOver, setGameOver] = useState(false);
+  /** Score reported by the guest's gameOver() — the overlay used to hide it. */
+  const [finalScore, setFinalScore] = useState<number | null>(null);
   const [liked, setLiked] = useState(card.viewer.liked);
   const [likeCount, setLikeCount] = useState(card.counts.likes);
   const [saved, setSaved] = useState(card.viewer.saved);
@@ -211,8 +213,10 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
         setLoadIssue(null);
         syncPlayback();
       },
-      onGameOver: () => {
+      onGameOver: (payload: unknown) => {
+        const score = (payload as { score?: unknown } | null)?.score;
         gameOverRef.current = true;
+        setFinalScore(typeof score === 'number' ? score : null);
         setGameOver(true);
         hostRef.current?.pause();
       },
@@ -795,11 +799,17 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
           }}
         >
           <div style={{ fontSize: 22, fontWeight: 700 }}>Game over</div>
+          {finalScore !== null ? (
+            <div style={{ fontSize: 15, opacity: 0.85, fontVariantNumeric: 'tabular-nums' }}>
+              Score <span style={{ fontWeight: 800, fontSize: 20 }}>{finalScore.toLocaleString()}</span>
+            </div>
+          ) : null}
           <button
             type="button"
             onClick={() => {
               gameOverRef.current = false;
               setGameOver(false);
+              setFinalScore(null);
               useFeedStore.getState().setPlaying(true);
               setFrameKey((k) => k + 1);
             }}
