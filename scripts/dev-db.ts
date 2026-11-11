@@ -14,7 +14,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync, readFileSync } from 'node:fs';
-import { mkdir, readFile } from 'node:fs/promises';
+import { cp, mkdir, readdir, readFile, rename, rm, stat } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { vector } from '@electric-sql/pglite-pgvector';
 import { PGLiteSocketServer } from '@electric-sql/pglite-socket';
@@ -39,6 +39,58 @@ if (existsSync(envPath)) {
     if (key && process.env[key] === undefined) process.env[key] = value;
   }
 }
+/**
+ * A timestamped copy of the data directory, at most one per 12 hours.
+ *
+ * PGlite is a single WASM process: `Stop-Process -Force` (or a crash) leaves it
+ * mid-checkpoint and the next open aborts with an unrecoverable "Aborted()".
+ * A recent snapshot is the difference between losing the database and losing
+ * twelve hours of it.
+ */
+async function snapshot(dataDir: string): Promise<void> {
+  try {
+    const backups = path.join(path.dirname(dataDir), 'backups');
+    await mkdir(backups, { recursive: true });
+    const existing = (await readdir(backups)).filter((name) => name.startsWith('pglite-')).sort();
+    const newest = existing[existing.length - 1];
+    if (newest) {
+      const age = Date.now() - (await stat(path.join(backups, newest))).mtimeMs;
+      if (age < 12 * 60 * 60 * 1000) return;
+    }
+    if (!existsSync(path.join(dataDir, 'base'))) return;
+    const target = path.join(backups, `pglite-${new Date().toISOString().replace(/[:.]/g, '-')}`);
+    await cp(dataDir, target, { recursive: true });
+    console.log(`[db] snapshot written to ${path.relative(path.join(root), target)}`);
+    // Keep the three most recent snapshots.
+    const all = (await readdir(backups)).filter((name) => name.startsWith('pglite-')).sort();
+    for (const stale of all.slice(0, Math.max(0, all.length - 3))) {
+      await rm(path.join(backups, stale), { recursive: true, force: true });
+    }
+  } catch (err) {
+    console.warn('[db] snapshot skipped:', err instanceof Error ? err.message : err);
+  }
+}
+
+/**
+ * Open the database, and if the files are unreadable (unclean shutdown), move
+ * them aside and start clean instead of failing the whole dev stack. The app
+ * reseeds templates and republishes seed games on the way up, so `pnpm dev`
+ * keeps working with a warning rather than an abort and a dead server.
+ */
+async function openDatabase(dataDir: string) {
+  try {
+    return await PGlite.create({ dataDir, extensions: { vector } });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    const broken = `${dataDir}.broken-${Date.now()}`;
+    console.warn(`[db] the data directory could not be opened (${reason}).`);
+    console.warn(`[db] moving it to ${path.relative(root, broken)} and starting a fresh database.`);
+    await rename(dataDir, broken).catch(() => undefined);
+    await mkdir(dataDir, { recursive: true });
+    return PGlite.create({ dataDir, extensions: { vector } });
+  }
+}
+
 async function main(): Promise<void> {
   const dataDir = path.join(root, '.data', 'pglite');
   const artifactsDir = path.join(root, 'apps', 'play-worker', 'artifacts');
@@ -47,7 +99,8 @@ async function main(): Promise<void> {
   await mkdir(dataDir, { recursive: true });
   await mkdir(artifactsDir, { recursive: true });
 
-  const pg = await PGlite.create({ dataDir, extensions: { vector } });
+  await snapshot(dataDir);
+  const pg = await openDatabase(dataDir);
   const db = drizzle(pg, { schema });
 
   // Migrations are idempotent (drizzle tracks applied hashes).

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { eq } from 'drizzle-orm';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
-import { TEMPLATES, extractManifest } from '@playloop/gamekit';
+import { templates, extractManifest } from '@playloop/gamekit';
 import * as schema from './schema';
 
 export const SYSTEM_HANDLE = 'playloop';
@@ -42,7 +42,7 @@ export async function seed(db: Db, opts: SeedOptions = {}): Promise<SeedResult> 
   let templateGames = 0;
   if (opts.artifactsDir) {
     await mkdir(opts.artifactsDir, { recursive: true });
-    for (const t of TEMPLATES) {
+    for (const t of templates()) {
       // The game id derives from the template id, so re-seeding never duplicates a template.
       const gameId = templateGameId(t.id);
       const existing = await db.select().from(schema.games).where(eq(schema.games.id, gameId));

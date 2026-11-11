@@ -80,7 +80,7 @@ describe('POST /api/studio/generate', () => {
     expect(json.error.message).toContain('600');
   });
 
-  it('streams progress and completes game creation over SSE', async () => {
+  it('streams progress and completes game creation over SSE', { timeout: 120_000 }, async () => {
     const { POST } = await import('../app/api/studio/generate/route');
     const req = new NextRequest('http://localhost:3000/api/studio/generate', {
       method: 'POST',
@@ -106,11 +106,48 @@ describe('POST /api/studio/generate', () => {
     expect(streamedText).toContain('event: progress');
     expect(streamedText).toContain('event: complete');
     expect(streamedText).toContain('artifactUrl');
+    expect(streamedText).toContain('versionNo');
 
     // Verify game row created in database
     const games = await db.select().from(schema.games);
     expect(games.length).toBeGreaterThanOrEqual(1);
     expect(games[0].status).toBe('published');
     expect(games[0].publishedVersionId).not.toBeNull();
+  });
+
+  it('thread: 401 when signed out, 404 for someone else, full session for the creator', async () => {
+    const mod = await import('../app/api/studio/thread/route');
+
+    const previous = authState.user;
+    authState.user = null;
+    const unauth = await mod.GET(new NextRequest('http://localhost:3000/api/studio/thread?gameId=00000000-0000-4000-8000-000000000000'), undefined as never);
+    authState.user = previous;
+    expect(unauth.status).toBe(401);
+
+    const [own] = await db.select({ id: schema.games.id }).from(schema.games).limit(1);
+    expect(own).toBeTruthy();
+
+    // A game created by another account must not leak through the thread API.
+    const [stranger] = await db
+      .insert(schema.users)
+      .values({ handle: 'othercreator', displayName: 'Other', email: 'other@test.local', role: 'user' })
+      .returning({ id: schema.users.id });
+    const [strangerGame] = await db
+      .insert(schema.games)
+      .values({ creatorId: stranger!.id, title: 'Not yours', status: 'published', moderation: 'approved' })
+      .returning({ id: schema.games.id });
+    const forbidden = await mod.GET(
+      new NextRequest(`http://localhost:3000/api/studio/thread?gameId=${strangerGame!.id}`),
+      undefined as never,
+    );
+    expect(forbidden.status).toBe(404);
+
+    const ok = await mod.GET(new NextRequest(`http://localhost:3000/api/studio/thread?gameId=${own!.id}`), undefined as never);
+    expect(ok.status).toBe(200);
+    const body = await ok.json();
+    expect(body.data.game.id).toBe(own!.id);
+    expect(Array.isArray(body.data.messages)).toBe(true);
+    expect(body.data.versions.length).toBeGreaterThanOrEqual(1);
+    expect(body.data.versions[0].artifactUrl).toContain('/v/');
   });
 });

@@ -1,12 +1,37 @@
-import { TEMPLATES } from '@playloop/gamekit';
+import { templates } from '@playloop/gamekit';
 import { CODER_SYSTEM_PROMPT } from './prompts';
-import type { AiProvider, GameSpec } from './types';
+import { PERFORMANCE_RULES } from './playbook';
+import type { AiProvider, GameDesign, GameSpec } from './types';
+
+const NL = String.fromCharCode(10);
+
+const HARD_RULES = `${PERFORMANCE_RULES}
+
+CODE RULES
+- Guard every canvas radius: Math.max(0, Number.isFinite(r) ? r : 0). A NaN radius throws and freezes the whole game.
+- Clamp dt: const dt = Math.min((now - last) / 1000, 0.05).
+- Start your reply with <!doctype html>. No preamble, no markdown fences. End with </html>.`;
+
+function designBlock(design?: GameDesign): string {
+  if (!design) return '';
+  return [
+    'DESIGN BRIEF (build exactly this):',
+    `- Visual identity: ${design.visualIdentity}`,
+    `- Palette: ${design.palette.join(', ')}`,
+    `- HUD: ${design.hud.join('; ')}`,
+    `- Assets: ${design.assetPlan.join('; ')}`,
+    `- Juice: small=${design.juice.small}; medium=${design.juice.medium}; large=${design.juice.large}`,
+    `- Difficulty: ${design.difficulty}`,
+    `- Performance: ${design.performanceNotes.join('; ')}`,
+    `- Must never happen: ${design.failureModes.join('; ')}`,
+  ].join(NL);
+}
 
 /**
  * Pull the HTML document out of a model response.
  *
  * Models wrap the artifact inconsistently: a ```html fence, a bare ``` fence, a
- * `<!DOCTYPE>` with chatter before it, or a fence that never closes because the
+ * <!DOCTYPE> with chatter before it, or a fence that never closes because the
  * completion was cut short. Strategy, most specific first:
  *   1. a complete fenced block
  *   2. an unterminated fence -> everything after it
@@ -41,29 +66,101 @@ function normalizeDocument(html: string): string {
   return html;
 }
 
+export type GenerateOptions = {
+  baseCode?: string;
+  isRemix?: boolean;
+  /** Follow-up turn: apply a change to the existing artifact. */
+  isEdit?: boolean;
+  design?: GameDesign;
+  /** Earlier turns in this session, oldest first. */
+  history?: string[];
+  /** Concrete defects from QA/runtime to fix in this pass. */
+  feedback?: string[];
+  imageDataUrl?: string;
+};
+
+/**
+ * Write (or rewrite) the game.
+ *
+ * With `baseCode` this is an EDIT: the model is told to apply only the requested
+ * change and return the whole document. That is what makes follow-up requests
+ * ("make the jump higher", "add a shield pickup") stateful instead of a
+ * from-scratch regeneration that forgets everything.
+ */
 export async function generateCode(
   userPrompt: string,
   spec: GameSpec,
   provider: AiProvider,
-  options: { baseCode?: string; isRemix?: boolean } = {}
+  options: GenerateOptions = {},
 ): Promise<string> {
-  if (options.isRemix && options.baseCode) {
-    const remixPrompt = `Remix and modify this existing HTML5 game:\n\nPrompt: ${userPrompt}\n\nBase Code:\n${options.baseCode}`;
-    const response = await provider.generateText(remixPrompt, {
+  const historyBlock =
+    options.history && options.history.length > 0
+      ? [
+          'Earlier requests in this session (oldest first, all must stay satisfied):',
+          ...options.history.map((entry, index) => `${index + 1}. ${entry}`),
+        ].join(NL)
+      : '';
+  const feedbackBlock =
+    options.feedback && options.feedback.length > 0
+      ? [
+          'FIX THESE DEFECTS (found in the last build — every one must be addressed):',
+          ...options.feedback.map((entry, index) => `${index + 1}. ${entry}`),
+        ].join(NL)
+      : '';
+
+  if (options.baseCode) {
+    const intent = options.isRemix
+      ? 'Remix this game: keep the core idea and controls, but change the theme, feel and content as described.'
+      : 'This is a follow-up change to the game below. Apply ONLY the requested change. Keep every mechanic, screen and control that already works; do not rewrite the file from scratch. Return the COMPLETE updated document.';
+    const editPrompt = [
+      intent,
+      `Requested change: ${userPrompt}`,
+      historyBlock,
+      feedbackBlock,
+      designBlock(options.design),
+      HARD_RULES,
+      'Current game source:',
+      options.baseCode,
+    ]
+      .filter(Boolean)
+      .join(NL + NL);
+
+    const response = await provider.generateText(editPrompt, {
       systemPrompt: CODER_SYSTEM_PROMPT,
-      temperature: 0.7,
+      temperature: options.isRemix ? 0.7 : 0.5,
+      images: options.imageDataUrl ? [options.imageDataUrl] : undefined,
     });
     return normalizeDocument(extractHtmlArtifact(response));
   }
 
-  const template = TEMPLATES.find((t) => t.id === spec.templateId) || TEMPLATES[0];
-  const promptWithSpec = `Create a complete mobile-first HTML5 game based on this specification:\n\nConcept: ${spec.concept}\nArchetype: ${spec.templateId}\nMechanics: ${spec.coreMechanic}\nControls: ${spec.controls}\nPalette: ${spec.palette.join(', ')}\nLoss Condition: ${spec.loseCondition}\n\nRules:\n- Start your reply with <!doctype html> — no preamble, no explanation, no markdown fences.\n- One self-contained file under 30 KB (~700 lines). No external URLs, fonts, images or libraries.\n- Keep it DRY: no comments, no duplicated blocks, no placeholder code.\n- Always close every script tag and end with </html>.\n- Show a start screen and wait for the player's first input before the simulation begins; never start moving on load.
-
-Reference Archetype Code:\n${template?.code || ''}`;
+  const template = templates().find((t) => t.id === spec.templateId) || templates()[0];
+  const promptWithSpec = [
+    'Create a complete mobile-first HTML5 game based on this specification:',
+    '',
+    `Concept: ${spec.concept}`,
+    `Archetype: ${spec.templateId}`,
+    `Mechanics: ${spec.coreMechanic}`,
+    `Controls: ${spec.controls}`,
+    `Palette: ${spec.palette.join(', ')}`,
+    `Loss condition: ${spec.loseCondition}`,
+    historyBlock,
+    feedbackBlock,
+    designBlock(options.design),
+    HARD_RULES,
+    'One self-contained file under 30 KB (~700 lines). No external URLs, fonts, images or libraries.',
+    'Show a start screen and wait for the first input before the simulation begins; never start moving on load.',
+    options.imageDataUrl ? 'A concept image is attached: match its palette, mood and subject.' : '',
+    // The archetype source is a crutch: with an art-direction brief it mostly
+    // tempts the model to clone the toy template, and it costs ~4 KB of prompt.
+    options.design ? '' : `Reference archetype code (structure only, do not copy its simplicity):${NL}${template?.code || ''}`,
+  ]
+    .filter(Boolean)
+    .join(NL);
 
   const response = await provider.generateText(promptWithSpec, {
     systemPrompt: CODER_SYSTEM_PROMPT,
     temperature: 0.7,
+    images: options.imageDataUrl ? [options.imageDataUrl] : undefined,
   });
 
   return normalizeDocument(extractHtmlArtifact(response));

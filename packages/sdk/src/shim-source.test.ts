@@ -74,6 +74,50 @@ function makeFakeDocument() {
   };
 }
 
+describe('canvas guard', () => {
+  afterEach(() => {
+    delete (globalThis as Record<string, unknown>).window;
+    delete (globalThis as Record<string, unknown>).document;
+  });
+
+  it('clamps non-finite gradient arguments instead of throwing', () => {
+    const { fakeWin } = makeFakeWindow();
+    const calls: number[][] = [];
+    // Mimic the real 2D context: throw on a non-finite argument.
+    function FakeCtx() {}
+    (FakeCtx as unknown as { prototype: Record<string, unknown> }).prototype = {
+      createRadialGradient: function (x0: number, y0: number, r0: number, x1: number, y1: number, r1: number) {
+        const args = [x0, y0, r0, x1, y1, r1];
+        if (args.some((n) => !Number.isFinite(n))) {
+          throw new TypeError('The provided double value is non-finite.');
+        }
+        calls.push(args);
+        return { addColorStop: () => {} };
+      },
+      arc: function (x: number, y: number, r: number) {
+        if (![x, y, r].every(Number.isFinite) || r < 0) throw new Error('bad arc');
+        calls.push([x, y, r]);
+      },
+    };
+    fakeWin['CanvasRenderingContext2D'] = FakeCtx;
+    (globalThis as Record<string, unknown>).window = fakeWin;
+    (globalThis as Record<string, unknown>).document = makeFakeDocument();
+
+    new Function(SHIM_SOURCE)();
+
+    const proto = (FakeCtx as unknown as { prototype: Record<string, (...args: unknown[]) => unknown> }).prototype;
+    expect(() => proto.createRadialGradient!(NaN, 0, 4, 0, 0, Infinity)).not.toThrow();
+    expect(() => proto.arc!(10, 10, Number.NEGATIVE_INFINITY)).not.toThrow();
+
+    // Every argument the real context saw was finite and radii non-negative.
+    expect(calls.length).toBe(2);
+    for (const call of calls) {
+      expect(call.every(Number.isFinite)).toBe(true);
+      expect(call.every((n) => n >= 0 || call.length === 6 ? true : n >= 0)).toBe(true);
+    }
+  });
+});
+
 describe('SHIM_SOURCE execution smoke', () => {
   const originalDateNow = Date.now;
 

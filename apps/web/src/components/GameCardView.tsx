@@ -211,6 +211,16 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
     const host = new GameHost(iframe, {
       onReady: () => {
         setLoadIssue(null);
+        // Tell the game how much of the bottom of its frame is covered by the
+        // feed chrome (nav + descriptor). Without this a HUD drawn near the
+        // bottom edge renders underneath the navigation.
+        host.configure({
+          safeArea: {
+            top: 12,
+            bottom: chromeBottom + 12,
+          },
+          muted: useFeedStore.getState().muted,
+        });
         syncPlayback();
       },
       onGameOver: (payload: unknown) => {
@@ -273,7 +283,7 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
   // Mute follows the global toggle.
   useEffect(() => {
     if (!live) return;
-    hostRef.current?.mute(muted);
+    hostRef.current?.configure({ muted });
   }, [live, muted]);
 
   useEffect(() => {

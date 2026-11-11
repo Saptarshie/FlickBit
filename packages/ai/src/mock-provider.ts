@@ -1,4 +1,4 @@
-import { TEMPLATES } from '@playloop/gamekit';
+import { templates } from '@playloop/gamekit';
 import type { AiProvider } from './types';
 
 export class MockAiProvider implements AiProvider {
@@ -37,6 +37,25 @@ export class MockAiProvider implements AiProvider {
       });
     }
 
+    // 1b. Art director request
+    if (sys.includes('art director')) {
+      return JSON.stringify({
+        visualIdentity: 'Flat neon geometry on a deep field; one accent colour marks the player.',
+        palette: ['#0b1020', '#38bdf8', '#fb7185', '#34d399', '#fde047'],
+        hud: ['score top-centre', 'best under it'],
+        assetPlan: ['player: glowing triangle', 'hazard: rotating square', 'background: starfield'],
+        juice: { small: 'tick + 5 particles', medium: 'hit + 10 particles + 60ms stop', large: 'boom + 30 particles + shake' },
+        difficulty: 'speed +8% per 10 points, capped at 2.4x',
+        performanceNotes: ['pool particles', 'cache starfield'],
+        failureModes: ['non-finite radius', 'input blocked during feedback'],
+      });
+    }
+
+    // 1c. QA review request
+    if (sys.includes('senior QA engineer')) {
+      return JSON.stringify({ verdict: 'ship', summary: 'Playable and readable.', issues: [] });
+    }
+
     // 2. Metadata request
     if (sys.includes('Generate concise metadata')) {
       return JSON.stringify({
@@ -51,7 +70,7 @@ export class MockAiProvider implements AiProvider {
     // 3. Repair request
     if (sys.includes('debugging assistant') || prompt.includes('violations')) {
       // If code was broken, return a clean template
-      const template = TEMPLATES.find((t) => t.id === 'tap-runner') ?? TEMPLATES[0];
+      const template = templates().find((t) => t.id === 'tap-runner') ?? templates()[0];
       return template?.code ?? '<html><body><script>window.playloop?.ready();</script></body></html>';
     }
 
@@ -61,8 +80,8 @@ export class MockAiProvider implements AiProvider {
     }
 
     // Pick template matching prompt or default
-    let chosenTemplate = TEMPLATES[0];
-    for (const t of TEMPLATES) {
+    let chosenTemplate = templates()[0];
+    for (const t of templates()) {
       if (prompt.toLowerCase().includes(t.id)) {
         chosenTemplate = t;
         break;
@@ -73,6 +92,6 @@ export class MockAiProvider implements AiProvider {
       return chosenTemplate.code;
     }
 
-    return TEMPLATES[0]?.code ?? '';
+    return templates()[0]?.code ?? '';
   }
 }

@@ -50,6 +50,18 @@ export type EventRow = {
   props?: Record<string, unknown> | null;
 };
 
+/**
+ * A `Date` object handed straight to the driver came back as
+ * ERR_INVALID_ARG_TYPE ("The \"string\" argument must be of type string") on
+ * every batched insert, so events silently failed and the feed had no signal.
+ * Send an ISO string instead: postgres casts it with ::timestamptz.
+ */
+function tsParam(ts: Date | string | null | undefined): string | null {
+  if (!ts) return null;
+  if (ts instanceof Date) return Number.isNaN(ts.getTime()) ? null : ts.toISOString();
+  return String(ts);
+}
+
 /** Batch insert. Uses raw SQL so it works against the partitioned table. */
 export async function insertEvents(
   exec: { execute: (q: ReturnType<typeof sql>) => Promise<unknown> },
@@ -60,7 +72,7 @@ export async function insertEvents(
     await exec.execute(sql`
       insert into events (ts, user_id, anon_id, session_id, type, game_id, version_id, position, source, propensity, model_version, props)
       values (
-        coalesce(${r.ts ?? null}::timestamptz, now()),
+        coalesce(${tsParam(r.ts)}::timestamptz, now()),
         ${r.userId ?? null}, ${r.anonId ?? null}, ${r.sessionId ?? null}, ${r.type},
         ${r.gameId ?? null}, ${r.versionId ?? null}, ${r.position ?? null},
         ${r.source ?? null}, ${r.propensity ?? null}, ${r.modelVersion ?? null},

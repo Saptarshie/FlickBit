@@ -13,6 +13,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import postgres from 'postgres';
 import { validateGame } from '../packages/gamekit/src/validate';
+import { runSmokeTest } from '../packages/gamekit/src/smoke';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
@@ -30,6 +31,10 @@ if (existsSync(envPath)) {
 }
 
 const fix = process.argv.includes('--fix');
+// --runtime plays every artifact in a headless browser (Playwright): it catches
+// the class of bug static validation cannot see, e.g. a game that throws
+// "createRadialGradient: non-finite" the first time you hold the screen.
+const runtime = process.argv.includes('--runtime');
 const artifactsDir = path.resolve(root, process.env.ARTIFACTS_DIR ?? 'apps/play-worker/artifacts');
 const sql = postgres(process.env.DATABASE_URL ?? 'postgres://postgres:postgres@127.0.0.1:5432/postgres', {
   max: 1,
@@ -65,6 +70,26 @@ async function main(): Promise<void> {
     if (report.errors.length > 0) {
       bad.push({ row, reason: report.errors.slice(0, 2).join('; ') });
       continue;
+    }
+    if (runtime) {
+      try {
+        // One retry: a Chromium hiccup must not unlist a good game.
+        let smoke = await runSmokeTest(bytes.toString('utf8'), { timeoutMs: 30_000 });
+        if (!smoke.pass) smoke = await runSmokeTest(bytes.toString('utf8'), { timeoutMs: 30_000 });
+        if (!smoke.pass) {
+          const reason = [
+            smoke.uncaught[0] ?? smoke.consoleErrors[0] ?? (smoke.blankScreen ? 'blank screen' : null),
+            smoke.fps < 30 ? `fps ${smoke.fps}` : null,
+          ]
+            .filter(Boolean)
+            .join('; ');
+          bad.push({ row, reason: `runtime: ${reason || 'smoke test failed'}` });
+          continue;
+        }
+      } catch (err) {
+        bad.push({ row, reason: `runtime: ${err instanceof Error ? err.message : String(err)}` });
+        continue;
+      }
     }
     ok += 1;
   }

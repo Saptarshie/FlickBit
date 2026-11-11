@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { injectShim } from './inject';
 import { runSmokeTest } from './smoke';
-import { TEMPLATES } from './index';
+import { templates } from './index';
 
 const BLANK_FIXTURE = `<!doctype html>
 <html lang="en">
@@ -99,7 +99,7 @@ describe('runSmokeTest fixtures', () => {
 });
 
 describe('templates smoke gate', () => {
-  it.each(TEMPLATES.map((t) => [t.id, t] as const))(
+  it.each(templates().map((t) => [t.id, t] as const))(
     '%s reports pass true, interactive true, fps >= 30',
     async (_id, template) => {
       const report = await runSmokeTest(template.code);

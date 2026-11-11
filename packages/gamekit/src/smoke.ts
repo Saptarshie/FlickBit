@@ -26,7 +26,16 @@ export interface SmokeOptions {
   timeoutMs?: number;
 }
 
-type HarnessEvents = NonNullable<Window['__pl']>['events'];
+/** The page-side harness installs `window.__pl`; typed locally so this module
+ * does not need a global augmentation to be consumed by other packages. */
+type HarnessEvents = NonNullable<{ __pl?: { events?: HarnessEventList } }['__pl']>['events'];
+
+type HarnessEventList = {
+  errors: { code: string; message: string; stack?: string }[];
+  readyAt: number | null;
+  gameOver: unknown[];
+  score: unknown[];
+};
 
 /** Mobile portrait box from the artifact spec: 390x844. */
 const VIEWPORT = { width: 390, height: 844 } as const;
@@ -280,7 +289,9 @@ export async function runSmokeTest(html: string, opts: SmokeOptions = {}): Promi
   await new Promise<void>((resolve) => {
     server.listen(0, '127.0.0.1', () => resolve());
   });
-  const origin = 'http://127.0.0.1:' + String(server.address()?.port ?? 0);
+  const address = server.address();
+  const port = typeof address === 'object' && address ? address.port : 0;
+  const origin = 'http://127.0.0.1:' + String(port);
 
   const consoleErrors: string[] = [];
   const uncaught: string[] = [];
@@ -317,14 +328,39 @@ export async function runSmokeTest(html: string, opts: SmokeOptions = {}): Promi
       const fpsPromise = measureFps(page, FPS_WINDOW_MS).catch(() => 0);
 
       await page.mouse.click(VIEWPORT.width / 2, VIEWPORT.height / 2);
+
+      // Hold-and-release: charge/jump games only reach their interesting state
+      // while the pointer is DOWN. Random taps never held long enough, so a NaN
+      // in a charge ratio (Magma Hop's createRadialGradient crash) shipped.
+      await page.mouse.move(VIEWPORT.width / 2, VIEWPORT.height * 0.75);
+      await page.mouse.down();
+      await sleep(1400);
+      await page.mouse.up();
+      await sleep(250);
+
+      // Resize mid-session: a game that recomputes geometry on resize used to
+      // throw instead of degrading.
+      await page.setViewportSize({ width: 320, height: 568 });
+      await sleep(400);
+      await page.setViewportSize({ ...VIEWPORT });
+      await sleep(200);
+
       const inputDeadline = Date.now() + INPUT_MS;
+      let holdCycles = 0;
       while (Date.now() < inputDeadline) {
         const roll = Math.random();
         const x = randInt(20, VIEWPORT.width - 20);
         const y = randInt(20, VIEWPORT.height - 20);
-        if (roll < 0.5) {
+        if (roll < 0.35) {
           await page.mouse.click(x, y);
-        } else if (roll < 0.75) {
+        } else if (roll < 0.55 && holdCycles < 4) {
+          // Long press, release: exercise charge-style mechanics.
+          holdCycles += 1;
+          await page.mouse.move(x, y);
+          await page.mouse.down();
+          await sleep(500 + Math.random() * 900);
+          await page.mouse.up();
+        } else if (roll < 0.8) {
           await page.mouse.move(x, y);
           await page.mouse.down();
           await page.mouse.move(randInt(20, VIEWPORT.width - 20), randInt(20, VIEWPORT.height - 20), {

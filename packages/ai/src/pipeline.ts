@@ -1,62 +1,108 @@
 import { createHash } from 'node:crypto';
 import { validateGame, type ValidationResult } from '@playloop/gamekit';
-import { generateCode } from './generator';
+import { designGame } from './design';
+import { generateCode, type GenerateOptions } from './generator';
 import { extractOrGenerateMetadata } from './metadata';
 import { planGame } from './planner';
 import { repairCode } from './repair';
+import { reviewGame } from './review';
 import type {
   AiProvider,
   GeneratedGame,
   GenerationOptions,
   GenerationProgress,
+  ReviewReport,
+  SmokeSummary,
 } from './types';
 
+/**
+ * Multi-agent generation pipeline.
+ *
+ *  1. planner      -> GameSpec   (what to build)
+ *  2. art director -> GameDesign (how it should look and feel; writes no code)
+ *  3. coder        -> self-contained HTML built to the brief
+ *  4. static gate  -> sandbox/security/manifest validation, repaired until clean
+ *  5. runtime gate -> the caller's smoke runner plays it; defects feed a repair
+ *  6. QA critic    -> reviews code + runtime report; critical issues feed a repair
+ *  7. metadata     -> title/tags/controls
+ *
+ * Each stage is a separate completion with its own system prompt: that is the
+ * "one specialist per role" model the studio exposes. Every stage degrades
+ * gracefully — a missing brief or a failed review never blocks the artifact.
+ */
 export async function runGenerationPipeline(
   options: GenerationOptions,
-  provider: AiProvider
+  provider: AiProvider,
 ): Promise<GeneratedGame> {
-  const { prompt, templateId, baseCode, isRemix, onProgress, maxRepairs = 3 } = options;
+  const {
+    prompt,
+    templateId,
+    baseCode,
+    isRemix,
+    isEdit,
+    history,
+    imageDataUrl,
+    onProgress,
+    maxRepairs = 3,
+  } = options;
+
+  const startedAt = Date.now();
+  const timings: Record<string, number> = {};
+  let stageStart = startedAt;
 
   const reportProgress = (progress: GenerationProgress) => {
+    const now = Date.now();
+    const previous = (progress as GenerationProgress & { stage?: string }).stage;
+    if (previous) {
+      // Attribute the time since the last transition to the stage we just left.
+      timings[lastStage] = (timings[lastStage] ?? 0) + (now - stageStart);
+      stageStart = now;
+      lastStage = previous;
+    }
     onProgress?.(progress);
   };
+  let lastStage = 'start';
 
-  // Stage 1: Specification / Plan
-  reportProgress({
-    stage: 'spec',
-    message: 'Formulating game concept and mechanics...',
-    progressPercent: 15,
-  });
+  // Stage 1: plan. A follow-up reuses the existing spec (see GenerationOptions.spec).
+  let spec = options.spec;
+  if (!spec) {
+    reportProgress({ stage: 'spec', message: 'Planning mechanics and win/lose conditions...', progressPercent: 8 });
+    spec = await planGame(prompt, provider, templateId);
+  }
 
-  const spec = await planGame(prompt, provider, templateId);
+  // Stage 2: art direction. Skipped for follow-up edits: the design exists.
+  let design: GeneratedGame['design'];
+  if (!baseCode && !options.skipDesign) {
+    reportProgress({
+      stage: 'design',
+      message: 'Art director is writing the visual and juice brief...',
+      progressPercent: 18,
+    });
+    design = await designGame(prompt, spec, provider, imageDataUrl);
+  }
 
-  // Stage 2: Code Generation
+  // Stage 3: code
   reportProgress({
     stage: 'generating',
-    message: `Synthesizing game artifact (${spec.templateId} archetype)...`,
-    progressPercent: 40,
+    message: baseCode ? 'Applying your change to the current build...' : `Synthesizing game (${spec.templateId})...`,
+    progressPercent: 30,
   });
 
-  let code = await generateCode(prompt, spec, provider, { baseCode, isRemix });
+  const codeOptions: GenerateOptions = { baseCode, isRemix, isEdit, design, history, imageDataUrl };
+  let code = await generateCode(prompt, spec, provider, codeOptions);
 
-  // Stage 3: Validation & Repair Loop
-  reportProgress({
-    stage: 'validating',
-    message: 'Verifying game sandbox security and compliance...',
-    progressPercent: 70,
-  });
-
+  // Stage 4: static validation + repair
+  reportProgress({ stage: 'validating', message: 'Checking sandbox safety and completeness...', progressPercent: 55 });
   let validateReport: ValidationResult = validateGame(code);
   let repairsCount = 0;
 
   while (validateReport.errors.length > 0 && repairsCount < maxRepairs) {
-    repairsCount++;
+    repairsCount += 1;
     reportProgress({
       stage: 'repairing',
-      message: `Repairing validation issues (attempt ${repairsCount}/${maxRepairs})...`,
-      progressPercent: 70 + repairsCount * 5,
+      message: `Fixing structural problems (attempt ${repairsCount}/${maxRepairs})...`,
+      progressPercent: 55 + repairsCount * 4,
     });
-
     code = await repairCode(code, validateReport, provider);
     validateReport = validateGame(code);
   }
@@ -64,33 +110,84 @@ export async function runGenerationPipeline(
   if (validateReport.errors.length > 0) {
     const errors = validateReport.errors.join('; ');
     const err = new Error(`Game artifact validation failed after ${repairsCount} repairs: ${errors}`);
-    reportProgress({
-      stage: 'failed',
-      message: err.message,
-      progressPercent: 100,
-      error: err.message,
-    });
+    reportProgress({ stage: 'failed', message: err.message, progressPercent: 100, error: err.message });
     throw err;
   }
 
-  // Stage 4: Metadata
-  reportProgress({
-    stage: 'metadata',
-    message: 'Extracting title, tags, and controls guide...',
-    progressPercent: 90,
-  });
+  // Stage 5: runtime gate — play it in a real browser.
+  let smoke: SmokeSummary | null = null;
+  if (options.smoke) {
+    const smokeRunner = options.smoke;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      reportProgress({
+        stage: 'testing',
+        message: attempt === 0 ? 'Playing the build in a headless browser...' : 'Re-testing the fixed build...',
+        progressPercent: 70 + attempt * 5,
+      });
+      smoke = await smokeRunner(code);
+      if (smoke.pass) break;
 
+      const defects = [
+        ...smoke.uncaught.slice(0, 3),
+        ...smoke.consoleErrors.slice(0, 3),
+        smoke.blankScreen ? 'the first frame renders blank (nothing visible on screen)' : '',
+        smoke.fps < 30 ? `frame rate is only ${smoke.fps} fps` : '',
+        !smoke.interactive ? 'the game does not react to taps (frames never change)' : '',
+      ].filter(Boolean);
+
+      repairsCount += 1;
+      reportProgress({
+        stage: 'repairing',
+        message: `Fixing runtime defects: ${defects[0] ?? 'unknown'}`.slice(0, 120),
+        progressPercent: 76,
+      });
+      code = await repairCode(code, { ok: false, errors: defects, warnings: [] } as unknown as ValidationResult, provider, defects);
+      validateReport = validateGame(code);
+      if (validateReport.errors.length > 0) break;
+    }
+  }
+
+  // Stage 6: QA critique — one focused pass on what a player would feel.
+  let review: ReviewReport | null = null;
+  if (!options.skipReview) {
+    reportProgress({
+      stage: 'reviewing',
+      message: 'QA is reviewing the build against the quality bar...',
+      progressPercent: 85,
+    });
+    review = await reviewGame({ code, spec, design, smoke, provider });
+
+    const critical = review.issues.filter((issue) => issue.severity === 'critical');
+    if (critical.length > 0) {
+      repairsCount += 1;
+      reportProgress({
+        stage: 'repairing',
+        message: `QA found ${critical.length} blocking issue(s) — fixing: ${critical[0]?.issue ?? ''}`.slice(0, 120),
+        progressPercent: 88,
+      });
+      const feedback = review.issues
+        .slice(0, 6)
+        .map((issue) => `[${issue.severity}] ${issue.issue} -> ${issue.fix}`);
+      code = await repairCode(code, { ok: false, errors: feedback, warnings: [] } as unknown as ValidationResult, provider, feedback);
+      validateReport = validateGame(code);
+      if (validateReport.errors.length === 0 && options.smoke) {
+        try {
+          smoke = await options.smoke(code);
+        } catch {
+          /* keep the last known runtime report */
+        }
+      }
+    }
+  }
+
+  // Stage 7: metadata
+  reportProgress({ stage: 'metadata', message: 'Naming the game and extracting tags...', progressPercent: 92 });
   const metadata = await extractOrGenerateMetadata(code, spec, provider);
 
   const bytes = Buffer.from(code, 'utf8');
   const sha256 = createHash('sha256').update(bytes).digest('hex');
 
-  // Stage 5: Complete
-  reportProgress({
-    stage: 'done',
-    message: 'Game generated and ready to play!',
-    progressPercent: 100,
-  });
+  reportProgress({ stage: 'done', message: 'Game generated and ready to play!', progressPercent: 100 });
 
   return {
     code,
@@ -100,5 +197,9 @@ export async function runGenerationPipeline(
     metadata,
     validateReport,
     repairsCount,
+    design,
+    smoke,
+    review,
+    timingsMs: timings,
   };
 }

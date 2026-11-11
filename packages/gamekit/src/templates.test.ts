@@ -1,22 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { TEMPLATES, TEMPLATE_IDS, getTemplate } from './index';
+import { templates, TEMPLATE_IDS, getTemplate } from './index';
 import { extractManifest, validateGame } from './validate';
 
 describe('TEMPLATES', () => {
   it('exports exactly the 8 template games, one file each', () => {
-    expect(TEMPLATES).toHaveLength(8);
+    expect(templates()).toHaveLength(8);
     expect([...TEMPLATE_IDS].sort()).toEqual(
       ['brick-breaker', 'flappy', 'match-3', 'memory', 'physics-toss', 'shooter', 'snake', 'tap-runner'],
     );
-    const ids = TEMPLATES.map((t) => t.id);
+    const ids = templates().map((t) => t.id);
     expect(new Set(ids).size).toBe(8);
-    for (const t of TEMPLATES) {
+    for (const t of templates()) {
       expect(t.file).toBe(`templates/${t.id}.html`);
       expect(t.code.length).toBeGreaterThan(500);
     }
   });
 
-  it.each(TEMPLATES.map((t) => [t.id, t] as const))(
+  it.each(templates().map((t) => [t.id, t] as const))(
     '%s passes validateGame with zero errors and zero warnings',
     (_id, template) => {
       const result = validateGame(template.code);
@@ -26,7 +26,7 @@ describe('TEMPLATES', () => {
   );
 
   it('every template carries a valid manifest with sdkVersion 1', () => {
-    for (const t of TEMPLATES) {
+    for (const t of templates()) {
       const manifest = extractManifest(t.code);
       expect(manifest, `${t.id} manifest`).not.toBeNull();
       expect(manifest?.sdkVersion).toBe(1);
@@ -37,7 +37,7 @@ describe('TEMPLATES', () => {
   });
 
   it('every template is canvas-based, dpr-aware, sized from innerWidth/innerHeight, dt-driven', () => {
-    for (const t of TEMPLATES) {
+    for (const t of templates()) {
       const code = t.code;
       expect(code, t.id).toContain('getContext');
       expect(code, t.id).toMatch(/devicePixelRatio/);
@@ -50,7 +50,7 @@ describe('TEMPLATES', () => {
   });
 
   it('every template calls PlayLoop.ready + PlayLoop.gameOver and reads PlayLoop.safeArea', () => {
-    for (const t of TEMPLATES) {
+    for (const t of templates()) {
       expect(t.code, t.id).toContain('PlayLoop.ready(');
       expect(t.code, t.id).toContain('PlayLoop.gameOver(');
       expect(t.code, t.id).toContain('PlayLoop.safeArea');
@@ -58,14 +58,14 @@ describe('TEMPLATES', () => {
   });
 
   it('every template has touch (pointer) input and keyboard equivalents', () => {
-    for (const t of TEMPLATES) {
+    for (const t of templates()) {
       expect(t.code, t.id).toContain('pointerdown');
       expect(t.code, t.id).toMatch(/keydown/);
     }
   });
 
   it('keeps each template game script to about 60 lines of JS', () => {
-    for (const t of TEMPLATES) {
+    for (const t of templates()) {
       const re = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
       for (const m of t.code.matchAll(re)) {
         const attrs = m[1] ?? '';

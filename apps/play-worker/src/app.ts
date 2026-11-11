@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import express from 'express';
 import { extractManifest } from '@playloop/gamekit';
+import { runSmokeTest } from '@playloop/gamekit/smoke';
 import { SHIM_SOURCE } from '@playloop/sdk';
 
 /** The exact CSP required on the play origin (docs/03-game-artifact-spec.md). */
@@ -57,6 +58,32 @@ export function createApp(opts: { artifactsDir: string }): express.Express {
 
   app.get('/healthz', (_req, res) => {
     res.status(200).json({ ok: true });
+  });
+
+  /**
+   * Runtime gate, hosted here because this process is plain Node: the Next app
+   * cannot bundle Playwright (chromium-bidi fails to resolve) and should not.
+   * Localhost-only; the web app calls it during generation.
+   */
+  app.post('/internal/smoke', express.json({ limit: '1mb' }), async (req, res) => {
+    const html = typeof req.body?.html === 'string' ? req.body.html : '';
+    if (!html) {
+      res.status(400).json({ error: { code: 'missing_html', message: 'Send { html }' } });
+      return;
+    }
+    try {
+      const report = await runSmokeTest(html, { timeoutMs: 30_000 });
+      res.status(200).json({
+        pass: report.pass,
+        fps: report.fps,
+        blankScreen: report.blankScreen,
+        interactive: report.interactive,
+        consoleErrors: report.consoleErrors.slice(0, 8),
+        uncaught: report.uncaught.slice(0, 5),
+      });
+    } catch (err) {
+      res.status(500).json({ error: { code: 'smoke_failed', message: err instanceof Error ? err.message : String(err) } });
+    }
   });
 
   app.get('/v/:file', async (req, res) => {

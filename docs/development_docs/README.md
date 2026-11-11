@@ -14,6 +14,7 @@ product/design rationale lives in `docs/00-…`–`docs/14-…`; this folder is 
 | [debugging.md](./debugging.md) | Something is broken and you need a repeatable way to see why |
 | [testing.md](./testing.md) | You are adding tests or the suite is red |
 | [extending.md](./extending.md) | You are adding a screen, an API route, an archetype, or an SDK feature |
+| [verification.md](./verification.md) | You are about to hand this to someone: tests, artifact audits, studio E2E, load, DB recovery |
 
 ## Non-negotiables
 
@@ -39,10 +40,12 @@ bugs we actually shipped, not theory.
 
 ```bash
 pnpm install
-pnpm dev                 # PGlite (:5432) + web (:3000) + play-worker (:3001)
+pnpm dev                 # PGlite (:5432) + web (:3000, Turbopack) + play-worker (:3001)
 pnpm run typecheck       # tsc across all packages
-pnpm --filter @playloop/<pkg> run test
-pnpm --filter @playloop/web run build
+pnpm test                # every package's suite
+pnpm run build           # root build — stop `pnpm dev` first (shared .next)
+node scripts/e2e-studio.mjs      # create → follow-up → thread (real LLM)
+node scripts/audit-runtime.mjs   # play every artifact in Chromium
 ```
 
 | Service | Port | Code |

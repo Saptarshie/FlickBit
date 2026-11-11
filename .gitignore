@@ -16,3 +16,5 @@ playwright-report
 .data/
 apps/play-worker/artifacts/*.html
 !apps/play-worker/artifacts/.gitkeep
+apps/play-worker/uploads/
+.jspace/

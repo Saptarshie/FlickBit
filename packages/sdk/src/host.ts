@@ -109,6 +109,8 @@ export class GameHost {
   private idSeq = 0;
   private invalidCount = 0;
   private playing = true;
+  /** Sticky `init` payload, replayed so late settings changes take effect. */
+  private initState: { safeArea?: { top: number; bottom: number }; muted?: boolean; seed?: number } = {};
   private autoPaused = false;
   private destroyed = false;
 
@@ -175,6 +177,18 @@ export class GameHost {
   /** Mute or unmute the guest's audio. */
   mute(muted: boolean): void {
     this.post('mute', { muted });
+  }
+
+  /**
+   * Send the `init` envelope the shim reads: safe-area insets and mute state.
+   *
+   * Without it a game sees `PlayLoop.safeArea = {top:0,bottom:0}` and draws its
+   * HUD underneath the feed's bottom navigation. Send it on every `ready`
+   * (the host keeps a mutable `init` that is replayed).
+   */
+  configure(settings: { safeArea?: { top: number; bottom: number }; muted?: boolean; seed?: number }): void {
+    this.initState = { ...this.initState, ...settings };
+    this.post('init', this.initState);
   }
 
   /**
@@ -328,6 +342,9 @@ export class GameHost {
     switch (env.type) {
       case 'ready': {
         this.clearHandshake();
+        // Replay the sticky init before anything else: safe-area and mute state
+        // must be known before the guest draws its first HUD frame.
+        if (Object.keys(this.initState).length > 0) this.post('init', this.initState);
         this.opts.onReady?.(env.payload);
         this.emit('ready', env.payload);
         break;

@@ -31,7 +31,14 @@ export type OpenAiCompatOptions = {
   fetchImpl?: typeof fetch;
 };
 
-type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
+type ContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } };
+
+type ChatMessage = {
+  role: 'system' | 'user' | 'assistant';
+  content: string | ContentPart[];
+};
 
 type ChatResponse = {
   choices?: { message?: { content?: string | null; reasoning_content?: string | null }; finish_reason?: string }[];
@@ -59,11 +66,24 @@ export class OpenAiCompatProvider implements AiProvider {
 
   async generateText(
     prompt: string,
-    options: { systemPrompt?: string; temperature?: number } = {}
+    options: { systemPrompt?: string; temperature?: number; images?: string[] } = {}
   ): Promise<string> {
     const messages: ChatMessage[] = [];
     if (options.systemPrompt) messages.push({ role: 'system', content: options.systemPrompt });
-    messages.push({ role: 'user', content: prompt });
+    // Vision-capable endpoints accept the OpenAI content-parts shape; text-only
+    // gateways reject it, so images are only sent when the caller enabled them.
+    const images = options.images?.filter(Boolean) ?? [];
+    if (images.length > 0) {
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'text', text: prompt },
+          ...images.map((url) => ({ type: 'image_url' as const, image_url: { url } })),
+        ],
+      });
+    } else {
+      messages.push({ role: 'user', content: prompt });
+    }
 
     let result = await this.complete(messages, options.temperature, this.maxTokens);
     if (result.content.trim().length === 0) {

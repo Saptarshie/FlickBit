@@ -267,6 +267,74 @@ export const SHIM_SOURCE = String.raw`
     }
   }
 
+  /* ---- canvas guard: one NaN must not kill the game ---- */
+  // Generated games routinely compute a radius from a value that can go
+  // non-finite (a charge ratio, a delta time, a normalised distance). The Canvas
+  // 2D API throws on the first bad argument: createRadialGradient dies with
+  // "The provided double value is non-finite" and the whole game freezes on that
+  // frame, which is exactly what a player reported. Clamp at the API boundary so
+  // a bad frame degrades instead of ending the session.
+  function finiteNumber(value, fallback) {
+    var n = Number(value);
+    return isFinite(n) ? n : fallback;
+  }
+  function clampRadius(value, fallback) {
+    var n = finiteNumber(value, fallback);
+    return n < 0 ? 0 : n;
+  }
+  try {
+    var CtxProto = w.CanvasRenderingContext2D && w.CanvasRenderingContext2D.prototype;
+    if (CtxProto) {
+      var guardMethods = {
+        createLinearGradient: function (a) {
+          return [finiteNumber(a[0], 0), finiteNumber(a[1], 0), finiteNumber(a[2], 0), finiteNumber(a[3], 0)];
+        },
+        createRadialGradient: function (a) {
+          return [
+            finiteNumber(a[0], 0), finiteNumber(a[1], 0), clampRadius(a[2], 0),
+            finiteNumber(a[3], 0), finiteNumber(a[4], 0), clampRadius(a[5], 1),
+          ];
+        },
+        createPattern: function () { return null; },
+        arc: function (a) {
+          return [finiteNumber(a[0], 0), finiteNumber(a[1], 0), clampRadius(a[2], 0), finiteNumber(a[3], 0), finiteNumber(a[4], 6.283)];
+        },
+        ellipse: function (a) {
+          return [
+            finiteNumber(a[0], 0), finiteNumber(a[1], 0), clampRadius(a[2], 0), clampRadius(a[3], 0),
+            finiteNumber(a[4], 0), finiteNumber(a[5], 0), finiteNumber(a[6], 6.283),
+          ];
+        },
+        rect: function (a) {
+          return [finiteNumber(a[0], 0), finiteNumber(a[1], 0), finiteNumber(a[2], 0), finiteNumber(a[3], 0)];
+        },
+        roundRect: function (a) {
+          return [finiteNumber(a[0], 0), finiteNumber(a[1], 0), finiteNumber(a[2], 0), finiteNumber(a[3], 0), a[4]];
+        },
+        translate: function (a) { return [finiteNumber(a[0], 0), finiteNumber(a[1], 0)]; },
+        scale: function (a) { return [finiteNumber(a[0], 1), finiteNumber(a[1], 1)]; },
+        rotate: function (a) { return [finiteNumber(a[0], 0)]; },
+      };
+      Object.keys(guardMethods).forEach(function (name) {
+        var original = CtxProto[name];
+        if (typeof original !== 'function') { return; }
+        var normalise = guardMethods[name];
+        CtxProto[name] = function guarded() {
+          var args = Array.prototype.slice.call(arguments);
+          var safe = normalise(args);
+          for (var i = 0; i < safe.length; i += 1) { args[i] = safe[i]; }
+          try {
+            return original.apply(this, args);
+          } catch (e) {
+            // A drawing call must never take the loop down; report once.
+            postError('canvas: ' + (e && e.message ? e.message : e), '');
+            return undefined;
+          }
+        };
+      });
+    }
+  } catch (e) {}
+
   /* ---- pause / resume (honourable even for non-cooperative games) ---- */
   var pauseCbs = [];
   var resumeCbs = [];

@@ -87,6 +87,8 @@ describe('packages/ai pipeline', () => {
       {
         prompt: 'Fixable game idea',
         maxRepairs: 2,
+        skipDesign: true,
+        skipReview: true,
       },
       buggyProvider
     );

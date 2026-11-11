@@ -73,7 +73,7 @@ const securityHeaders = [
 const config: NextConfig = {
   transpilePackages: ['@playloop/sdk', '@playloop/gamekit', '@playloop/db', '@playloop/recsys', '@playloop/ai'],
   // Keep Node-only DB/native-ish deps out of the server bundle.
-  serverExternalPackages: ['postgres', 'nodemailer'],
+  serverExternalPackages: ['postgres', 'nodemailer', 'playwright', 'playwright-core'],
   poweredByHeader: false,
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
