@@ -2,6 +2,7 @@ import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { comments, games, users } from '@playloop/db';
 import { getDb } from '../../../../../src/lib/db';
+import { notify } from '../../../../../src/lib/notify';
 import {
   jsonError,
   jsonOk,
@@ -84,12 +85,23 @@ export const POST = wrap<{ id: string }>(async (req, ctx) => {
   const input = await parseBody(req, createSchema);
 
   const db = getDb();
-  const gameRows = await db.select({ id: games.id }).from(games).where(eq(games.id, gameId)).limit(1);
-  if (gameRows.length === 0) return jsonError('not_found', 'Game not found', 404);
+  const gameRows = await db
+    .select({ id: games.id, creatorId: games.creatorId })
+    .from(games)
+    .where(eq(games.id, gameId))
+    .limit(1);
+  const game = gameRows[0];
+  if (!game) return jsonError('not_found', 'Game not found', 404);
 
+  let parentAuthorId: string | null = null;
   if (input.parentId) {
     const parentRows = await db
-      .select({ id: comments.id, parentId: comments.parentId, deletedAt: comments.deletedAt })
+      .select({
+        id: comments.id,
+        parentId: comments.parentId,
+        deletedAt: comments.deletedAt,
+        userId: comments.userId,
+      })
       .from(comments)
       .where(and(eq(comments.id, input.parentId), eq(comments.gameId, gameId)))
       .limit(1);
@@ -97,6 +109,7 @@ export const POST = wrap<{ id: string }>(async (req, ctx) => {
     if (!parent) return jsonError('bad_request', 'Parent comment not found on this game', 400);
     if (parent.parentId) return jsonError('bad_request', 'Replies can only be one level deep', 400);
     if (parent.deletedAt) return jsonError('bad_request', 'Parent comment was deleted', 400);
+    parentAuthorId = parent.userId ?? null;
   }
 
   const [row] = await db
@@ -109,6 +122,13 @@ export const POST = wrap<{ id: string }>(async (req, ctx) => {
     .update(games)
     .set({ commentCount: sql`${games.commentCount} + 1` })
     .where(eq(games.id, gameId));
+
+  // Activity: the creator hears about comments on their game; a reply also
+  // notifies the person being replied to.
+  await notify(db, { userId: game.creatorId, type: 'comment', actorId: userId, gameId });
+  if (parentAuthorId) {
+    await notify(db, { userId: parentAuthorId, type: 'reply', actorId: userId, gameId });
+  }
 
   const userRows = await db
     .select({ id: users.id, handle: users.handle, avatarUrl: users.avatarUrl })

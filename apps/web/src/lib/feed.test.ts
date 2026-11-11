@@ -64,13 +64,11 @@ describe('fetchFeedGames (DB-backed)', () => {
     expect(new Set(items.map((c) => c.id)).size).toBe(items.length);
   });
 
-  it('returns an empty page instead of throwing when the DB is unavailable', async () => {
+  it('propagates a database failure so the UI can show an error (not "no games yet")', async () => {
     const broken = { execute: () => Promise.reject(new Error('connection refused')) } as never;
     setTestDb(broken);
     try {
-      const page = await fetchFeedGames();
-      expect(page.items).toEqual([]);
-      expect(page.cursor).toBeNull();
+      await expect(fetchFeedGames()).rejects.toThrow();
     } finally {
       setTestDb(db as never);
     }

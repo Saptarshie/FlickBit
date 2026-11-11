@@ -8,8 +8,10 @@ import { NextRequest } from 'next/server';
 import * as schema from '@playloop/db';
 import { setTestDb } from '../src/lib/db';
 
+// Mutable mock so individual tests can simulate an anonymous caller.
+const authState: { user: { id: string } | null } = { user: { id: '11111111-1111-4111-8111-111111111111' } };
 vi.mock('../auth', () => ({
-  auth: async () => ({ user: { id: '11111111-1111-4111-8111-111111111111' } }),
+  auth: async () => (authState.user ? { user: authState.user } : null),
 }));
 
 describe('POST /api/studio/generate', () => {
@@ -46,6 +48,36 @@ describe('POST /api/studio/generate', () => {
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.error.code).toBe('validation_error');
+  });
+
+  it('refuses to generate for an anonymous caller', async () => {
+    const { POST } = await import('../app/api/studio/generate/route');
+    const previous = authState.user;
+    authState.user = null;
+    try {
+      const req = new NextRequest('http://localhost:3000/api/studio/generate', {
+        method: 'POST',
+        body: JSON.stringify({ prompt: 'anonymous game' }),
+      });
+      const res = await POST(req);
+      expect(res.status).toBe(401);
+      const json = await res.json();
+      expect(json.error.code).toBe('unauthorized');
+    } finally {
+      authState.user = previous;
+    }
+  });
+
+  it('rejects prompts over the length cap', async () => {
+    const { POST } = await import('../app/api/studio/generate/route');
+    const req = new NextRequest('http://localhost:3000/api/studio/generate', {
+      method: 'POST',
+      body: JSON.stringify({ prompt: 'a'.repeat(700) }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error.message).toContain('600');
   });
 
   it('streams progress and completes game creation over SSE', async () => {

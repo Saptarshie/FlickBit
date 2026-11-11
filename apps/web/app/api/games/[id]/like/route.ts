@@ -1,6 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { games, likes } from '@playloop/db';
+import { notify } from '../../../../../src/lib/notify';
 import { getDb } from '../../../../../src/lib/db';
 import {
   jsonError,
@@ -25,8 +26,13 @@ export const POST = wrap<{ id: string }>(async (req, ctx) => {
   const { id: gameId } = parseValue(await ctx.params, paramsSchema);
 
   const db = getDb();
-  const gameRows = await db.select({ id: games.id }).from(games).where(eq(games.id, gameId)).limit(1);
-  if (gameRows.length === 0) return jsonError('not_found', 'Game not found', 404);
+  const gameRows = await db
+    .select({ id: games.id, creatorId: games.creatorId })
+    .from(games)
+    .where(eq(games.id, gameId))
+    .limit(1);
+  const game = gameRows[0];
+  if (!game) return jsonError('not_found', 'Game not found', 404);
 
   const inserted = await db
     .insert(likes)
@@ -38,6 +44,7 @@ export const POST = wrap<{ id: string }>(async (req, ctx) => {
       .update(games)
       .set({ likeCount: sql`${games.likeCount} + 1` })
       .where(eq(games.id, gameId));
+    await notify(db, { userId: game.creatorId, type: 'like', actorId: userId, gameId });
   }
   return jsonOk({ liked: true, likeCount: await readLikeCount(gameId) });
 });

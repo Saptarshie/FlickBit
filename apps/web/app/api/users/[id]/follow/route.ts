@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { follows, users } from '@playloop/db';
+import { notify } from '../../../../../src/lib/notify';
 import { getDb } from '../../../../../src/lib/db';
 import {
   jsonError,
@@ -26,7 +27,14 @@ export const POST = wrap<{ id: string }>(async (req, ctx) => {
     .limit(1);
   if (targetRows.length === 0) return jsonError('not_found', 'User not found', 404);
 
-  await db.insert(follows).values({ followerId: userId, followeeId }).onConflictDoNothing();
+  const inserted = await db
+    .insert(follows)
+    .values({ followerId: userId, followeeId })
+    .onConflictDoNothing()
+    .returning();
+  if (inserted.length > 0) {
+    await notify(db, { userId: followeeId, type: 'follow', actorId: userId });
+  }
   return jsonOk({ following: true }, 201);
 });
 

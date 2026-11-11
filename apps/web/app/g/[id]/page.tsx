@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import * as schema from '@playloop/db';
 import { getDb } from '@/lib/db';
+import { auth } from '../../../auth';
 import { GameShareScreen } from '@/components/GameShareScreen';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +12,7 @@ type PageProps = { params: Promise<{ id: string }> };
 
 const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-async function loadGame(id: string) {
+async function loadGame(id: string, viewerId?: string) {
   if (!uuidRe.test(id)) return null;
   const db = getDb();
   const rows = await db
@@ -66,9 +67,31 @@ async function loadGame(id: string) {
       artifactUrl: row.artifactSha256 ? `${playOrigin}/v/${row.artifactSha256}.html` : null,
       posterUrl: row.posterKey ?? null,
       forkedFrom,
-      viewer: { liked: false, saved: false, followsCreator: false },
+      viewer: await loadViewerState(row.game.id, row.game.creatorId, viewerId),
     },
   };
+}
+
+/** Real like/save/follow state for the current visitor (was hardcoded false). */
+async function loadViewerState(gameId: string, creatorId: string, viewerId?: string) {
+  if (!viewerId) return { liked: false, saved: false, followsCreator: false };
+  const db = getDb();
+  const [like] = await db
+    .select({ userId: schema.likes.userId })
+    .from(schema.likes)
+    .where(and(eq(schema.likes.gameId, gameId), eq(schema.likes.userId, viewerId)))
+    .limit(1);
+  const [save] = await db
+    .select({ userId: schema.saves.userId })
+    .from(schema.saves)
+    .where(and(eq(schema.saves.gameId, gameId), eq(schema.saves.userId, viewerId)))
+    .limit(1);
+  const [follow] = await db
+    .select({ followerId: schema.follows.followerId })
+    .from(schema.follows)
+    .where(and(eq(schema.follows.followeeId, creatorId), eq(schema.follows.followerId, viewerId)))
+    .limit(1);
+  return { liked: Boolean(like), saved: Boolean(save), followsCreator: Boolean(follow) };
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -95,7 +118,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function GameSharePage({ params }: PageProps) {
   const { id } = await params;
-  const loaded = await loadGame(id);
+  const session = (await auth()) as { user?: { id?: string | null } | null } | null;
+  const loaded = await loadGame(id, session?.user?.id ?? undefined);
   if (!loaded) notFound();
   return <GameShareScreen game={loaded.game} />;
 }

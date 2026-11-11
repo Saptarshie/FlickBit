@@ -9,6 +9,8 @@ export const users = pgTable('users', {
   displayName: text('display_name'),
   avatarUrl: text('avatar_url'),
   bio: text('bio'),
+  /** scrypt hash (see apps/web/src/lib/password.ts). Null until the account sets one. */
+  passwordHash: text('password_hash'),
   email: text('email').notNull(),
   emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
   role: userRole('role').notNull().default('user'),

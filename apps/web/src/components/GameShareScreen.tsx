@@ -2,6 +2,10 @@
 
 import { useRef, useState } from 'react';
 import Link from 'next/link';
+import { useMutation } from '@tanstack/react-query';
+import CommentsSheet from './CommentsSheet';
+import { BottomNav } from './AppNav';
+import { api } from '../lib/client-api';
 
 type ShareGame = {
   id: string;
@@ -24,6 +28,62 @@ type ShareGame = {
 export function GameShareScreen({ game }: { game: ShareGame }) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [started, setStarted] = useState(false);
+
+  // A shared link is where most first-time visitors land, so it needs the same
+  // actions as the feed card — it used to offer only Remix and Report.
+  const [liked, setLiked] = useState(game.viewer.liked);
+  const [likeCount, setLikeCount] = useState(game.counts.likes);
+  const [saved, setSaved] = useState(game.viewer.saved);
+  const [saveCount, setSaveCount] = useState(game.counts.saves);
+  const [commentCount, setCommentCount] = useState(game.counts.comments);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const flash = (message: string) => {
+    setNotice(message);
+    window.setTimeout(() => setNotice(null), 2200);
+  };
+
+  const likeMutation = useMutation({
+    mutationFn: (next: boolean) =>
+      next ? api.post(`/api/games/${game.id}/like`) : api.del(`/api/games/${game.id}/like`),
+    onMutate: (next: boolean) => {
+      setLiked(next);
+      setLikeCount((c) => Math.max(0, c + (next ? 1 : -1)));
+    },
+    onError: (_err, next: boolean) => {
+      setLiked(!next);
+      setLikeCount((c) => Math.max(0, c + (next ? -1 : 1)));
+      flash('Sign in to like this game');
+    },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: (next: boolean) =>
+      next ? api.post(`/api/games/${game.id}/save`) : api.del(`/api/games/${game.id}/save`),
+    onMutate: (next: boolean) => {
+      setSaved(next);
+      setSaveCount((c) => Math.max(0, c + (next ? 1 : -1)));
+    },
+    onError: (_err, next: boolean) => {
+      setSaved(!next);
+      setSaveCount((c) => Math.max(0, c + (next ? -1 : 1)));
+      flash('Sign in to save this game');
+    },
+  });
+
+  const share = async () => {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    try {
+      if (navigator.share) await navigator.share({ title: game.title, url });
+      else {
+        await navigator.clipboard.writeText(url);
+        flash('Link copied');
+      }
+    } catch {
+      flash('Could not share');
+    }
+  };
 
   const start = () => {
     setStarted(true);
@@ -54,7 +114,17 @@ export function GameShareScreen({ game }: { game: ShareGame }) {
             sandbox="allow-scripts"
             allow="autoplay; fullscreen; gamepad; accelerometer; gyroscope"
             referrerPolicy="no-referrer"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', touchAction: 'none' }}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              // Before play the page must scroll (a shared link was unscrollable
+              // because the iframe swallowed every drag); after the tap the game
+              // owns touch so in-game gestures work.
+              touchAction: started ? 'none' : 'pan-y',
+            }}
           />
         ) : null}
         {!started ? (
@@ -84,6 +154,87 @@ export function GameShareScreen({ game }: { game: ShareGame }) {
           </button>
         ) : null}
       </div>
+
+      {/* Actions: the same social surface as a feed card. */}
+      <div style={{ display: 'flex', gap: 8, padding: '12px 16px 0' }}>
+        {[
+          {
+            key: 'like',
+            label: liked ? '♥' : '♡',
+            text: String(likeCount),
+            active: liked,
+            onClick: () => likeMutation.mutate(!liked),
+            aria: liked ? 'Unlike' : 'Like',
+          },
+          {
+            key: 'comment',
+            label: '💬',
+            text: String(commentCount),
+            active: false,
+            onClick: () => setCommentsOpen(true),
+            aria: 'Comments',
+          },
+          {
+            key: 'save',
+            label: saved ? '🔖' : '📑',
+            text: String(saveCount),
+            active: saved,
+            onClick: () => saveMutation.mutate(!saved),
+            aria: saved ? 'Remove from saved' : 'Save',
+          },
+        ].map((action) => (
+          <button
+            key={action.key}
+            type="button"
+            aria-label={action.aria}
+            onClick={action.onClick}
+            style={{
+              minHeight: 48,
+              minWidth: 64,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              padding: '0 14px',
+              borderRadius: 24,
+              border: '1px solid rgba(255,255,255,0.14)',
+              background: action.active ? 'rgba(255,59,141,0.18)' : 'rgba(255,255,255,0.06)',
+              color: '#fff',
+              fontSize: 15,
+              cursor: 'pointer',
+            }}
+          >
+            <span aria-hidden>{action.label}</span>
+            <span style={{ fontSize: 13, opacity: 0.8 }}>{action.text}</span>
+          </button>
+        ))}
+        <button
+          type="button"
+          aria-label="Share this game"
+          onClick={share}
+          style={{
+            minHeight: 48,
+            minWidth: 48,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 24,
+            border: '1px solid rgba(255,255,255,0.14)',
+            background: 'rgba(255,255,255,0.06)',
+            color: '#fff',
+            fontSize: 15,
+            cursor: 'pointer',
+          }}
+        >
+          ↗
+        </button>
+      </div>
+
+      {notice ? (
+        <div role="status" style={{ padding: '8px 16px 0', fontSize: 12, color: '#ffb3c9' }}>
+          {notice}
+        </div>
+      ) : null}
 
       {/* Meta block */}
       <section style={{ padding: '16px 16px 8px' }}>
@@ -195,6 +346,15 @@ export function GameShareScreen({ game }: { game: ShareGame }) {
       <div style={{ padding: '4px 16px 24px' }}>
         <ReportGame gameId={game.id} />
       </div>
+
+      <CommentsSheet
+        gameId={game.id}
+        open={commentsOpen}
+        onClose={() => setCommentsOpen(false)}
+        onCountChange={(count) => setCommentCount(count)}
+      />
+
+      <BottomNav />
     </main>
   );
 }

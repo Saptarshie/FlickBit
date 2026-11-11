@@ -11,6 +11,7 @@ import PostgresAdapter from '@auth/pg-adapter';
 import postgres from 'postgres';
 import nodemailer from 'nodemailer';
 import { getSql } from './src/lib/db';
+import { hashPassword, verifyPassword, MIN_PASSWORD_LENGTH, RESERVED_HANDLES } from './src/lib/password';
 
 declare module 'next-auth' {
   interface Session {
@@ -80,42 +81,68 @@ function pgPoolShim(sql: ReturnType<typeof postgres>): Parameters<typeof Postgre
 const providers: NextAuthConfig['providers'] = [];
 
 /**
- * Handle sign-in: no password, no email round-trip. Picking a handle upserts a
- * real `users` row and issues a session, which is what likes/follows/comments
- * need. This is the primary login for local development and for a
- * create-an-account-in-one-tap product flow; swap in Google/email for prod.
+ * Handle + password sign-in.
+ *
+ * A handle is public (it is in every URL), so it cannot be the credential:
+ * without a password anyone could become @someone and edit their games.
+ * First sign-in with an unknown handle creates the account with that password;
+ * afterwards the password must match.
+ *
+ * Accounts created before passwords existed (seeded/legacy rows) may claim a
+ * password ONCE, and only outside production — otherwise an attacker could
+ * claim them too. Reserved handles are never claimable.
  */
 providers.push(
   Credentials({
     id: 'handle',
     name: 'PlayLoop handle',
-    credentials: { handle: { label: 'Handle', type: 'text' } },
+    credentials: {
+      handle: { label: 'Handle', type: 'text' },
+      password: { label: 'Password', type: 'password' },
+    },
     async authorize(credentials) {
       const handle = normalizeHandle(String(credentials?.handle ?? ''));
-      if (!handle) return null;
-      const email = `${handle}@playloop.local`;
+      const password = String(credentials?.password ?? '');
+      if (!handle || password.length < MIN_PASSWORD_LENGTH) return null;
+      if (RESERVED_HANDLES.has(handle)) return null;
 
+      const email = `${handle}@playloop.local`;
       const sql = authSql;
-      const existing = await sql<{ id: string; handle: string; display_name: string | null }[]>`
-        SELECT id, handle, display_name FROM users WHERE lower(handle) = ${handle} LIMIT 1
+      type Row = { id: string; handle: string; display_name: string | null; password_hash: string | null };
+      const existing = await sql<Row[]>`
+        SELECT id, handle, display_name, password_hash FROM users WHERE lower(handle) = ${handle} LIMIT 1
       `;
       let row = existing[0];
+
       if (!row) {
-        const inserted = await sql<{ id: string; handle: string; display_name: string | null }[]>`
-          INSERT INTO users (handle, display_name, email, role)
-          VALUES (${handle}, ${handle}, ${email}, 'user')
+        const created = await sql<Row[]>`
+          INSERT INTO users (handle, display_name, email, role, password_hash)
+          VALUES (${handle}, ${handle}, ${email}, 'user', ${await hashPassword(password)})
           ON CONFLICT DO NOTHING
-          RETURNING id, handle, display_name
+          RETURNING id, handle, display_name, password_hash
         `;
-        row = inserted[0];
+        row = created[0];
         if (!row) {
-          const again = await sql<{ id: string; handle: string; display_name: string | null }[]>`
-            SELECT id, handle, display_name FROM users WHERE lower(handle) = ${handle} LIMIT 1
+          // Lost a race with a concurrent sign-up: fall through to verification.
+          const again = await sql<Row[]>`
+            SELECT id, handle, display_name, password_hash FROM users WHERE lower(handle) = ${handle} LIMIT 1
           `;
           row = again[0];
         }
       }
+
       if (!row) return null;
+
+      if (!row.password_hash) {
+        // Legacy account with no password. In development the first sign-in
+        // claims it so local users keep working; in production it is closed.
+        if (process.env.NODE_ENV === 'production') return null;
+        const hash = await hashPassword(password);
+        await sql`UPDATE users SET password_hash = ${hash} WHERE id = ${row.id}`;
+      } else if (!(await verifyPassword(password, row.password_hash))) {
+        return null;
+      }
+
       return {
         id: row.id,
         name: row.display_name ?? row.handle,

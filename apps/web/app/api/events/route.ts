@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { sql } from 'drizzle-orm';
 import { EVENT_TYPES, insertEvents, type EventRow } from '@playloop/db';
 import { auth } from '../../../auth';
 import { getDb } from '../../../src/lib/db';
@@ -94,7 +95,23 @@ export const POST = wrap(async (req) => {
     });
   }
 
-  await insertEvents(getDb(), rows);
+  const db = getDb();
+  await insertEvents(db, rows);
+
+  // The card counts are denormalised on `games`, so a finished play must bump
+  // the counter here — otherwise every game shows 0 plays forever and the
+  // ranker has no behavioural signal.
+  const playsByGame = new Map<string, number>();
+  for (const row of rows) {
+    if (row.type === 'play_15s' && row.gameId) {
+      playsByGame.set(row.gameId, (playsByGame.get(row.gameId) ?? 0) + 1);
+    }
+  }
+  for (const [gameId, plays] of playsByGame) {
+    await db.execute(sql`
+      UPDATE games SET play_count = play_count + ${plays} WHERE id = ${gameId}
+    `);
+  }
 
   const headers = new Headers();
   if (mintedAnon && anonId) {

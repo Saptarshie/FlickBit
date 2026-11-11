@@ -1,6 +1,7 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { api, RequestError } from '../lib/client-api';
 
@@ -33,11 +34,26 @@ function timeAgo(iso: string): string {
 }
 
 export default function NotificationsScreen() {
+  const queryClient = useQueryClient();
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => api.get<{ items: NotificationRow[]; unread: number }>('/api/notifications'),
     retry: false,
   });
+
+  // Opening the tab is the acknowledgement: mark everything read so the badge
+  // can actually clear (nothing used to call this endpoint).
+  const unread = data?.unread ?? 0;
+  useEffect(() => {
+    if (unread === 0) return;
+    void api
+      .post('/api/notifications/read', { all: true })
+      .then(() => {
+        void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        void queryClient.invalidateQueries({ queryKey: ['me'] });
+      })
+      .catch(() => {});
+  }, [unread, queryClient]);
 
   if (isLoading) return <div style={{ padding: '0 12px', opacity: 0.6, fontSize: 14 }}>Loading…</div>;
 

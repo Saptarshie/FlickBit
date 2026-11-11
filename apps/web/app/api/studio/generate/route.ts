@@ -3,6 +3,8 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { auth } from '../../../../auth';
 import { getDb } from '@/lib/db';
+import { artifactsDir } from '@/lib/artifacts';
+import { MAX_PROMPT_LENGTH, takeGenerationSlot } from '@/lib/generation-quota';
 import * as schema from '@playloop/db';
 import { eq, sql } from 'drizzle-orm';
 import { MockAiProvider, providerFromEnv, runGenerationPipeline, embedText, toVectorLiteral } from '@playloop/ai';
@@ -27,33 +29,44 @@ export async function POST(req: NextRequest) {
       headers: { 'content-type': 'application/json' },
     });
   }
-
-  const session = await auth();
-  // For studio generation, require user or use default test user
-  let creatorId = session?.user?.id;
-  const db = getDb();
-
-  if (!creatorId) {
-    // Fall back to system or demo user for anonymous studio trials
-    const [systemUser] = await db.select().from(schema.users).where(eq(schema.users.handle, 'playloop'));
-    creatorId = systemUser?.id;
-    if (!creatorId) {
-      const [u] = await db.insert(schema.users).values({
-        handle: 'creator',
-        displayName: 'Creator',
-        email: 'creator@playloop.local',
-        role: 'user',
-      }).returning();
-      creatorId = u!.id;
-    }
+  if (prompt.length > MAX_PROMPT_LENGTH) {
+    return new Response(
+      JSON.stringify({
+        error: { code: 'validation_error', message: `Prompt is limited to ${MAX_PROMPT_LENGTH} characters` },
+      }),
+      { status: 400, headers: { 'content-type': 'application/json' } },
+    );
   }
 
-  // ARTIFACTS_DIR may be relative ("./apps/play-worker/artifacts" from the repo
-  // root); Next's cwd is apps/web, so resolve relative paths against the repo.
-  const repoRoot = path.resolve(process.cwd(), '../..');
-  const artifactsDir = process.env.ARTIFACTS_DIR
-    ? path.resolve(repoRoot, process.env.ARTIFACTS_DIR)
-    : path.resolve(process.cwd(), '../play-worker/artifacts');
+  // Generation costs a multi-minute LLM completion, so it requires an account:
+  // anonymous callers used to publish games attributed to the system user.
+  const session = await auth();
+  const creatorId = session?.user?.id;
+  if (!creatorId) {
+    return new Response(
+      JSON.stringify({ error: { code: 'unauthorized', message: 'Sign in to create a game' } }),
+      { status: 401, headers: { 'content-type': 'application/json' } },
+    );
+  }
+
+  const quota = takeGenerationSlot(creatorId);
+  if (!quota.allowed) {
+    return new Response(
+      JSON.stringify({
+        error: {
+          code: 'rate_limited',
+          message: `You have reached ${quota.limit} generations this hour. Try again later.`,
+        },
+      }),
+      { status: 429, headers: { 'content-type': 'application/json', 'retry-after': String(quota.retryAfterSeconds) } },
+    );
+  }
+
+  const db = getDb();
+
+  // Shared resolver: ARTIFACTS_DIR is relative to the repo root, not to
+  // apps/web (see src/lib/artifacts.ts).
+  const artifactDir = artifactsDir();
   const playOrigin =
     process.env.NEXT_PUBLIC_PLAY_ORIGIN || 'http://localhost:3001';
 
@@ -115,8 +128,8 @@ export async function POST(req: NextRequest) {
       }
 
       // Write artifact to disk for play-worker
-      await mkdir(artifactsDir, { recursive: true });
-      await writeFile(path.join(artifactsDir, `${result.sha256}.html`), result.code, 'utf8');
+      await mkdir(artifactDir, { recursive: true });
+      await writeFile(path.join(artifactDir, `${result.sha256}.html`), result.code, 'utf8');
 
       // Insert game & version into DB (game -> version -> update game)
       const [g] = await db.insert(schema.games).values({

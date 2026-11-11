@@ -5,12 +5,17 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { signInWithHandle } from '../lib/client-api';
 
-/** One-tap handle sign-in. No password, no email loop. */
+/**
+ * Handle + password sign-in. An unknown handle creates the account with that
+ * password; a known handle must match it (a public handle alone is not a
+ * credential — that allowed anyone to become any creator).
+ */
 export default function LoginScreen() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get('next') || '/';
   const [handle, setHandle] = useState('');
+  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,9 +25,9 @@ export default function LoginScreen() {
     setBusy(true);
     setError(null);
     try {
-      const ok = await signInWithHandle(handle);
+      const ok = await signInWithHandle(handle, password);
       if (!ok) {
-        setError('Pick a handle with at least 3 letters or numbers.');
+        setError('That handle and password do not match. New here? Signing in creates the account.');
         return;
       }
       router.push(next);
@@ -81,9 +86,34 @@ export default function LoginScreen() {
               }}
             />
           </div>
+          <label htmlFor="password" style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>
+            Password
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            placeholder="at least 6 characters"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={{
+              minHeight: 48,
+              borderRadius: 12,
+              border: '1px solid rgba(255,255,255,0.16)',
+              background: 'rgba(255,255,255,0.06)',
+              color: '#fff',
+              fontSize: 16,
+              padding: '0 14px',
+              outline: 'none',
+            }}
+          />
+          <p style={{ fontSize: 12, opacity: 0.55, lineHeight: '18px', margin: 0 }}>
+            A new handle creates an account with this password. Handles are public, passwords are not.
+          </p>
           <button
             type="submit"
-            disabled={busy || handle.trim().length < 3}
+            disabled={busy || handle.trim().length < 3 || password.length < 6}
             style={{
               minHeight: 48,
               borderRadius: 12,

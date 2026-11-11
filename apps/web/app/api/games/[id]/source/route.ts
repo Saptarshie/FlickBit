@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import path from 'node:path';
+import { artifactPath } from '../../../../../src/lib/artifacts';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import * as schema from '@playloop/db';
@@ -41,11 +41,9 @@ export const GET = wrap<{ id: string }>(async (_req, ctx) => {
     return jsonError('not_found', 'Game source not found', 404);
   }
 
-  const artifactsDir =
-    process.env.ARTIFACTS_DIR || path.resolve(process.cwd(), '../../.artifacts');
   let code: string;
   try {
-    code = await readFile(path.join(artifactsDir, `${row.artifactSha256}.html`), 'utf8');
+    code = await readFile(artifactPath(row.artifactSha256), 'utf8');
   } catch {
     return jsonError('not_found', 'Game source not found', 404);
   }

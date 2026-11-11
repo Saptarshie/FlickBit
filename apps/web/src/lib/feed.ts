@@ -40,19 +40,23 @@ export async function fetchFeedGames(cursor?: string): Promise<FeedPage> {
   const session = await auth();
   const playOrigin = process.env.PLAY_ORIGIN ?? 'http://localhost:3001';
 
+  let page;
   try {
-    const page = await fetchFeedPage(getDb(), {
+    page = await fetchFeedPage(getDb(), {
       userId: session?.user?.id,
       cursor,
       limit: PAGE_SIZE,
       playOrigin,
     });
-    return {
-      items: page.items.map((c) => ({ ...c, primaryTag: c.tags[0] })),
-      cursor: page.cursor,
-    };
   } catch (err) {
+    // Swallowing this turned a backend outage into "No games yet — be the
+    // first to create one". Let the client show a real error state.
     console.error('[feed] query failed:', err instanceof Error ? err.message : err);
-    return { items: [], cursor: null };
+    throw err;
   }
+
+  return {
+    items: page.items.map((c) => ({ ...c, primaryTag: c.tags[0] })),
+    cursor: page.cursor,
+  };
 }

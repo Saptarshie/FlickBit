@@ -5,7 +5,8 @@ import './globals.css';
 
 export const metadata: Metadata = { title: 'PlayLoop', description: 'Scroll. Play. Remix.' };
 export const viewport: Viewport = {
-  width: 'device-width', initialScale: 1, maximumScale: 1, viewportFit: 'cover', themeColor: '#0b0b10',
+  // No maximumScale: blocking pinch-zoom fails WCAG 1.4.4.
+  width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#0b0b10',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

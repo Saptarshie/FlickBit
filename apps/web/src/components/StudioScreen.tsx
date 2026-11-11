@@ -14,6 +14,14 @@ const TEMPLATES = [
   { id: 'physics-toss', name: '🎯 Toss' },
 ];
 
+/** One-tap starting points — an empty box is the main reason people stall here. */
+const EXAMPLES = [
+  'Neon snake that speeds up and leaves a glow trail',
+  'Cozy space miner: drag to sling a grappling hook',
+  'One-button lava slime leaping between crumbling platforms',
+  'Rhythm tapper with a combo multiplier',
+];
+
 export function StudioScreen() {
   const [prompt, setPrompt] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('tap-runner');
@@ -29,6 +37,11 @@ export function StudioScreen() {
   const [isPaused, setIsPaused] = useState(false);
   const [publishBusy, setPublishBusy] = useState(false);
   const [publishSaved, setPublishSaved] = useState(false);
+  // Failures used to live only inside the generating overlay, which unmounts in
+  // `finally` — so an LLM error left the screen unchanged with no message.
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [lastPrompt, setLastPrompt] = useState('');
+  const [remixIssue, setRemixIssue] = useState<string | null>(null);
 
   // Remix: /studio?remix=<gameId> prefills the generation with the base code.
   const searchParams = useSearchParams();
@@ -42,7 +55,12 @@ export function StudioScreen() {
     (async () => {
       try {
         const res = await fetch(`/api/games/${remixId}/source`);
-        if (!res.ok) return;
+        if (!res.ok) {
+          if (!cancelled) {
+            setRemixIssue('Remix source unavailable — this game will be generated from scratch.');
+          }
+          return;
+        }
         const body = await res.json();
         if (!cancelled) {
           setRemixBaseCode(body.data.code);
@@ -65,6 +83,8 @@ export function StudioScreen() {
     if (!prompt.trim() || isGenerating) return;
 
     setIsGenerating(true);
+    setErrorMsg(null);
+    setLastPrompt(prompt.trim());
     setProgressStage('spec');
     setProgressMsg('Planning game concept...');
     setProgressPercent(10);
@@ -126,13 +146,24 @@ export function StudioScreen() {
           }
         }
       }
-    } catch (err: any) {
-      setProgressMsg(`Error: ${err.message}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Generation failed';
+      setProgressMsg(`Error: ${message}`);
       setProgressStage('failed');
+      setErrorMsg(message);
     } finally {
       setIsGenerating(false);
     }
   };
+
+  useEffect(() => {
+    if (!showPublishModal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowPublishModal(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showPublishModal]);
 
   const restartGame = () => {
     if (iframeRef.current && artifactUrl) {
@@ -198,6 +229,41 @@ export function StudioScreen() {
           )}
         </header>
 
+        {remixIssue ? (
+          <div className="mx-4 mt-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+            🔁 {remixIssue}
+          </div>
+        ) : null}
+
+        {errorMsg ? (
+          <div
+            role="alert"
+            className="mx-4 mt-3 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-[11px] text-red-200"
+          >
+            <p className="font-semibold mb-1">Generation failed</p>
+            <p className="leading-snug break-words">{errorMsg}</p>
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setPrompt(lastPrompt);
+                  void handleGenerate();
+                }}
+                className="px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 font-medium"
+              >
+                Retry
+              </button>
+              <button
+                type="button"
+                onClick={() => setErrorMsg(null)}
+                className="px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         {/* Preview / Canvas Stage */}
         <div className="relative flex-1 bg-neutral-900 overflow-hidden flex items-center justify-center">
           {artifactUrl ? (
@@ -234,6 +300,18 @@ export function StudioScreen() {
               <p className="text-xs text-neutral-400 leading-relaxed">
                 Type an idea below. AI plans the mechanics, generates the canvas code, runs security checks, and loads it instantly.
               </p>
+              <div className="mt-5 space-y-2">
+                {EXAMPLES.map((idea) => (
+                  <button
+                    key={idea}
+                    type="button"
+                    onClick={() => setPrompt(idea)}
+                    className="w-full text-left text-[11px] leading-snug px-3 py-2 rounded-lg bg-neutral-800/70 border border-neutral-700/70 text-neutral-300 hover:border-indigo-500/60 hover:text-white transition-colors"
+                  >
+                    {idea}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -300,9 +378,27 @@ export function StudioScreen() {
 
       {/* Publish / Share Modal */}
       {showPublishModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-2xl p-5 shadow-2xl">
-            <h3 className="text-lg font-bold mb-1">Game Published!</h3>
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowPublishModal(false);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Game published"
+            className="relative w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-2xl p-5 shadow-2xl"
+          >
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setShowPublishModal(false)}
+              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+            >
+              ✕
+            </button>
+            <h3 className="text-lg font-bold mb-1 pr-8">Game Published!</h3>
             <p className="text-xs text-neutral-400 mb-4">
               Your game artifact is verified, sandboxed, and ready in the vertical Reels feed.
             </p>

@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { GameHost, type GameHostError } from '@playloop/sdk';
 import type { GameCard } from '../lib/feed';
 import { useFeedStore } from '../lib/feed-store';
+import { track } from '../lib/analytics';
 import { api, RequestError } from '../lib/client-api';
 import CommentsSheet from './CommentsSheet';
 import { chromeBottom } from './AppNav';
@@ -101,16 +102,18 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
   isActiveRef.current = isActive;
   gameOverRef.current = gameOver;
 
-  const handleAuthError = useCallback(
-    (err: unknown) => {
-      if (err instanceof RequestError && err.status === 401) {
-        router.push(`/login?next=${encodeURIComponent('/')}`);
-        return true;
-      }
-      return false;
-    },
-    [router],
-  );
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
+
+  const handleAuthError = useCallback((err: unknown) => {
+    if (err instanceof RequestError && err.status === 401) {
+      // Never navigate away: a tap on Like used to tear the user out of the
+      // feed and lose their place. Offer sign-in inline instead.
+      setAuthNotice('Sign in to like, save and comment');
+      window.setTimeout(() => setAuthNotice(null), 3200);
+      return true;
+    }
+    return false;
+  }, []);
 
   const likeMutation = useMutation({
     mutationFn: (next: boolean) => (next ? api.post(`/api/games/${card.id}/like`) : api.del(`/api/games/${card.id}/like`)),
@@ -232,6 +235,31 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [live, card.artifactUrl, frameKey]);
+
+  // Analytics: an impression when the card becomes the active one, a play when
+  // the player actually stays in the game for 15 s, and game-over/replay below.
+  useEffect(() => {
+    if (!isActive) return;
+    track('impression', card.id, { once: true, versionId: card.versionId });
+  }, [isActive, card.id, card.versionId]);
+
+  useEffect(() => {
+    if (!engaged) return;
+    const timer = window.setTimeout(() => {
+      track('play_15s', card.id, { once: true, versionId: card.versionId });
+    }, 15_000);
+    return () => window.clearTimeout(timer);
+  }, [engaged, card.id, card.versionId]);
+
+  // A finished game must not follow the user back: when the card leaves the
+  // live window its iframe unmounts, but state survives, so returning showed a
+  // paused "Game over" overlay over a brand-new frame.
+  useEffect(() => {
+    if (live) return;
+    setGameOver(false);
+    gameOverRef.current = false;
+    setLoadIssue(null);
+  }, [live]);
 
   // Re-drive playback whenever the view state changes.
   useEffect(() => {
@@ -533,6 +561,47 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
               ✕
             </button>
           ) : null}
+        </div>
+      ) : null}
+
+      {/* Inline sign-in prompt (instead of navigating away on a 401). */}
+      {authNotice ? (
+        <div
+          role="status"
+          style={{
+            position: 'absolute',
+            left: '50%',
+            bottom: 'calc(var(--nav-h, 56px) + 96px)',
+            transform: 'translateX(-50%)',
+            zIndex: 8,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '8px 10px 8px 14px',
+            borderRadius: 999,
+            background: 'rgba(10,10,16,0.92)',
+            border: '1px solid rgba(255,255,255,0.16)',
+            fontSize: 12,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <span>{authNotice}</span>
+          <button
+            type="button"
+            onClick={() => router.push(`/login?next=${encodeURIComponent('/')}`)}
+            style={{
+              border: 'none',
+              borderRadius: 999,
+              padding: '4px 10px',
+              background: 'linear-gradient(135deg,#7b5cff,#ff3b8d)',
+              color: '#fff',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Sign in
+          </button>
         </div>
       ) : null}
 

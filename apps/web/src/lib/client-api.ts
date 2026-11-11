@@ -64,9 +64,9 @@ export type Viewer = {
 export type MeResponse = { viewer: Viewer; unread: number };
 
 /** Sign in with a handle (no password). Returns true on success. */
-export async function signInWithHandle(handle: string): Promise<boolean> {
+export async function signInWithHandle(handle: string, password: string): Promise<boolean> {
   const { signIn } = await import('next-auth/react');
-  const result = await signIn('handle', { handle, redirect: false });
+  const result = await signIn('handle', { handle, password, redirect: false });
   return Boolean(result && !result.error);
 }
 

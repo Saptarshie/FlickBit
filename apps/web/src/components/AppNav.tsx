@@ -149,6 +149,7 @@ export function BottomNav({ transparent = false }: NavProps) {
           {icon(ICONS.plus)}
         </span>
       </Link>
+      {item('/saved', 'Saved', ICONS.bookmark, pathname.startsWith('/saved'))}
       {item('/notifications', 'Activity', ICONS.bell, pathname.startsWith('/notifications'), unread)}
       {item(
         handle ? `/u/${handle}` : '/login',
