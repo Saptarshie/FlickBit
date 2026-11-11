@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { NextRequest } from 'next/server';
 import * as schema from '@playloop/db';
 import { setTestDb } from '../src/lib/db';
+import { eq } from 'drizzle-orm';
 
 // Mutable mock so individual tests can simulate an anonymous caller.
 const authState: { user: { id: string } | null } = { user: { id: '11111111-1111-4111-8111-111111111111' } };
@@ -149,5 +150,77 @@ describe('POST /api/studio/generate', () => {
     expect(Array.isArray(body.data.messages)).toBe(true);
     expect(body.data.versions.length).toBeGreaterThanOrEqual(1);
     expect(body.data.versions[0].artifactUrl).toContain('/v/');
+  });
+
+  it('remix: reads the source artifact and forks the new game from it', { timeout: 120_000 }, async () => {
+    const { writeFile, mkdir } = await import('node:fs/promises');
+    const path = await import('node:path');
+    const { randomUUID } = await import('node:crypto');
+    const { artifactsDir } = await import('../src/lib/artifacts');
+
+    // A published source game with an artifact on disk.
+    const sha = randomUUID().replace(/-/g, '');
+    await mkdir(artifactsDir(), { recursive: true });
+    await writeFile(
+      path.join(artifactsDir(), `${sha}.html`),
+      '<!doctype html><html><body>SOURCE-MARKER</body></html>',
+      'utf8',
+    );
+    const [sourceGame] = await db
+      .insert(schema.games)
+      .values({ creatorId: authState.user!.id, title: 'Remix Source', status: 'published', moderation: 'approved' })
+      .returning({ id: schema.games.id });
+    const [sourceVersion] = await db
+      .insert(schema.gameVersions)
+      .values({
+        gameId: sourceGame!.id,
+        versionNo: 1,
+        artifactSha256: sha,
+        artifactBytes: 60,
+        artifactKey: `artifacts/${sha}.html`,
+        manifest: {},
+        createdBy: 'user',
+      })
+      .returning({ id: schema.gameVersions.id });
+    await db.update(schema.games).set({ publishedVersionId: sourceVersion!.id }).where(eq(schema.games.id, sourceGame!.id));
+
+    const { POST } = await import('../app/api/studio/generate/route');
+    const req = new NextRequest('http://localhost:3000/api/studio/generate', {
+      method: 'POST',
+      body: JSON.stringify({ prompt: 'make it underwater', forkedFromId: sourceGame!.id }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+
+    let text = '';
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      text += decoder.decode(value);
+    }
+    expect(text).toContain('event: complete');
+
+    const remixes = await db.select().from(schema.games).where(eq(schema.games.forkedFromGameId, sourceGame!.id));
+    expect(remixes).toHaveLength(1);
+    expect(remixes[0].id).not.toBe(sourceGame!.id);
+  });
+
+  it('remix of a game with no published build is refused, not silently generated', async () => {
+    const [bare] = await db
+      .insert(schema.games)
+      .values({ creatorId: authState.user!.id, title: 'No build', status: 'draft' })
+      .returning({ id: schema.games.id });
+    const { POST } = await import('../app/api/studio/generate/route');
+    const res = await POST(
+      new NextRequest('http://localhost:3000/api/studio/generate', {
+        method: 'POST',
+        body: JSON.stringify({ prompt: 'remix it', forkedFromId: bare!.id }),
+      }),
+    );
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.error.code).toBe('missing_source');
   });
 });

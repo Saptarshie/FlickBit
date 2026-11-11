@@ -165,6 +165,22 @@ export async function POST(req: NextRequest) {
       .orderBy(desc(schema.chatMessages.createdAt))
       .limit(8);
     history = prior.map((p) => p.content).reverse();
+  } else if (forkedFromId) {
+    // Remix: the source game's artifact is the base the model rewrites. Without
+    // this the coder only saw a title and invented an unrelated game.
+    const [source] = await db
+      .select({ sha: schema.gameVersions.artifactSha256 })
+      .from(schema.games)
+      .leftJoin(schema.gameVersions, eq(schema.gameVersions.id, schema.games.publishedVersionId))
+      .where(eq(schema.games.id, forkedFromId))
+      .limit(1);
+    if (!source) return bad('not_found', 'The game you are remixing does not exist', 404);
+    if (!source.sha) return bad('missing_source', 'That game has no published build to remix', 409);
+    try {
+      baseCode = await readFile(path.join(artifactsDir(), `${source.sha}.html`), 'utf8');
+    } catch {
+      return bad('missing_source', 'The build to remix is not on disk', 409);
+    }
   }
 
   // Record the turn before generating so a failure is still visible in the thread.

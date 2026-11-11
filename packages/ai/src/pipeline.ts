@@ -72,7 +72,9 @@ export async function runGenerationPipeline(
 
   // Stage 2: art direction. Skipped for follow-up edits: the design exists.
   let design: GeneratedGame['design'];
-  if (!baseCode && !options.skipDesign) {
+  // A remix gets a fresh visual identity even though it starts from a build;
+  // a plain follow-up keeps the brief it was made with.
+  if ((!baseCode || isRemix) && !options.skipDesign) {
     reportProgress({
       stage: 'design',
       message: 'Art director is writing the visual and juice brief...',
