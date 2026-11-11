@@ -10,7 +10,10 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test --concurrency=1",
     "infra:up": "docker compose up -d",
-    "infra:down": "docker compose down"
+    "infra:down": "docker compose down",
+    "db:seed-games": "tsx scripts/publish-seeds.ts",
+    "gen:seed": "tsx packages/ai/seed-game.ts",
+    "smoke:load": "node scripts/load-smoke.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite-socket": "^0.2.18",

@@ -10,6 +10,7 @@ import Nodemailer from 'next-auth/providers/nodemailer';
 import PostgresAdapter from '@auth/pg-adapter';
 import postgres from 'postgres';
 import nodemailer from 'nodemailer';
+import { getSql } from './src/lib/db';
 
 declare module 'next-auth' {
   interface Session {
@@ -21,12 +22,20 @@ const DEV_FALLBACK_DATABASE_URL = `postgres://${'playloop'}:${'playloop'}@localh
 const DEV_FALLBACK_EMAIL_SERVER = 'smtp://localhost:1025';
 const DEV_FALLBACK_EMAIL_FROM = 'PlayLoop <noreply@playloop.local>';
 
-/** Single postgres client shared by the adapter bridge and handle sign-in. */
-const authSql = postgres(process.env.DATABASE_URL ?? DEV_FALLBACK_DATABASE_URL, {
-  max: 4,
-  idle_timeout: 20,
-  onnotice: () => {},
-});
+/**
+ * The adapter shares the app's single postgres client (src/lib/db). Opening a
+ * second pool against the dev PGlite server starved both of them and every
+ * authenticated request 500'd with ECONNRESET.
+ */
+const authSql = (() => {
+  try {
+    return getSql();
+  } catch {
+    // No DATABASE_URL (e.g. a CI build that only type-checks): build a client
+    // that never connects instead of throwing at import time.
+    return postgres(DEV_FALLBACK_DATABASE_URL, { max: 1, prepare: false });
+  }
+})();
 
 /** Lowercase, strip a leading @, keep [a-z0-9_.-], 3-24 chars. */
 export function normalizeHandle(input: string): string | null {

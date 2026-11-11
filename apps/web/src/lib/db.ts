@@ -19,19 +19,40 @@ const globalForDb = globalThis as unknown as {
 };
 
 /**
+ * The single postgres-js client for the process, shared by Drizzle and by the
+ * Auth.js adapter. Sharing matters: the dev database (PGlite) accepts one
+ * socket at a time, so a second pool starves the first and both start failing
+ * with prepared-statement / ECONNRESET errors.
+ */
+export function getSql(): ReturnType<typeof postgres> {
+  if (!globalForDb.__playloopSql) {
+    const url = process.env.DATABASE_URL;
+    if (!url) throw new Error('DATABASE_URL is not set');
+    // `prepare: false` is mandatory here: the dev database is PGlite served
+    // over one shared engine, so postgres-js's unnamed prepared statements
+    // collide between sockets ("bind message supplies 11 parameters, but
+    // prepared statement requires 10") and requests fail at random under
+    // concurrency. Simple-protocol queries are safe over a shared session.
+    globalForDb.__playloopSql = postgres(url, {
+      max: 1,
+      prepare: false,
+      connect_timeout: 10,
+      idle_timeout: 2,
+      max_lifetime: 60 * 10,
+      onnotice: () => {},
+    });
+  }
+  return globalForDb.__playloopSql;
+}
+
+/**
  * Lazily create (and memoise) the production Drizzle client over postgres-js,
  * bound to the schema exported by @playloop/db. Tests inject a PGlite-backed
  * instance via setTestDb() instead of pointing at a real server.
  */
 export function getDb(): Db {
   if (!db) {
-    const url = process.env.DATABASE_URL;
-    if (!url) throw new Error('DATABASE_URL is not set');
-    const sql =
-      globalForDb.__playloopSql ??
-      postgres(url, { max: 4, idle_timeout: 20, max_lifetime: 60 * 10, onnotice: () => {} });
-    globalForDb.__playloopSql = sql;
-    db = drizzle(sql, { schema });
+    db = drizzle(getSql(), { schema });
   }
   return db;
 }

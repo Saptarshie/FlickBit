@@ -33,6 +33,7 @@ const fix = process.argv.includes('--fix');
 const artifactsDir = path.resolve(root, process.env.ARTIFACTS_DIR ?? 'apps/play-worker/artifacts');
 const sql = postgres(process.env.DATABASE_URL ?? 'postgres://postgres:postgres@127.0.0.1:5432/postgres', {
   max: 1,
+  prepare: false,
 });
 
 type Row = { id: string; title: string; sha: string };

@@ -60,7 +60,14 @@ async function main(): Promise<void> {
   const result = await seed(db as never, { artifactsDir });
   console.log(`[db] seeded: systemUser=${result.systemUserId} newTemplateGames=${result.templateGames}`);
 
-  const server = new PGLiteSocketServer({ db: pg, port, host: '127.0.0.1', maxConnections: 10 });
+  // EXACTLY ONE connection. PGlite runs every statement on a single engine and
+  // keeps one unnamed prepared statement per session; with two sockets the
+  // Parse/Bind frames interleave and the server answers with
+  //   'bind message supplies 11 parameters, but prepared statement requires 10'
+  // or 'unnamed prepared statement does not exist'. Both were random 500s on
+  // the feed under concurrency. Serialising at the socket is the only correct
+  // option without a real Postgres.
+  const server = new PGLiteSocketServer({ db: pg, port, host: '127.0.0.1', maxConnections: 1 });
   await server.start();
   console.log(`[db] postgres wire protocol on postgres://postgres:postgres@127.0.0.1:${port}/postgres`);
   console.log(`[db] artifacts served from ${artifactsDir}`);

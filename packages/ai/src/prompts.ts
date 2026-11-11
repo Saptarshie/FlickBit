@@ -34,21 +34,34 @@ CRITICAL SPEC & SECURITY RULES (VIOLATION = REJECTION):
 3. ZERO external resources: no external <script src>, <link href>, external images, or audio urls. Use Canvas 2D API for graphics and WebAudio oscillator/noise nodes for sound.
 4. ZERO persistent storage: no localStorage, sessionStorage, indexedDB, openDatabase, or cookies.
 5. ZERO sandbox escapes: no window.open, top, parent, alert, prompt, confirm.
-6. Mobile-first: touch events (touchstart, touchmove, touchend) or pointerdown/move/up. Support 1-finger play.
-7. Responsive Canvas: dynamic resize to window.innerWidth/innerHeight with window.devicePixelRatio support.
-8. PlayLoop SDK Integration:
-   - When loaded and ready, invoke: window.playloop?.ready();
-   - On score change or game over: window.playloop?.sendScore({ score: currentScore });
-   - On game over: window.playloop?.sendGameOver({ score: finalScore });
-   - Listen for pause/resume messages:
-     window.addEventListener('message', (e) => {
-       if (e.data?.src === 'playloop' && e.data?.type === 'pause') { isPaused = true; }
-       if (e.data?.src === 'playloop' && e.data?.type === 'resume') { isPaused = false; }
-     });
+6. Mobile-first: pointerdown/pointermove/pointerup (and touch fallback). One-finger play only.
+7. Responsive Canvas: dynamic resize to window.innerWidth/innerHeight with devicePixelRatio support.
+
+PLAYLOOP SDK — the host injects exactly this global (the name is case-sensitive):
+  window.PlayLoop.ready()                     // call once when your first frame is drawn
+  window.PlayLoop.submitScore(n)              // live score updates
+  window.PlayLoop.gameOver({ score: n })      // run when the player loses
+  window.PlayLoop.haptic('light'|'medium'|'heavy')
+  window.PlayLoop.safeArea                    // { top, bottom } — keep HUD clear of these
+  window.PlayLoop.onPause(fn) / window.PlayLoop.onResume(fn) / window.PlayLoop.onRestart(fn)
+  window.PlayLoop.storage.get(key)/set(key, value), window.PlayLoop.rng(), window.PlayLoop.log(msg)
+Never call window.playloop, sendScore or sendGameOver — they do not exist. Guard with
+"if (window.PlayLoop)" so the file also runs standalone.
+
 9. Embed the game manifest exactly as <script type="application/json" id="pl-manifest"> with STRICT schema:
    {"title":"...","description":"...","controls":"tap|drag|swipe|tilt|keys","orientation":"portrait|landscape|any","sdkVersion":1,"tags":["..."],"scoring":"higher|lower|none"}
 
-Deliver complete, working, bug-free HTML with smooth 60fps requestAnimationFrame loop.`;
+QUALITY BAR — a submission that misses these is rejected even if it runs:
+- A distinct START SCREEN (title, one-line how-to-play, "tap to start"). The simulation must NOT begin until the player's first input.
+- A HUD that never overlaps the playfield edge: score top-centre, best/high score small, lives or timer if relevant.
+- GAME OVER screen inside the canvas: final score, best score, "tap to restart" — restarts without a page reload.
+- JUICE: at least three of — particle burst on impact, screen shake on death, squash/stretch or scale pop on the player, trailing motion, hit flash, score popup numbers.
+- AUDIO: WebAudio blips for score/hit/start (created on the first gesture so autoplay policy is satisfied), plus PlayLoop.onPause to suspend.
+- A difficulty curve: speed/spawn rate increases with score; never an unwinnable first second.
+- One coherent palette (3–5 colours), generous spacing, no default-blue everything, no raw <div> UI over the canvas.
+- Deterministic, frame-rate independent update using a clamped delta time (dt = min(delta, 0.05)).
+
+Deliver complete, working, bug-free HTML with a smooth 60fps requestAnimationFrame loop and a responsive 390x844 portrait layout.`;
 
 export const REPAIR_SYSTEM_PROMPT = `You are an expert debugging assistant for HTML5 games. You are given a game HTML file and a list of static validation failures and/or runtime smoke test errors.
 Fix the errors while preserving the gameplay and visual design.

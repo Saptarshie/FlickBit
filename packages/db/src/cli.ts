@@ -9,7 +9,7 @@ import { rollupGameStats } from './rollup';
 
 const cmd = process.argv[2];
 const url = process.env.DATABASE_URL ?? 'postgres://playloop:playloop@localhost:5432/playloop';
-const client = postgres(url, { max: 1 });
+const client = postgres(url, { max: 1, prepare: false });
 const db = drizzle(client, { schema });
 
 try {

@@ -165,10 +165,11 @@ export function StudioScreen() {
   const togglePause = () => {
     if (iframeRef.current?.contentWindow) {
       const nextPaused = !isPaused;
-      iframeRef.current.contentWindow.postMessage({
-        src: 'playloop',
-        type: nextPaused ? 'pause' : 'resume',
-      }, '*');
+      // Must be a valid v1 envelope or the guest shim drops it.
+      iframeRef.current.contentWindow.postMessage(
+        { v: 1, src: 'playloop', type: nextPaused ? 'pause' : 'resume' },
+        '*',
+      );
       setIsPaused(nextPaused);
     }
   };

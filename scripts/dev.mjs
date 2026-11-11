@@ -11,10 +11,20 @@
 import { spawn } from 'node:child_process';
 import net from 'node:net';
 import path from 'node:path';
+import { existsSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const children = [];
+
+// `next build` and `next dev` share .next/. Leaving a production build behind
+// makes the dev server 500 on every route with "routes-manifest.json" ENOENT, so
+// start clean whenever a build marker is present.
+const nextDir = path.join(root, 'apps', 'web', '.next');
+if (existsSync(path.join(nextDir, 'BUILD_ID'))) {
+  console.log('[dev] removing a production .next build so next dev starts clean');
+  rmSync(nextDir, { recursive: true, force: true });
+}
 let shuttingDown = false;
 
 function run(label, command, args, opts = {}) {
