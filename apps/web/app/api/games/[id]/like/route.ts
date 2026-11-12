@@ -3,13 +3,14 @@ import { z } from 'zod';
 import { games, likes } from '@playloop/db';
 import { notify } from '../../../../../src/lib/notify';
 import { getDb } from '../../../../../src/lib/db';
+import { enforceRateLimit } from '@/lib/api-helpers';
 import {
   jsonError,
   jsonOk,
   parseValue,
   requireUser,
   wrap,
-} from '../../../../../src/lib/api-helpers';
+} from '../../../../../src/lib/api-helpers';;
 
 const paramsSchema = z.object({ id: z.uuid() });
 
@@ -23,6 +24,7 @@ async function readLikeCount(gameId: string): Promise<number> {
 
 export const POST = wrap<{ id: string }>(async (req, ctx) => {
   const userId = await requireUser(req);
+  enforceRateLimit(userId, 'like', 60, 60_000);
   const { id: gameId } = parseValue(await ctx.params, paramsSchema);
 
   const db = getDb();

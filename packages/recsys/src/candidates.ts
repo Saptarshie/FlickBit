@@ -26,6 +26,9 @@ export async function trending(
   opts: CandidateOptions = {}
 ): Promise<Candidate[]> {
   const seen = toSeenSet(opts.seenGameIds);
+  // Bound the scan: the seen-filter runs after the query, so ask for a little
+  // more than we need instead of sorting every published game in the database.
+  const fetchLimit = Math.min(limit + seen.size + 10, 500);
 
   const query = sql`
     WITH h AS (SELECT to_timestamp(FLOOR(EXTRACT(epoch FROM now()) / 3600) * 3600) AS t),
@@ -66,6 +69,7 @@ export async function trending(
     LEFT JOIN live ON live.game_id = g.id
     WHERE g.status = 'published' AND g.moderation = 'approved'
     ORDER BY "score" DESC, g.published_at DESC
+    LIMIT ${fetchLimit}
   `;
 
   const rows = await db.execute(query);
@@ -97,6 +101,9 @@ export async function fresh(
   opts: CandidateOptions = {}
 ): Promise<Candidate[]> {
   const seen = toSeenSet(opts.seenGameIds);
+  // Bound the scan: the seen-filter runs after the query, so ask for a little
+  // more than we need instead of sorting every published game in the database.
+  const fetchLimit = Math.min(limit + seen.size + 10, 500);
 
   const query = sql`
     SELECT
@@ -108,6 +115,7 @@ export async function fresh(
     LEFT JOIN game_features gf ON gf.game_version_id = g.published_version_id
     WHERE g.status = 'published' AND g.moderation = 'approved'
     ORDER BY g.published_at DESC NULLS LAST
+    LIMIT ${fetchLimit}
   `;
 
   const rows = await db.execute(query);
@@ -141,6 +149,9 @@ export async function social(
 ): Promise<Candidate[]> {
   if (!userId) return [];
   const seen = toSeenSet(opts.seenGameIds);
+  // Bound the scan: the seen-filter runs after the query, so ask for a little
+  // more than we need instead of sorting every published game in the database.
+  const fetchLimit = Math.min(limit + seen.size + 10, 500);
 
   const query = sql`
     SELECT
@@ -153,6 +164,7 @@ export async function social(
     LEFT JOIN game_features gf ON gf.game_version_id = g.published_version_id
     WHERE g.status = 'published' AND g.moderation = 'approved'
     ORDER BY g.published_at DESC NULLS LAST
+    LIMIT ${fetchLimit}
   `;
 
   const rows = await db.execute(query);
@@ -185,6 +197,9 @@ export async function explore(
   opts: CandidateOptions = {}
 ): Promise<Candidate[]> {
   const seen = toSeenSet(opts.seenGameIds);
+  // Bound the scan: the seen-filter runs after the query, so ask for a little
+  // more than we need instead of sorting every published game in the database.
+  const fetchLimit = Math.min(limit + seen.size + 10, 500);
 
   const query = sql`
     WITH h AS (SELECT to_timestamp(FLOOR(EXTRACT(epoch FROM now()) / 3600) * 3600) AS t),
@@ -212,6 +227,7 @@ export async function explore(
     LEFT JOIN live ON live.game_id = g.id
     WHERE g.status = 'published' AND g.moderation = 'approved'
     ORDER BY impressions ASC, g.published_at DESC
+    LIMIT ${fetchLimit}
   `;
 
   const rows = await db.execute(query);

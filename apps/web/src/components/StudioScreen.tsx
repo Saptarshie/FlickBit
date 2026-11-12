@@ -66,6 +66,9 @@ export function StudioScreen() {
   const [stage, setStage] = useState<Stage | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  /** Set when a finished build could not be stored: publishing can be retried. */
+  const [publishRetry, setPublishRetry] = useState<{ sha: string } | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   const [artifactUrl, setArtifactUrl] = useState<string | null>(null);
   const [title, setTitle] = useState('');
@@ -226,17 +229,61 @@ export function StudioScreen() {
             setImageKey(null);
             setImagePreview(null);
           } else if (eventName === 'error') {
-            throw new Error(data.message ?? 'Generation failed');
+            const failure = new Error(data.message ?? 'Generation failed') as Error & { payload?: unknown };
+            failure.payload = data;
+            throw failure;
           }
         }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Generation failed';
+      const payload = (err as { payload?: { code?: string; sha?: string } }).payload;
       setErrorMsg(message);
-      setTurns((prev) => [...prev, { id: `err-${Date.now()}`, role: 'assistant', content: `Build failed: ${message}` }]);
+      if (payload?.code === 'publish_failed' && payload.sha) setPublishRetry({ sha: payload.sha });
+      setTurns((prev) => [...prev, { id: `err-${Date.now()}`, role: 'assistant', content: message }]);
     } finally {
       setIsGenerating(false);
       setStage(null);
+    }
+  };
+
+  /**
+   * Finish a build whose database write failed, without regenerating it.
+   * The artifact and its metadata are on disk; this only re-runs publishing.
+   */
+  const retryPublish = async () => {
+    if (!publishRetry || retrying) return;
+    setRetrying(true);
+    try {
+      const res = await fetch('/api/studio/publish', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sha: publishRetry.sha }),
+      });
+      const body = (await res.json()) as
+        | { data: { gameId: string; versionNo: number; artifactUrl: string } }
+        | { error: { message: string; retryable?: boolean } };
+      if (!res.ok || !('data' in body)) {
+        const failure = 'error' in body ? body.error : { message: 'Publishing failed again.' };
+        setErrorMsg(failure.message);
+        return;
+      }
+      setGameId(body.data.gameId);
+      setArtifactUrl(body.data.artifactUrl);
+      setPublishRetry(null);
+      setErrorMsg(null);
+      setTurns((prev) => [
+        ...prev,
+        {
+          id: `ok-${Date.now()}`,
+          role: 'assistant',
+          content: `Published — v${body.data.versionNo} is live.`,
+        },
+      ]);
+    } catch {
+      setErrorMsg('Could not reach the server. Your build is still saved — retry in a moment.');
+    } finally {
+      setRetrying(false);
     }
   };
 
@@ -365,13 +412,28 @@ export function StudioScreen() {
           <div role="alert" className="mx-auto mt-3 max-w-lg rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-[11px] text-red-200">
             <p className="font-semibold">Build failed</p>
             <p className="break-words">{errorMsg}</p>
-            <button
-              type="button"
-              onClick={() => setErrorMsg(null)}
-              className="mt-2 rounded-lg bg-neutral-800 px-2 py-1 text-[11px] hover:bg-neutral-700"
-            >
-              Dismiss
-            </button>
+            <div className="mt-2 flex gap-2">
+              {publishRetry ? (
+                <button
+                  type="button"
+                  onClick={retryPublish}
+                  disabled={retrying}
+                  className="rounded-lg bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
+                >
+                  {retrying ? 'Publishing…' : 'Retry publishing'}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMsg(null);
+                  setPublishRetry(null);
+                }}
+                className="rounded-lg bg-neutral-800 px-2 py-1 text-[11px] hover:bg-neutral-700"
+              >
+                Dismiss
+              </button>
+            </div>
           </div>
         ) : null}
 

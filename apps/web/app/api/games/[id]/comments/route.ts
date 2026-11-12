@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { comments, games, users } from '@playloop/db';
 import { getDb } from '../../../../../src/lib/db';
 import { notify } from '../../../../../src/lib/notify';
+import { enforceRateLimit } from '@/lib/api-helpers';
 import {
   jsonError,
   jsonOk,
@@ -10,7 +11,7 @@ import {
   parseValue,
   requireUser,
   wrap,
-} from '../../../../../src/lib/api-helpers';
+} from '../../../../../src/lib/api-helpers';;
 
 const paramsSchema = z.object({ id: z.uuid() });
 
@@ -81,6 +82,7 @@ export const GET = wrap<{ id: string }>(async (req, ctx) => {
 
 export const POST = wrap<{ id: string }>(async (req, ctx) => {
   const userId = await requireUser(req);
+  enforceRateLimit(userId, 'comment', 10, 60_000, 'comments');
   const { id: gameId } = parseValue(await ctx.params, paramsSchema);
   const input = await parseBody(req, createSchema);
 

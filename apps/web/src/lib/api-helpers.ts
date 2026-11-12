@@ -1,5 +1,8 @@
 import { z } from 'zod';
 import { auth } from '../../auth';
+import { humanizeDbError } from './db-errors';
+import { resolveViewer, SESSION_STALE } from './session';
+import { takeRateLimit } from './rate-limit';
 
 /**
  * Shared plumbing for API route handlers.
@@ -49,12 +52,45 @@ export async function parseBody<S extends z.ZodType>(req: Request, schema: S): P
   return parseValue(raw, schema);
 }
 
-/** Return the authenticated user id; throws a 401 JSON Response when unauthenticated. */
+/**
+ * Return the authenticated user id; throws a 401 JSON Response when
+ * unauthenticated **or when the account no longer exists**.
+ *
+ * The second case is not theoretical: a cookie survives a database reset, so an
+ * old session used to sail through and die on a foreign key deep inside a write
+ * (the studio showed the raw SQL). One lookup here fixes every route at once.
+ */
 export async function requireUser(_req: Request): Promise<string> {
-  const session = (await auth()) as SessionLike;
-  const userId = session?.user?.id;
-  if (!userId) throw jsonError('unauthorized', 'Authentication required', 401);
-  return userId;
+  const viewer = await resolveViewer();
+  if (viewer.kind === 'anonymous') throw jsonError('unauthorized', 'Authentication required', 401);
+  if (viewer.kind === 'stale') throw jsonError(SESSION_STALE.code, SESSION_STALE.message, 401);
+  return viewer.userId;
+}
+
+/**
+ * Throttle a write from one identity; throws a 429 with `retry-after`.
+ *
+ * Every social endpoint was previously unthrottled, so a single script could
+ * fill the comments table or inflate like counts.
+ */
+export function enforceRateLimit(
+  userId: string,
+  bucket: string,
+  max: number,
+  windowMs: number,
+  noun = 'requests',
+): void {
+  const result = takeRateLimit(bucket, userId, max, windowMs);
+  if (result.allowed) return;
+  throw new Response(
+    JSON.stringify({
+      error: { code: 'rate_limited', message: `Too many ${noun} — try again in ${result.retryAfterSeconds}s.` },
+    }),
+    {
+      status: 429,
+      headers: { 'content-type': 'application/json', 'retry-after': String(result.retryAfterSeconds) },
+    },
+  );
 }
 
 export type RouteParams = Record<string, string>;
@@ -76,8 +112,10 @@ export function wrap<P extends RouteParams = RouteParams>(
       return await handler(req, ctx);
     } catch (err) {
       if (err instanceof Response) return err;
-      console.error(err);
-      return jsonError('internal', 'Internal server error', 500);
+      const human = humanizeDbError(err);
+      // The stack and the SQL stay here; the client gets a sentence it can act on.
+      console.error('[api]', human.code, human.detail);
+      return jsonError(human.code, human.message, 500);
     }
   };
 }

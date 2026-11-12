@@ -1,7 +1,10 @@
 import { NextRequest } from 'next/server';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { auth } from '../../../../auth';
+import { resolveViewer, SESSION_STALE } from '@/lib/session';
+import { humanizeDbError } from '@/lib/db-errors';
+import { publishArtifact } from '@/lib/publish';
+import { savePendingBuild } from '@/lib/pending-builds';
 import { getDb } from '@/lib/db';
 import { artifactsDir } from '@/lib/artifacts';
 import { MAX_PROMPT_LENGTH, takeGenerationSlot } from '@/lib/generation-quota';
@@ -104,9 +107,10 @@ export async function POST(req: NextRequest) {
     return bad('validation_error', `Prompt is limited to ${MAX_PROMPT_LENGTH} characters`, 400);
   }
 
-  const session = await auth();
-  const creatorId = (session as { user?: { id?: string } } | null)?.user?.id;
-  if (!creatorId) return bad('unauthorized', 'Sign in to create a game', 401);
+  const viewer = await resolveViewer();
+  if (viewer.kind === 'anonymous') return bad('unauthorized', 'Sign in to create a game', 401);
+  if (viewer.kind === 'stale') return bad(SESSION_STALE.code, SESSION_STALE.message, 401);
+  const creatorId = viewer.userId;
 
   const quota = takeGenerationSlot(creatorId);
   if (!quota.allowed) {
@@ -269,63 +273,52 @@ export async function POST(req: NextRequest) {
       await mkdir(artifactDir, { recursive: true });
       await writeFile(path.join(artifactDir, `${result.sha256}.html`), result.code, 'utf8');
 
-      // New game on first turn; the same row is extended on every follow-up.
-      if (!gameId) {
-        const [created] = await db
-          .insert(schema.games)
-          .values({
-            creatorId,
-            title: result.metadata.title,
-            description: result.metadata.description,
-            tags: result.metadata.tags,
-            status: 'published',
-            moderation: 'approved',
-            forkedFromGameId: forkedFromId,
-            publishedAt: new Date(),
-          })
-          .returning({ id: schema.games.id });
-        gameId = created!.id;
-        // First turn: the game did not exist when the request arrived, so the
-        // visitor's opening message is recorded now that it has a home.
+      const firstTurn = !gameId;
+      let published: Awaited<ReturnType<typeof publishArtifact>>;
+      try {
+        published = await publishArtifact(db, {
+          creatorId,
+          sha256: result.sha256,
+          bytes: result.bytes,
+          metadata: result.metadata,
+          spec: result.spec,
+          gameId,
+          versionNo: gameId ? undefined : versionNo,
+          forkedFromId,
+        });
+      } catch (publishErr) {
+        const human = humanizeDbError(publishErr);
+        console.error('[studio] publish failed:', human.detail);
+        // The build is finished and on disk. Keep everything needed to publish
+        // it later instead of asking for another ten minutes of generation.
+        const pending = { ...result, createdAt: Date.now() };
+        await savePendingBuild(pending, { gameId, forkedFromId, creatorId }).catch((err) =>
+          console.warn('[studio] could not save the pending build:', err instanceof Error ? err.message : err),
+        );
+        if (turnJobId) {
+          await db
+            .update(schema.generationJobs)
+            .set({ status: 'failed', error: { message: human.message }, finishedAt: new Date() })
+            .where(eq(schema.generationJobs.id, turnJobId))
+            .catch(() => undefined);
+        }
+        await sendEvent('error', {
+          code: 'publish_failed',
+          message: human.message,
+          retryable: true,
+          sha: result.sha256,
+        });
+        return;
+      }
+
+      gameId = published.gameId;
+      if (firstTurn) {
+        // The game did not exist when the request arrived; record the opening turn now.
         try {
           await db.insert(schema.chatMessages).values({ gameId, userId: creatorId, role: 'user', content: prompt });
         } catch (err) {
           console.warn('[studio] could not record the opening turn:', err instanceof Error ? err.message : err);
         }
-      } else {
-        await db
-          .update(schema.games)
-          .set({ title: result.metadata.title, description: result.metadata.description, tags: result.metadata.tags, updatedAt: new Date() })
-          .where(eq(schema.games.id, gameId));
-      }
-
-      const [version] = await db
-        .insert(schema.gameVersions)
-        .values({
-          gameId,
-          versionNo,
-          artifactSha256: result.sha256,
-          artifactBytes: result.bytes,
-          artifactKey: `artifacts/${result.sha256}.html`,
-          manifest: { ...result.metadata, spec: result.spec },
-          createdBy: 'ai',
-        })
-        .returning({ id: schema.gameVersions.id });
-
-      await db.update(schema.games).set({ publishedVersionId: version!.id }).where(eq(schema.games.id, gameId));
-
-      try {
-        const embedTextInput = `${result.metadata.title}. ${result.metadata.description} ${result.metadata.tags.join(' ')}`;
-        const vec = await embedText(embedTextInput);
-        if (vec) {
-          await db.execute(
-            sql`INSERT INTO game_features (game_version_id, description_text, text_vec, content_vec, feed_eligible, embedded_at, model_versions)
-                VALUES (${version!.id}, ${embedTextInput}, ${toVectorLiteral(vec)}::vector, ${toVectorLiteral(vec)}::vector, true, now(), ${JSON.stringify({ embed: process.env.EMBED_MODEL ?? 'embeddinggemma' })}::jsonb)
-                ON CONFLICT (game_version_id) DO UPDATE SET text_vec = EXCLUDED.text_vec, content_vec = EXCLUDED.content_vec, feed_eligible = true, embedded_at = now()`,
-          );
-        }
-      } catch (embedErr) {
-        console.warn('[studio] embedding skipped:', embedErr instanceof Error ? embedErr.message : embedErr);
       }
 
       // Close the turn: assistant reply + job outcome.
@@ -341,12 +334,12 @@ export async function POST(req: NextRequest) {
           ]
             .filter(Boolean)
             .join(' '),
-          versionId: version!.id,
+          versionId: published.versionId,
         });
         if (turnJobId) {
           await db
             .update(schema.generationJobs)
-            .set({ status: 'succeeded', resultVersionId: version!.id, finishedAt: new Date() })
+            .set({ status: 'succeeded', resultVersionId: published.versionId, finishedAt: new Date() })
             .where(eq(schema.generationJobs.id, turnJobId));
         }
       } catch (err) {
@@ -355,8 +348,8 @@ export async function POST(req: NextRequest) {
 
       await sendEvent('complete', {
         gameId,
-        versionId: version!.id,
-        versionNo,
+        versionId: published.versionId,
+        versionNo: published.versionNo,
         artifactUrl: `${playOrigin}/v/${result.sha256}.html`,
         metadata: result.metadata,
         spec: result.spec,
@@ -367,7 +360,11 @@ export async function POST(req: NextRequest) {
         repairs: result.repairsCount,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Generation failed';
+      const raw = err instanceof Error ? err.message : 'Generation failed';
+      const message = /Failed query:|violates |invalid input syntax/i.test(raw)
+        ? humanizeDbError(err).message
+        : raw;
+      if (message !== raw) console.error('[studio] generation failed:', raw.slice(0, 2000));
       try {
         if (turnJobId) {
           await db

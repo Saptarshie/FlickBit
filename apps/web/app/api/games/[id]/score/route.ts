@@ -2,6 +2,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { gameVersions, games, scores } from '@playloop/db';
 import { getDb } from '../../../../../src/lib/db';
+import { enforceRateLimit } from '@/lib/api-helpers';
 import {
   jsonError,
   jsonOk,
@@ -9,7 +10,7 @@ import {
   parseValue,
   requireUser,
   wrap,
-} from '../../../../../src/lib/api-helpers';
+} from '../../../../../src/lib/api-helpers';;
 
 const paramsSchema = z.object({ id: z.uuid() });
 
@@ -37,6 +38,7 @@ function scoreJson(row: {
 
 export const POST = wrap<{ id: string }>(async (req, ctx) => {
   const userId = await requireUser(req);
+  enforceRateLimit(userId, 'score', 30, 60_000, 'score submissions');
   const { id: gameId } = parseValue(await ctx.params, paramsSchema);
   const input = await parseBody(req, scoreSchema);
 

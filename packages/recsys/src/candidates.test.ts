@@ -10,6 +10,38 @@ import * as schema from '@playloop/db';
 import { insertEvents, rollupGameStats } from '@playloop/db';
 import { trending, fresh, social, explore } from './candidates';
 
+/**
+ * Every generator used to scan and sort EVERY published game and slice the
+ * result in JS (557 ms on 20k games). The bound now lives in SQL; this guards it
+ * so a future edit cannot silently drop it again.
+ */
+describe('candidate query bounds', () => {
+  const capture = () => {
+    const seen: string[] = [];
+    const fakeDb = {
+      execute: async (q: { queryChunks?: unknown[] }) => {
+        const text = (q.queryChunks ?? [])
+          .map((chunk) => {
+            const c = chunk as { value?: unknown; constructor?: { name?: string } };
+            if (Array.isArray(c.value)) return String(c.value[0] ?? '');
+            return typeof c.value === 'string' ? c.value : '?';
+          })
+          .join('');
+        seen.push(text);
+        return [];
+      },
+    };
+    return { fakeDb, seen };
+  };
+
+  it.each(['trending', 'fresh', 'social', 'explore'] as const)('%s bounds the rows it fetches', async (name) => {
+    const { fakeDb, seen } = capture();
+    const fn = { trending, fresh, social, explore }[name];
+    await fn(fakeDb as never, 10, { seenGameIds: ['x'] });
+    expect(seen.join(' ')).toMatch(/LIMIT/i);
+  });
+});
+
 describe('candidate generators', () => {
   let client: PGlite;
   let db: any;

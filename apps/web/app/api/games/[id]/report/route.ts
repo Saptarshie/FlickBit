@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { games, reports } from '@playloop/db';
 import { getDb } from '../../../../../src/lib/db';
+import { enforceRateLimit } from '@/lib/api-helpers';
 import {
   jsonError,
   jsonOk,
@@ -9,7 +10,7 @@ import {
   parseValue,
   requireUser,
   wrap,
-} from '../../../../../src/lib/api-helpers';
+} from '../../../../../src/lib/api-helpers';;
 
 const paramsSchema = z.object({ id: z.uuid() });
 
@@ -20,6 +21,7 @@ const reportSchema = z.object({
 
 export const POST = wrap<{ id: string }>(async (req, ctx) => {
   const userId = await requireUser(req);
+  enforceRateLimit(userId, 'report', 5, 3_600_000, 'reports');
   const { id: gameId } = parseValue(await ctx.params, paramsSchema);
   const input = await parseBody(req, reportSchema);
 

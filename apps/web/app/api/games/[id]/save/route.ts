@@ -2,13 +2,14 @@ import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { games, saves } from '@playloop/db';
 import { getDb } from '../../../../../src/lib/db';
+import { enforceRateLimit } from '@/lib/api-helpers';
 import {
   jsonError,
   jsonOk,
   parseValue,
   requireUser,
   wrap,
-} from '../../../../../src/lib/api-helpers';
+} from '../../../../../src/lib/api-helpers';;
 
 const paramsSchema = z.object({ id: z.uuid() });
 
@@ -22,6 +23,7 @@ async function readSaveCount(gameId: string): Promise<number> {
 
 export const POST = wrap<{ id: string }>(async (req, ctx) => {
   const userId = await requireUser(req);
+  enforceRateLimit(userId, 'save', 60, 60_000);
   const { id: gameId } = parseValue(await ctx.params, paramsSchema);
 
   const db = getDb();

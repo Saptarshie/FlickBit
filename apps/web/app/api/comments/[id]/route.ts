@@ -2,18 +2,20 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { comments, games } from '@playloop/db';
 import { getDb } from '../../../../src/lib/db';
+import { enforceRateLimit } from '@/lib/api-helpers';
 import {
   jsonError,
   jsonOk,
   parseValue,
   requireUser,
   wrap,
-} from '../../../../src/lib/api-helpers';
+} from '../../../../src/lib/api-helpers';;
 
 const paramsSchema = z.object({ id: z.uuid() });
 
 export const DELETE = wrap<{ id: string }>(async (req, ctx) => {
   const userId = await requireUser(req);
+  enforceRateLimit(userId, 'comment-delete', 30, 60_000, 'comment edits');
   const { id } = parseValue(await ctx.params, paramsSchema);
 
   const db = getDb();
