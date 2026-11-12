@@ -72,3 +72,21 @@ deterministic output (tests depend on it).
    partitions) — and note it in this file.
 4. Update `seed.ts` if the table is seeded.
 5. Add a test in `packages/db/src/*.test.ts` that runs the migration on PGlite.
+
+## Hardening notes (migration 0003)
+
+- **Deletion is possible now.** `games.creator_id` cascades, `games.published_version_id`,
+  `games.forked_from_game_id`, `generation_jobs.game_id`, `generation_jobs.base_version_id`,
+  `generation_jobs.result_version_id`, `scores.version_id` and
+  `chat_messages.version_id` are `SET NULL`. Before this, a single `generation_jobs`
+  row made every studio game undeletable and no account could be purged.
+- **Indexes match the queries.** Trigram GIN on title/description (only where
+  `pg_trgm` exists — PGlite has no such extension, so dev falls back to a scan),
+  `games(published_at)` for published rows, partial unread index on
+  `notifications`, a unique unread index per `(user, type, actor, game)`,
+  `scores(game_id, user_id, created_at)`, `events(ts)` / `events(game_id, ts)` and
+  `game_stats_hourly(game_id, hour)`.
+- **Counters are derived, not guessed.** `play15_count` and `remix_count` are
+  written by `rollupGameStats` from `game_stats_hourly`; `like_count`,
+  `save_count` and `comment_count` move inside the same transaction as the row
+  they count.

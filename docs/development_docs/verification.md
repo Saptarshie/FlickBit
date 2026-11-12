@@ -106,7 +106,30 @@ Warm timings on this machine (dev, Turbopack, PGlite):
 | `/g/<id>` | ~120 ms |
 | `/u/<handle>` | ~180 ms |
 
-## 7. Manual smoke (2 minutes)
+## 7. Resilience checks (seconds)
+
+These prove the failure paths, not the happy path.
+
+```bash
+# a session from a database that no longer exists must not reach a write
+curl -s -o /dev/null -w '%{http_code}
+' -X POST localhost:3000/api/studio/publish   -H 'content-type: application/json' -d '{"sha":"'$(printf 'a%.0s' {1..64})'"}'
+# -> 401
+
+# a beacon naming an unknown game must not fail the batch (nor the FK)
+curl -s -o /dev/null -w '%{http_code}
+' -X POST localhost:3000/api/events   -H 'content-type: application/json'   -d '{"events":[{"type":"play_15s","gameId":"00000000-0000-4000-8000-000000000000"}]}'
+# -> 204
+
+# deletion works (it could not before migration 0003: every studio game has a
+# generation_jobs row, and that FK was ON DELETE no action)
+```
+
+Automated: `apps/web/test/resilience.test.ts` covers the stale session, the
+publish retry (401/404/403/200, idempotency) and the "no raw SQL in a message"
+rule; `apps/web/test/api.test.ts` covers drafts staying private.
+
+## 8. Manual smoke (2 minutes)
 
 ```bash
 pnpm dev     # DB :5432, web :3000, play-worker :3001

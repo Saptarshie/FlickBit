@@ -19,3 +19,7 @@ apps/play-worker/artifacts/*.html
 !apps/play-worker/artifacts/.gitkeep
 apps/play-worker/uploads/
 .jspace/
+
+# Next regenerates this and the reference path depends on dev (.next-dev) vs
+# production (.next) builds, so it would flip-flop in every commit.
+apps/web/next-env.d.ts

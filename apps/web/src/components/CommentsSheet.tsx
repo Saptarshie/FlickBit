@@ -126,7 +126,7 @@ export default function CommentsSheet({ gameId, open, onClose, onCountChange }: 
       />
       <div
         role="dialog"
-        aria-modal="true"
+        aria-modal={open ? 'true' : undefined}
         aria-label="Comments"
         style={{
           position: 'absolute',

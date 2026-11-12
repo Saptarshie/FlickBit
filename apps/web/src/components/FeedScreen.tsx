@@ -120,9 +120,13 @@ export default function FeedScreen() {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
-      // A sheet or dialog owns the keyboard while it is open — otherwise the feed
-      // scrolls underneath it (and can unmount the card holding the draft).
-      if (document.querySelector('[aria-modal="true"], [role="dialog"]')) return;
+      // A sheet that is actually OPEN owns the keyboard. Closed sheets stay
+      // mounted inside an aria-hidden container, so "does a dialog exist?" is
+      // the wrong question — it disabled every shortcut in the feed.
+      const sheetOpen = [...document.querySelectorAll('[role="dialog"]')].some(
+        (el) => !el.closest('[aria-hidden="true"]'),
+      );
+      if (sheetOpen) return;
       switch (event.key) {
         case 'ArrowDown':
         case 'PageDown':
