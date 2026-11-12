@@ -52,7 +52,7 @@ export function artifactUrl(base: string, sha: string): string {
 function sendError(
   res: express.Response,
   status: number,
-  code: 'not_found' | 'hash_mismatch' | 'no_manifest',
+  code: 'not_found' | 'hash_mismatch' | 'no_manifest' | 'forbidden' | 'payload_too_large' | 'internal',
 ): void {
   res.status(status).json({ error: { code } });
 }
@@ -70,9 +70,28 @@ export function createApp(opts: { artifactsDir: string }): express.Express {
   /**
    * Runtime gate, hosted here because this process is plain Node: the Next app
    * cannot bundle Playwright (chromium-bidi fails to resolve) and should not.
-   * Localhost-only; the web app calls it during generation.
+   *
+   * This endpoint drives a headless browser over caller-supplied HTML, so it is
+   * guarded: loopback callers only, plus a shared token when one is configured.
+   * (It used to be reachable from anywhere the worker was, which on a laptop
+   * meant the whole LAN.)
    */
-  app.post('/internal/smoke', express.json({ limit: '1mb' }), async (req, res) => {
+  const internalOnly: express.RequestHandler = (req, res, next) => {
+    const remote = req.socket.remoteAddress ?? '';
+    const loopback = remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1';
+    const token = process.env.PLAYLOOP_INTERNAL_TOKEN;
+    if (!loopback) {
+      sendError(res, 403, 'forbidden');
+      return;
+    }
+    if (token && req.get('x-internal-token') !== token) {
+      sendError(res, 403, 'forbidden');
+      return;
+    }
+    next();
+  };
+
+  app.post('/internal/smoke', internalOnly, express.json({ limit: '1mb' }), async (req, res) => {
     const html = typeof req.body?.html === 'string' ? req.body.html : '';
     if (!html) {
       res.status(400).json({ error: { code: 'missing_html', message: 'Send { html }' } });
@@ -119,7 +138,8 @@ export function createApp(opts: { artifactsDir: string }): express.Express {
 
     const html = bytes.toString('utf8');
     if (extractManifest(html) === null) {
-      sendError(res, 500, 'no_manifest');
+      // A content defect, not a server fault: the artifact is what is wrong.
+      sendError(res, 404, 'no_manifest');
       return;
     }
 
@@ -134,6 +154,13 @@ export function createApp(opts: { artifactsDir: string }): express.Express {
   // else) gets the same JSON 404.
   app.use((_req, res) => {
     sendError(res, 404, 'not_found');
+  });
+
+  // Express's default error handler prints an HTML stack trace (absolute paths
+  // included) when NODE_ENV is not production; answer with the JSON envelope.
+  app.use((err: { status?: number; type?: string }, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    const status = err.type === 'entity.too.large' ? 413 : (err.status ?? 500);
+    sendError(res, status, status === 413 ? 'payload_too_large' : 'internal');
   });
 
   return app;

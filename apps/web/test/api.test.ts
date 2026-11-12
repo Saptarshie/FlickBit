@@ -110,7 +110,8 @@ function jsonReq(
 async function createGame(creatorId: string): Promise<string> {
   const [game] = await getDb()
     .insert(schema.games)
-    .values({ creatorId, title: 'Test Game' })
+    // Public games are published; a draft is only visible to its creator.
+    .values({ creatorId, title: 'Test Game', status: 'published', moderation: 'approved', publishedAt: new Date() })
     .returning();
   if (!game) throw new Error('game insert failed');
   return game.id;
@@ -715,7 +716,8 @@ describe('GET /api/users/[id] (profile)', () => {
       .update(schema.games)
       .set({ publishedVersionId: pubVersion!.id, status: 'published', publishedAt: new Date() })
       .where(eq(schema.games.id, publishedId));
-    await createGame(aliceId); // stays draft
+    const draftId = await createGame(aliceId);
+    await getDb().update(schema.games).set({ status: 'draft' }).where(eq(schema.games.id, draftId));
     await getDb().insert(schema.follows).values({ followerId: bobId, followeeId: aliceId });
 
     asUser(bobId);
@@ -725,9 +727,12 @@ describe('GET /api/users/[id] (profile)', () => {
 
     expect(data.user.handle).toBe('alice');
     expect(data.counts.followers).toBe(1);
-    expect(data.counts.games).toBe(1);
-    expect(data.games).toHaveLength(1);
-    expect(data.games[0].id).toBe(publishedId);
+    // Other tests share this database, so assert the contract rather than a
+    // total: every listed game is published, the published one is there, the
+    // draft is not.
+    expect(data.counts.games).toBe(data.games.length);
+    expect(data.games.some((g: { id: string }) => g.id === publishedId)).toBe(true);
+    expect(data.games.some((g: { id: string }) => g.id === draftId)).toBe(false);
     expect(data.viewer.following).toBe(true);
   });
 

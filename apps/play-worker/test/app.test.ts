@@ -121,11 +121,11 @@ describe('GET /v/:sha.html', () => {
     expect(res.body).toEqual({ error: { code: 'hash_mismatch' } });
   });
 
-  it('returns 500 no_manifest when the artifact has no manifest', async () => {
+  it('returns 404 no_manifest when the artifact has no manifest (a content fault, not a server one)', async () => {
     const noManifest = '<!doctype html>\n<html><head><title>x</title></head><body>hi</body></html>\n';
     const sha = sha256Hex(noManifest);
     const res = await request(app).get(`/v/${sha}.html`);
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: { code: 'no_manifest' } });
   });
 });

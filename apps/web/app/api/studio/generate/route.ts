@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { NextRequest } from 'next/server';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -30,13 +31,15 @@ export const maxDuration = 900;
 
 const uploadsDir = () => path.join(artifactsDir(), '..', 'uploads');
 
-type Body = {
-  prompt?: string;
-  gameId?: string;
-  templateId?: string;
-  imageKey?: string;
-  forkedFromId?: string;
-};
+const bodySchema = z.object({
+  prompt: z.string(),
+  gameId: z.uuid().nullish(),
+  templateId: z.string().max(64).nullish(),
+  imageKey: z.string().max(128).nullish(),
+  forkedFromId: z.uuid().nullish(),
+});
+
+type Body = z.infer<typeof bodySchema>;
 
 function bad(code: string, message: string, status: number) {
   return new Response(JSON.stringify({ error: { code, message } }), {
@@ -94,12 +97,20 @@ async function conceptImageDataUrl(imageKey?: string): Promise<string | undefine
 }
 
 export async function POST(req: NextRequest) {
-  let body: Body;
+  let raw: unknown;
   try {
-    body = await req.json();
+    raw = await req.json();
   } catch {
     return bad('bad_request', 'Invalid JSON body', 400);
   }
+  // Validate instead of trusting the cast: a non-uuid gameId reached the query
+  // and Postgres answered 22P02, which the handler reported as a bare 500.
+  const parsed = bodySchema.safeParse(raw);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return bad('validation_error', issue ? `${issue.path.join('.')}: ${issue.message}` : 'Invalid request', 400);
+  }
+  const body: Body = parsed.data;
 
   const prompt = (body.prompt || '').trim();
   if (!prompt) return bad('validation_error', 'Prompt is required', 400);
@@ -210,7 +221,7 @@ export async function POST(req: NextRequest) {
 
   const artifactDir = artifactsDir();
   const playOrigin = process.env.NEXT_PUBLIC_PLAY_ORIGIN || 'http://localhost:3001';
-  const imageDataUrl = await conceptImageDataUrl(body.imageKey);
+  const imageDataUrl = await conceptImageDataUrl(body.imageKey ?? undefined);
 
   const encoder = new TextEncoder();
   const stream = new TransformStream();
@@ -251,7 +262,7 @@ export async function POST(req: NextRequest) {
         result = await runGenerationPipeline(
           {
             prompt,
-            templateId: body.templateId,
+            templateId: body.templateId ?? undefined,
             baseCode,
             isEdit: Boolean(baseCode),
             isRemix: Boolean(forkedFromId),
@@ -383,11 +394,22 @@ export async function POST(req: NextRequest) {
       } catch {
         /* the stream error below is what the user sees */
       }
-      await sendEvent('error', { code: 'generation_failed', message });
+      try {
+        await sendEvent('error', { code: 'generation_failed', message });
+      } catch {
+        /* the client is gone; nothing left to tell */
+      }
     } finally {
-      await writer.close();
+      try {
+        await writer.close();
+      } catch {
+        /* the stream was already closed by a disconnect */
+      }
     }
-  })();
+  })().catch((err) => {
+    // Nobody awaits this promise: an escaping rejection would crash the process.
+    console.error('[studio] generation loop failed:', err instanceof Error ? err.message : err);
+  });
 
   return new Response(stream.readable, {
     headers: {

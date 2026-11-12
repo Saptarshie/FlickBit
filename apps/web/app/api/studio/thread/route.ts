@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { and, asc, desc, eq } from 'drizzle-orm';
 import * as schema from '@playloop/db';
-import { auth } from '../../../../auth';
 import { getDb } from '@/lib/db';
-import { jsonError, jsonOk, wrap } from '@/lib/api-helpers';
+import { jsonError, jsonOk, parseValue, wrap } from '@/lib/api-helpers';
+import { resolveViewer, SESSION_STALE } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,11 +16,14 @@ const querySchema = z.object({ gameId: z.string().uuid() });
  */
 export const GET = wrap(async (req) => {
   const url = new URL(req.url);
-  const gameId = querySchema.parse({ gameId: url.searchParams.get('gameId') ?? '' }).gameId;
+  // parseValue throws the 400 envelope; a bare .parse() was caught by wrap() and
+  // reported as a 500 "something went wrong while saving".
+  const gameId = parseValue({ gameId: url.searchParams.get('gameId') ?? '' }, querySchema).gameId;
 
-  const session = (await auth()) as { user?: { id?: string } | null } | null;
-  const userId = session?.user?.id;
-  if (!userId) return jsonError('unauthorized', 'Sign in to open a studio session', 401);
+  const viewer = await resolveViewer();
+  if (viewer.kind === 'anonymous') return jsonError('unauthorized', 'Sign in to open a studio session', 401);
+  if (viewer.kind === 'stale') return jsonError(SESSION_STALE.code, SESSION_STALE.message, 401);
+  const userId = viewer.userId;
 
   const db = getDb();
   const [game] = await db

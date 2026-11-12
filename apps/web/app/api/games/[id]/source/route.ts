@@ -29,6 +29,8 @@ export const GET = wrap<{ id: string }>(async (_req, ctx) => {
       title: schema.games.title,
       description: schema.games.description,
       tags: schema.games.tags,
+      status: schema.games.status,
+      deletedAt: schema.games.deletedAt,
       artifactSha256: schema.gameVersions.artifactSha256,
     })
     .from(schema.games)
@@ -37,7 +39,9 @@ export const GET = wrap<{ id: string }>(async (_req, ctx) => {
     .limit(1);
 
   const row = rows[0];
-  if (!row || !row.artifactSha256) {
+  // The HTML of a draft or a taken-down game is not public even though the
+  // artifact store itself has no per-game ACL.
+  if (!row || !row.artifactSha256 || row.deletedAt || row.status !== 'published') {
     return jsonError('not_found', 'Game source not found', 404);
   }
 

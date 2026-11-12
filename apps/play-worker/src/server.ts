@@ -30,6 +30,9 @@ const artifactsDir = process.env.ARTIFACTS_DIR
 mkdirSync(artifactsDir, { recursive: true });
 
 const app = createApp({ artifactsDir });
-app.listen(port, () => {
-  console.log(`play-worker listening on http://localhost:${port} (artifacts: ${artifactsDir})`);
+// Loopback by default: the artifacts are public through the host that embeds
+// them, and nothing else on the network needs to reach this process directly.
+const host = process.env.HOST ?? '127.0.0.1';
+app.listen(port, host, () => {
+  console.log(`play-worker listening on http://${host}:${port} (artifacts: ${artifactsDir})`);
 });

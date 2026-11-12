@@ -49,6 +49,14 @@ export const GET = wrap<{ id: string }>(async (req, ctx) => {
   const session = (await auth()) as { user?: { id?: string | null } | null } | null;
   const viewerId = session?.user?.id ?? null;
 
+  // A draft is not public: only its creator may read it. (Unlisted is readable
+  // by anyone holding the link, removed games are not.)
+  const isOwner = viewerId !== null && viewerId === row.game.creatorId;
+  const visible = row.game.status === 'published' || row.game.status === 'unlisted';
+  if (!isOwner && (!visible || row.game.moderation === 'rejected')) {
+    return jsonError('not_found', 'Game not found', 404);
+  }
+
   let viewer = { liked: false, saved: false, followsCreator: false };
   if (viewerId) {
     const [likes, saves, followsRows] = await Promise.all([
