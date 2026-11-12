@@ -71,6 +71,16 @@ const securityHeaders = [
 ];
 
 const config: NextConfig = {
+  /**
+   * Separate output directories for dev and production builds.
+   *
+   * `next dev` and `next build` both write `apps/web/.next`; running a build
+   * while the dev server is up deleted the dev client manifest and every page
+   * died with "Could not load the feed" / 500 until the server was restarted.
+   * With two directories the two commands cannot collide, so building while
+   * developing is safe instead of forbidden.
+   */
+  distDir: process.env.NEXT_DIST_DIR ?? (process.env.NODE_ENV === 'development' ? '.next-dev' : '.next'),
   transpilePackages: ['@playloop/sdk', '@playloop/gamekit', '@playloop/db', '@playloop/recsys', '@playloop/ai'],
   // Keep Node-only DB/native-ish deps out of the server bundle.
   serverExternalPackages: ['postgres', 'nodemailer', 'playwright', 'playwright-core'],

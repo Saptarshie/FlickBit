@@ -15,7 +15,9 @@
     "gen:seed": "tsx packages/ai/seed-game.ts",
     "smoke:load": "node scripts/load-smoke.mjs",
     "e2e:studio": "node scripts/e2e-studio.mjs",
-    "audit:games": "tsx scripts/audit-artifacts.ts --runtime"
+    "audit:games": "tsx scripts/audit-artifacts.ts --runtime",
+    "start": "node scripts/start.mjs",
+    "start:db": "tsx scripts/dev-db.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite-socket": "^0.2.18",

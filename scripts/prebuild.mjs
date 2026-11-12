@@ -1,20 +1,21 @@
 #!/usr/bin/env node
 /**
- * Refuse to build while the dev stack is running.
+ * Guard rails before `turbo run build`.
  *
- * `next build` and `next dev` share `apps/web/.next`. Building on top of a live
- * dev server corrupts the dev client manifest ("module not found in Client
- * Manifest") and the build itself dies with the misleading
- *   Invariant: no direct app page entry found for /_not-found
- * which is what made `pnpm build` look broken.
- *
- * One cheap port check turns that into a clear, actionable message.
+ * `next dev` writes `.next-dev` and `next build` writes `.next`
+ * (apps/web/next.config.ts), so the two can run at the same time. This script
+ * only reports the state so the output is not confusing — it never blocks a
+ * build, because blocking was what made `pnpm build` look broken.
  */
 import net from 'node:net';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
+const root = fileURLToPath(new URL('..', import.meta.url));
 const PORTS = [
-  { port: 3000, name: 'the dev web server (pnpm dev)' },
-  { port: 3001, name: 'the artifact worker (pnpm dev)' },
+  { port: 3000, name: 'dev web server (pnpm dev)' },
+  { port: 3001, name: 'artifact worker (pnpm dev)' },
 ];
 
 function isListening(port) {
@@ -35,15 +36,15 @@ const busy = [];
 for (const entry of PORTS) {
   if (await isListening(entry.port)) busy.push(entry);
 }
-
 if (busy.length > 0) {
-  console.error('\n[build] refusing to build while the dev stack is running:');
-  for (const entry of busy) console.error(`  - :${entry.port} is ${entry.name}`);
-  console.error(
-    '\n  `next build` and `next dev` both write apps/web/.next. Stop the dev server,\n' +
-      '  run `pnpm build`, then start `pnpm dev` again.\n',
-  );
-  process.exit(1);
+  console.log('[build] dev stack is running — production build goes to apps/web/.next, dev keeps .next-dev.');
+  for (const entry of busy) console.log(`  - :${entry.port} ${entry.name}`);
+} else {
+  console.log('[build] no dev server detected — building clean.');
 }
 
-console.log('[build] no dev server detected — building clean.');
+// A previous production build left behind is fine; Next replaces it.
+const outDir = path.join(root, 'apps', 'web', '.next');
+if (existsSync(path.join(outDir, 'BUILD_ID'))) {
+  console.log('[build] replacing the existing production build in apps/web/.next');
+}

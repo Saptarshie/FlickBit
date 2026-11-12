@@ -17,13 +17,14 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const children = [];
 
-// `next build` and `next dev` share .next/. Leaving a production build behind
-// makes the dev server 500 on every route with "routes-manifest.json" ENOENT, so
-// start clean whenever a build marker is present.
-const nextDir = path.join(root, 'apps', 'web', '.next');
-if (existsSync(path.join(nextDir, 'BUILD_ID'))) {
-  console.log('[dev] removing a production .next build so next dev starts clean');
-  rmSync(nextDir, { recursive: true, force: true });
+// Dev builds into `.next-dev` (see apps/web/next.config.ts) so `next build` can
+// run at any time without deleting the running server's manifest. A production
+// marker can only appear here if someone built with NEXT_DIST_DIR pointing at
+// it, so clear that case and never touch `.next` (that is the build output).
+const devNextDir = path.join(root, 'apps', 'web', '.next-dev');
+if (existsSync(path.join(devNextDir, 'BUILD_ID'))) {
+  console.log('[dev] clearing a production build from the dev output directory');
+  rmSync(devNextDir, { recursive: true, force: true });
 }
 let shuttingDown = false;
 
@@ -81,7 +82,39 @@ function waitForPort(port, host = '127.0.0.1', timeoutMs = 30_000) {
 process.on('SIGINT', () => shutdown(0));
 process.on('SIGTERM', () => shutdown(0));
 
+/**
+ * Refuse to start next to an existing stack with a message that says what to do.
+ * Two dev servers silently fight over :3000 and the second one dies with a
+ * Turbo error that looks like a code problem.
+ */
+async function portInUse(port) {
+  return new Promise((resolve) => {
+    const socket = net.connect({ port, host: '127.0.0.1' });
+    const done = (answer) => {
+      socket.destroy();
+      resolve(answer);
+    };
+    socket.setTimeout(600);
+    socket.once('connect', () => done(true));
+    socket.once('timeout', () => done(false));
+    socket.once('error', () => done(false));
+  });
+}
+
 const dbPort = Number.parseInt(process.env.DB_PORT ?? '5432', 10);
+
+for (const [port, name] of [
+  [3000, 'the web app'],
+  [3001, 'the artifact worker'],
+]) {
+  if (await portInUse(port)) {
+    console.error(`[dev] port ${port} (${name}) is already in use — something is still running.`);
+    console.error('      Stop it (Ctrl-C in that terminal, or kill the process on that port)');
+    console.error('      and run `pnpm dev` again.');
+    process.exit(1);
+  }
+}
+
 console.log('[dev] starting database (PGlite + pgvector, no Docker required)...');
 run('db', 'pnpm', ['exec', 'tsx', path.join(root, 'scripts', 'dev-db.ts')]);
 
