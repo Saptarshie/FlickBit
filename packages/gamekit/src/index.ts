@@ -50,7 +50,8 @@ let cachedDir: string | null = null;
  * the working directory until the templates are found. `PLAYLOOP_TEMPLATES_DIR`
  * overrides the search for unusual deployments.
  */
-function templatesDir(): string {
+/** Directory holding the archetype templates (walked up from cwd). */
+export function templatesDir(): string {
   if (cachedDir) return cachedDir;
   const override = process.env.PLAYLOOP_TEMPLATES_DIR;
   if (override && existsSync(join(override, 'tap-runner.html'))) {

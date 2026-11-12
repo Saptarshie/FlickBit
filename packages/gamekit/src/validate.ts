@@ -2,6 +2,7 @@
  * PlayLoop game artifact validator (static, defense-in-depth).
  * See docs/03-game-artifact-spec.md — "Validation rules".
  */
+import { isRuntimeId, RUNTIME_IDS } from '@playloop/sdk';
 
 export type ControlKind = 'tap' | 'drag' | 'swipe' | 'tilt' | 'keys';
 export type Orientation = 'portrait' | 'landscape' | 'any';
@@ -16,6 +17,13 @@ export type Manifest = {
   sdkVersion: SdkVersion;
   tags: string[];
   scoring: Scoring;
+  /**
+   * Engine the artifact was authored against (see @playloop/sdk runtimes).
+   * Absent or 'micro' means gameplay-only: no engine is loaded for this game.
+   */
+  runtime?: string;
+  /** Exact engine version, pinned so an upgrade can never change an old game. */
+  runtimeVersion?: string;
 };
 
 export type ValidationResult = {
@@ -183,6 +191,14 @@ function parseManifestRaw(raw: string): { manifest: Manifest | null; error: stri
     problems.push('"orientation" must be one of portrait|landscape|any');
   }
   if (rec['sdkVersion'] !== 1) problems.push('"sdkVersion" must be 1');
+  // A manifest may only name a runtime from the platform allowlist; a URL here
+  // would let a creator load arbitrary code under our origin.
+  if (rec['runtime'] !== undefined && !isRuntimeId(rec['runtime'])) {
+    problems.push(`"runtime" must be one of ${RUNTIME_IDS.join('|')}`);
+  }
+  if (rec['runtimeVersion'] !== undefined && typeof rec['runtimeVersion'] !== 'string') {
+    problems.push('"runtimeVersion" must be a string');
+  }
   const tags = rec['tags'];
   if (!Array.isArray(tags) || tags.some((t) => typeof t !== 'string')) {
     problems.push('"tags" must be an array of strings');
@@ -202,6 +218,8 @@ function parseManifestRaw(raw: string): { manifest: Manifest | null; error: stri
       sdkVersion: 1,
       tags: tags as string[],
       scoring: rec['scoring'] as Scoring,
+      ...(rec['runtime'] !== undefined ? { runtime: rec['runtime'] as string } : {}),
+      ...(rec['runtimeVersion'] !== undefined ? { runtimeVersion: rec['runtimeVersion'] as string } : {}),
     },
     error: null,
   };

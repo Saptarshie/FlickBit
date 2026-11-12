@@ -29,7 +29,14 @@ const artifactsDir = process.env.ARTIFACTS_DIR
 
 mkdirSync(artifactsDir, { recursive: true });
 
-const app = createApp({ artifactsDir });
+// Engines live beside the artifacts and are addressed by hash, so this one
+// directory is the whole "shared runtime" story for the server.
+const runtimesDir = process.env.RUNTIMES_DIR
+  ? path.resolve(repoRoot(), process.env.RUNTIMES_DIR)
+  : path.join(path.dirname(artifactsDir), 'runtimes');
+mkdirSync(runtimesDir, { recursive: true });
+
+const app = createApp({ artifactsDir, runtimesDir });
 /**
  * Bind dual-stack.
  *
@@ -40,5 +47,5 @@ const app = createApp({ artifactsDir });
  */
 const host = process.env.HOST ?? '::';
 app.listen(port, host, () => {
-  console.log(`play-worker listening on http://${host}:${port} (artifacts: ${artifactsDir})`);
+  console.log(`play-worker listening on http://${host}:${port} (artifacts: ${artifactsDir}, runtimes: ${runtimesDir})`);
 });

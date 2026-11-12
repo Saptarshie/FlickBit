@@ -10,6 +10,9 @@ export type GameCard = {
   counts: { likes: number; saves: number; comments: number; plays: number };
   viewer: { liked: boolean; saved: boolean; followsCreator: boolean };
   forkedFrom?: { id: string; title: string } | null;
+  /** Engine this game was built against; absent means the inlined micro shim. */
+  runtime?: string;
+  runtimeVersion?: string;
 };
 
 export type FeedPage = {

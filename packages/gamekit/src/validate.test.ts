@@ -240,3 +240,25 @@ describe('good fixtures — zero errors and zero warnings', () => {
     expect(result.warnings).toEqual([]);
   });
 });
+
+describe('manifest.runtime', () => {
+  it('accepts an allowlisted engine and keeps the pin', () => {
+    const html = withManifest(
+      'const x = 1;',
+      '{"title":"T","description":"D","controls":"tap","orientation":"portrait","sdkVersion":1,"tags":["arcade"],"scoring":"higher","runtime":"phaser4","runtimeVersion":"4.2.1"}',
+    );
+    expect(extractManifest(html)).toMatchObject({ runtime: 'phaser4', runtimeVersion: '4.2.1' });
+  });
+
+  it('defaults to no runtime field when the game is plain', () => {
+    expect(extractManifest(withManifest('const x = 1;'))?.runtime).toBeUndefined();
+  });
+
+  it('rejects anything that is not an allowlisted id — a URL here would load foreign code', () => {
+    const html = withManifest(
+      'const x = 1;',
+      '{"title":"T","description":"D","controls":"tap","orientation":"portrait","sdkVersion":1,"tags":["arcade"],"scoring":"higher","runtime":"https://evil.example/x.js"}',
+    );
+    expect(extractManifest(html)).toBeNull();
+  });
+});

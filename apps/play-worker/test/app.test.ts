@@ -1,15 +1,15 @@
 import { createHash } from 'node:crypto';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { SHIM_SOURCE } from '@playloop/sdk';
-import { allowedEmbedders, artifactUrl, createApp, injectShim } from '../src/app';
+import { allowedEmbedders, artifactUrl, createApp, injectShim, loadRuntimes } from '../src/app';
 
 // frame-ancestors pins who may embed an artifact (see src/app.ts).
 const CSP =
-  "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' blob:; style-src 'unsafe-inline'; " +
+  "default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'unsafe-inline'; " +
   "img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; " +
   "frame-src 'none'; form-action 'none'; base-uri 'none'; " +
   'frame-ancestors http://localhost:3000';
@@ -158,5 +158,88 @@ describe('injectShim', () => {
   it('prepends the shim when there is no head tag', () => {
     const out = injectShim('<html><body>hi</body></html>', 'SHIM');
     expect(out).toBe('<script>SHIM</script><html><body>hi</body></html>');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Shared runtimes: the engine is served once, by hash, and pinned per game.
+// ---------------------------------------------------------------------------
+
+describe('runtime serving', () => {
+  let dir: string;
+  let runtimeApp: ReturnType<typeof createApp>;
+  let engineFile: string;
+  let engineSha: string;
+
+  beforeAll(() => {
+    dir = mkdtempSync(path.join(tmpdir(), 'play-worker-runtimes-'));
+    const engine = Buffer.from('/* fake engine */ window.PHASER = { VERSION: "4.2.1" };', 'utf8');
+    engineSha = createHash('sha384').update(engine).digest('hex');
+    engineFile = `phaser4@4.2.1-${engineSha.slice(0, 16)}.js`;
+    writeFileSync(path.join(dir, engineFile), engine);
+    runtimeApp = createApp({ artifactsDir: dir, runtimesDir: dir });
+  });
+
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  it('indexes a runtime by its file name and rejects one whose bytes were swapped', () => {
+    const index = loadRuntimes(dir);
+    expect([...index.keys()]).toEqual([engineFile]);
+
+    const tampered = `phaser4@4.2.1-${'0'.repeat(16)}.js`;
+    writeFileSync(path.join(dir, tampered), 'not the bytes the name promises');
+    expect(loadRuntimes(dir).has(tampered)).toBe(false);
+    rmSync(path.join(dir, tampered));
+  });
+
+  it('serves the engine immutably with its integrity hash', async () => {
+    const res = await request(runtimeApp).get(`/r/${engineFile}`);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('text/javascript');
+    expect(res.headers['cache-control']).toContain('immutable');
+    const onDisk = readFileSync(path.join(dir, engineFile));
+    expect(res.headers['x-integrity']).toBe(`sha384-${createHash('sha384').update(onDisk).digest('base64')}`);
+  });
+
+  it('404s a traversal attempt and an unknown engine', async () => {
+    expect((await request(runtimeApp).get('/r/..%2F..%2Fetc%2Fpasswd')).status).toBe(404);
+    expect((await request(runtimeApp).get('/r/nope@1.0.0-0000000000000000.js')).status).toBe(404);
+  });
+
+  it('lists what the origin can serve', async () => {
+    const res = await request(runtimeApp).get('/r/index.json');
+    expect(res.status).toBe(200);
+    expect(res.body.runtimes[0]).toMatchObject({ id: 'phaser4', version: '4.2.1', url: `/r/${engineFile}` });
+  });
+
+  it('injects the pinned engine before the game code, and only when the game asks', async () => {
+    const plain = await request(runtimeApp).get(`/v/${validSha}.html`);
+    expect(plain.text).not.toContain('<script src="/r/');
+
+    const withEngine = Buffer.from(
+      gameHtml().replace('"scoring":"higher"', '"scoring":"higher","runtime":"phaser4","runtimeVersion":"4.2.1"'),
+      'utf8',
+    );
+    const sha = sha256Hex(withEngine);
+    writeFileSync(path.join(dir, `${sha}.html`), withEngine);
+
+    const res = await request(runtimeApp).get(`/v/${sha}.html`);
+    expect(res.status).toBe(200);
+    expect(res.text).toContain(`<script src="/r/${engineFile}"></script>`);
+    // The shim comes first: the protocol must exist before any engine uses it.
+    expect(res.text.indexOf('<script>')).toBeLessThan(res.text.indexOf(`<script src="/r/${engineFile}">`));
+  });
+
+  it('answers 503 (not a blank frame) when a game pins an engine this origin does not hold', async () => {
+    const orphan = Buffer.from(
+      gameHtml().replace('"scoring":"higher"', '"scoring":"higher","runtime":"babylon","runtimeVersion":"9.36.0"'),
+      'utf8',
+    );
+    const sha = sha256Hex(orphan);
+    writeFileSync(path.join(dir, `${sha}.html`), orphan);
+
+    const res = await request(runtimeApp).get(`/v/${sha}.html`);
+    expect(res.status).toBe(503);
+    expect(res.body.error.code).toBe('runtime_unavailable');
   });
 });

@@ -86,6 +86,7 @@ export async function fetchFeedPage(
       g.forked_from_game_id AS "forkedFromGameId",
       gv.id AS "versionId",
       gv.artifact_sha256 AS "artifactSha256",
+      gv.manifest AS "manifest",
       gv.poster_key AS "posterKey",
       u.id AS "creatorId",
       u.handle AS "creatorHandle",
@@ -133,6 +134,15 @@ export async function fetchFeedPage(
 
     const sha = String(r.artifactSha256 || '');
     const artifactUrl = `${playOrigin}/v/${sha}.html`;
+    // Surfaced so the client can prefetch the engine before the card is
+    // scrolled to. Parsed defensively: raw `execute` returns jsonb as an object
+    // on postgres-js and as a string through some PGlite paths.
+    let manifest: Record<string, unknown> = {};
+    try {
+      manifest = typeof r.manifest === 'string' ? JSON.parse(r.manifest) : (r.manifest ?? {});
+    } catch {
+      manifest = {};
+    }
     const posterUrl = r.posterKey ? `/api/media/${r.posterKey}` : null;
 
     cards.push({
@@ -148,6 +158,8 @@ export async function fetchFeedPage(
       },
       artifactUrl,
       posterUrl,
+      ...(typeof manifest['runtime'] === 'string' ? { runtime: manifest['runtime'] } : {}),
+      ...(typeof manifest['runtimeVersion'] === 'string' ? { runtimeVersion: manifest['runtimeVersion'] } : {}),
       counts: {
         likes: Number(r.likeCount ?? 0),
         saves: Number(r.saveCount ?? 0),

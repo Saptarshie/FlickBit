@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { fetchFeedGames, type GameCard } from '../lib/feed';
 import { useFeedStore } from '../lib/feed-store';
+import { prefetchRuntimes } from '../lib/runtime-prefetch';
 import GameCardView from './GameCardView';
 import { BottomNav } from './AppNav';
 
@@ -67,6 +68,17 @@ export default function FeedScreen() {
     if (!hasNextPage || isFetchingNextPage) return;
     if (itemCount > 0 && activeIndex >= itemCount - PREFETCH_WITHIN) void fetchNextPage();
   }, [activeIndex, itemCount, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Prefetch the engines the next few cards will need.
+  //
+  // Announced 3–4 cards early, on an idle callback, at low priority: by the
+  // time a card is on screen its engine is already in the HTTP cache. The
+  // module dedupes across renders and checks saveData/2G itself.
+  useEffect(() => {
+    const ahead = items.slice(activeIndex + 1, activeIndex + PREFETCH_WITHIN + 2);
+    if (ahead.length === 0) return;
+    void prefetchRuntimes(ahead.map((card) => (card as GameCard).runtime));
+  }, [activeIndex, items]);
 
   // IntersectionObserver decides the active card.
   useEffect(() => {
