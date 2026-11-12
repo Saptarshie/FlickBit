@@ -68,9 +68,14 @@ async function main() {
   // 1. engage play mode: tap the middle of the card
   await page.mouse.click(VIEWPORT.width / 2, VIEWPORT.height * 0.45);
   await page.waitForTimeout(1500);
-  const engaged = await page.evaluate(() =>
-    [...document.querySelectorAll('*')].some((e) => e.textContent?.trim() === 'Playing'),
-  );
+  // The chip reads "Playing" while the run is alive and "Game over" once it
+  // ends, so the chip alone is not a reliable engagement signal — a short game
+  // can finish inside the probe. A forwarded input with a live host is.
+  const engaged = await page.evaluate(() => {
+    const input = (window as { __plInput?: { host?: string } }).__plInput;
+    if (input) return input.host === 'live';
+    return [...document.querySelectorAll('*')].some((e) => e.textContent?.trim() === 'Playing');
+  });
 
   // Pick the frame of the card that is actually on screen: matching any
   // /v/<sha> URL grabs whichever of the three live frames happens to be first.
@@ -87,8 +92,22 @@ async function main() {
   let frame = await frameFor();
   if (!frame) throw new Error('game frame never mounted');
 
-  const snapshot = () =>
-    frame!.evaluate(() => {
+  // The feed mounts/unmounts iframes while scrolling, so a frame captured once
+  // can detach mid-probe. Re-resolve it on every read.
+  const snapshot = async () => {
+    frame = (await frameFor()) ?? frame;
+    try {
+      return await readFrame(frame!);
+    } catch (err) {
+      if (!/detached|Target closed/i.test(String(err))) throw err;
+      await page.waitForTimeout(400);
+      frame = (await frameFor()) ?? frame;
+      return readFrame(frame!);
+    }
+  };
+
+  const readFrame = (f: NonNullable<typeof frame>) =>
+    f.evaluate(() => {
       const canvas = document.querySelector('canvas');
       const text = document.body.innerText.slice(0, 400);
       // Full data URL: a slice of the tail misses changes in the middle of the
