@@ -46,6 +46,15 @@ const INPUT_MS = 8000;
 const FPS_WINDOW_MS = 2000;
 /** A single colour covering more than this fraction of samples counts as flat. */
 const SINGLE_COLOUR_RATIO = 0.98;
+/**
+ * Stricter threshold for the "flat but slightly different" branch.
+ *
+ * Shooter's playfield is ~98.5% one colour, so 0.98 flagged a healthy game as
+ * blank whenever the two screenshots landed on similar frames (machine under
+ * load). A genuinely blank canvas is a single colour everywhere: 0.995 still
+ * catches it, while a sparse playfield with sprites passes.
+ */
+const SINGLE_COLOUR_RATIO_STRICT = 0.995;
 /** Both frames flat only counts as blank when the frames barely changed. */
 const NEAR_IDENTICAL_RATIO = 0.995;
 /** Resources matching this marker never get a response (blocks window load). */
@@ -406,8 +415,8 @@ export async function runSmokeTest(html: string, opts: SmokeOptions = {}): Promi
       //   something, even if the t=1s/t=8s frames match byte-for-byte because
       //   the run ended in a static end screen before t=1s.
       const flatFrames =
-        stats.dom1 > SINGLE_COLOUR_RATIO &&
-        stats.dom2 > SINGLE_COLOUR_RATIO &&
+        stats.dom1 > SINGLE_COLOUR_RATIO_STRICT &&
+        stats.dom2 > SINGLE_COLOUR_RATIO_STRICT &&
         stats.sameRatio > NEAR_IDENTICAL_RATIO;
       const blankScreen = !liveness && (!framesDiffer || flatFrames);
 

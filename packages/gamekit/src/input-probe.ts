@@ -91,6 +91,24 @@ export async function probeReplayedInput(html: string, options: { browser?: Brow
         '(() => { var c = document.querySelector("canvas"); return c ? c.toDataURL() : "no-canvas"; })()',
       );
 
+    /**
+     * Wait for the canvas to differ from `previous`, up to `timeoutMs`.
+     *
+     * A single immediate comparison is flaky: when the machine is loaded (the
+     * suite runs several Chromium instances) a frame may not have rendered by
+     * the time we sample, and a responsive game is reported as dead. Polling
+     * costs nothing when the game reacts immediately.
+     */
+    const changedWithin = async (previous: string, timeoutMs = 2000): Promise<string | null> => {
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) {
+        const current = await snapshot();
+        if (current !== previous) return current;
+        await page.waitForTimeout(100);
+      }
+      return null;
+    };
+
     const seen = (await frame.evaluate(
       '(() => { window.__probeDowns = 0; window.addEventListener("pointerdown", function () { window.__probeDowns += 1; }); return !!document.querySelector("canvas"); })()',
     )) as boolean;
@@ -115,9 +133,11 @@ export async function probeReplayedInput(html: string, options: { browser?: Brow
            setTimeout(resolve, 260);
          })`,
       );
-      const next = await snapshot();
-      if (next !== previous) changes += 1;
-      previous = next;
+      const next = await changedWithin(previous);
+      if (next !== null) {
+        changes += 1;
+        previous = next;
+      }
     }
 
     // A hold, for charge/jump games whose interesting state is while the
@@ -132,8 +152,8 @@ export async function probeReplayedInput(html: string, options: { browser?: Brow
          setTimeout(function () { send('up', 195, 500); setTimeout(resolve, 500); }, 1200);
        })`,
     );
-    const afterHold = await snapshot();
-    if (afterHold !== previous) changes += 1;
+    const afterHold = await changedWithin(previous, 2500);
+    if (afterHold !== null) changes += 1;
 
     const debug = (await frame
       .evaluate('(window.__plDebug ? JSON.parse(JSON.stringify(window.__plDebug)) : null)')

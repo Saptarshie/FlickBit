@@ -61,7 +61,33 @@ repairs), turn 2 **287 s** (v2 of the same game, gate pass, 0 repairs), thread
 returned 4 messages and 2 versions. The edit is more than twice as fast as the
 create because it reuses the stored spec and the art-direction brief.
 
-## 5. Load / latency (seconds)
+## 5. Input path (seconds, per artifact)
+
+```bash
+pnpm probe:input                       # every artifact in the store + seeds
+pnpm probe:live --title "Memory"       # a real card in the running app
+```
+
+The host never lets a finger reach the game: the frame is `pointer-events: none`,
+the gesture layer captures the touch and replays it as
+`{ v: 1, src: 'playloop', type: 'input', payload: { kind, x, y } }`. A game that
+only listens to real DOM events therefore renders fine and still ignores every
+tap on a phone. `probe:input` posts that exact envelope and compares the canvas;
+`probe:live` does the same through the real feed, engaging the card first.
+
+Both poll for up to 2 s per tap instead of sampling once — a loaded machine can
+miss a frame and report a healthy game as dead.
+
+`packages/gamekit/src/templates.input.test.ts` runs the same check for all 8
+templates in CI, and the runtime gate runs it for every generated game before it
+publishes.
+
+**Caching rule:** `/v/<sha>.html` is keyed by the game hash but the body inlines
+the shim, so it must revalidate (`max-age=0, must-revalidate`, ETag) and every
+artifact URL carries `?v=<shim version>`. An `immutable, max-age=1y` header
+pinned players to an old shim for a year and made "fixed" input look broken.
+
+## 6. Load / latency (seconds)
 
 ```bash
 node scripts/load-smoke.mjs http://localhost:3000 24
@@ -80,7 +106,7 @@ Warm timings on this machine (dev, Turbopack, PGlite):
 | `/g/<id>` | ~120 ms |
 | `/u/<handle>` | ~180 ms |
 
-## 6. Manual smoke (2 minutes)
+## 7. Manual smoke (2 minutes)
 
 ```bash
 pnpm dev     # DB :5432, web :3000, play-worker :3001
