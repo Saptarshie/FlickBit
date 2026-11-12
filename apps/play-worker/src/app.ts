@@ -9,13 +9,29 @@ import { SHIM_SOURCE } from '@playloop/sdk';
 /** The exact CSP required on the play origin (docs/03-game-artifact-spec.md). */
 // `frame-ancestors` pins who may embed an artifact: without it any site could
 // frame a game and click-jack the player.
-const ALLOWED_EMBEDDER = process.env.PLAYER_ORIGIN || process.env.PLAY_ORIGIN || 'http://localhost:3000';
+//
+// It must be the APP's origin, not the play origin. This used to fall back to
+// PLAY_ORIGIN, and `pnpm start` exports .env into every child — so the worker
+// announced "only :3001 may embed me" and every game frame in the feed became
+// chrome-error. APP_ORIGIN (comma-separated for several deployments) is the
+// canonical setting.
+export function allowedEmbedders(env: Record<string, string | undefined> = process.env): string {
+  // Deliberately ignores PLAY_ORIGIN: that is where artifacts are SERVED from,
+  // and allowing it means the feed's own origin (:3000) is blocked.
+  return (env.APP_ORIGIN || env.PLAYER_ORIGIN || 'http://localhost:3000')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+    .join(' ');
+}
+
+const WEB_ORIGINS = allowedEmbedders();
 
 const CSP =
   "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' blob:; style-src 'unsafe-inline'; " +
   "img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; " +
   "frame-src 'none'; form-action 'none'; base-uri 'none'; " +
-  `frame-ancestors ${ALLOWED_EMBEDDER}`;
+  `frame-ancestors ${WEB_ORIGINS}`;
 
 /**
  * The URL is content-addressed by the GAME hash, but the response also carries

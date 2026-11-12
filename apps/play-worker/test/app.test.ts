@@ -5,7 +5,7 @@ import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { SHIM_SOURCE } from '@playloop/sdk';
-import { artifactUrl, createApp, injectShim } from '../src/app';
+import { allowedEmbedders, artifactUrl, createApp, injectShim } from '../src/app';
 
 // frame-ancestors pins who may embed an artifact (see src/app.ts).
 const CSP =
@@ -127,6 +127,21 @@ describe('GET /v/:sha.html', () => {
     const res = await request(app).get(`/v/${sha}.html`);
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: { code: 'no_manifest' } });
+  });
+});
+
+describe('allowedEmbedders', () => {
+  it('never uses the play origin, which would block the app that embeds games', () => {
+    // The regression: PLAY_ORIGIN leaked into frame-ancestors, so every game
+    // frame in the feed loaded as chrome-error.
+    expect(allowedEmbedders({ PLAY_ORIGIN: 'http://localhost:3001' })).toBe('http://localhost:3000');
+  });
+
+  it('takes the app origin and accepts a list', () => {
+    expect(allowedEmbedders({ APP_ORIGIN: 'https://play.example.com' })).toBe('https://play.example.com');
+    expect(allowedEmbedders({ APP_ORIGIN: 'https://a.example, https://b.example' })).toBe(
+      'https://a.example https://b.example',
+    );
   });
 });
 

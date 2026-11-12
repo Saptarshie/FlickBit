@@ -52,7 +52,13 @@ function pidsForRepo() {
       Where-Object { $_.CommandLine -like '*${root.replace(/'/g, "''")}*' -and $_.CommandLine -notlike '*stop.mjs*' } |
       Select-Object -ExpandProperty ProcessId
   `;
-  const out = execFileSync('powershell', ['-NoProfile', '-Command', script], { encoding: 'utf8' });
+  // stdin/stderr are pinned: PowerShell echoes "stdin is not a tty" to stderr
+  // whenever it is started from a job without a terminal, and execFileSync
+  // inherits stderr by default — that noise ended up looking like our output.
+  const out = execFileSync('powershell', ['-NoProfile', '-Command', script], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
   return out
     .split('\n')
     .map((line) => Number.parseInt(line.trim(), 10))

@@ -89,8 +89,28 @@ async function main() {
     });
     return src ? (page.frames().find((f) => f.url() === src) ?? null) : null;
   };
+  // Engaging play mode re-mounts the frame (new key), so it can be missing for a
+  // few hundred ms — poll instead of sampling once.
   let frame = await frameFor();
-  if (!frame) throw new Error('game frame never mounted');
+  for (let attempt = 0; attempt < 20 && !frame; attempt += 1) {
+    await page.waitForTimeout(250);
+    frame = await frameFor();
+  }
+  if (!frame) {
+    const diag = await page.evaluate(() => ({
+      iframes: [...document.querySelectorAll('iframe')].map((f) => ({
+        src: (f as HTMLIFrameElement).src,
+        top: Math.round(f.getBoundingClientRect().top),
+      })),
+      sections: [...document.querySelectorAll('section[aria-label]')].slice(0, 6).map((sec) => ({
+        label: sec.getAttribute('aria-label'),
+        top: Math.round(sec.getBoundingClientRect().top),
+      })),
+    }));
+    throw new Error(
+      `game frame never mounted — iframes=${JSON.stringify(diag.iframes)} frames=${JSON.stringify(page.frames().map((f) => f.url()))} sections=${JSON.stringify(diag.sections)}`,
+    );
+  }
 
   // The feed mounts/unmounts iframes while scrolling, so a frame captured once
   // can detach mid-probe. Re-resolve it on every read.

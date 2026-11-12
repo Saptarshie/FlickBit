@@ -30,9 +30,15 @@ const artifactsDir = process.env.ARTIFACTS_DIR
 mkdirSync(artifactsDir, { recursive: true });
 
 const app = createApp({ artifactsDir });
-// Loopback by default: the artifacts are public through the host that embeds
-// them, and nothing else on the network needs to reach this process directly.
-const host = process.env.HOST ?? '127.0.0.1';
+/**
+ * Bind dual-stack.
+ *
+ * '127.0.0.1' looked safer but breaks the app: browsers resolve `localhost` to
+ * ::1 first, so every game frame failed with chrome-error. '::' accepts both
+ * families. The dangerous endpoint is /internal/smoke, which is guarded on its
+ * own (loopback caller + optional token) rather than by the bind address.
+ */
+const host = process.env.HOST ?? '::';
 app.listen(port, host, () => {
   console.log(`play-worker listening on http://${host}:${port} (artifacts: ${artifactsDir})`);
 });

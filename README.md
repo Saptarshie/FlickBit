@@ -45,7 +45,7 @@ else has a working local default.
 | `PLAYLOOP_SINGLE_SOCKET` | set by the scripts | `1` for the embedded PGlite database (one connection); `0` against a real Postgres, which gets a pool. `pnpm dev` / `pnpm start` set it. |
 | `DATABASE_POOL_MAX` | `20` | Connection pool size when not in single-socket mode. |
 | `PLAYLOOP_INTERNAL_TOKEN` | unset | Shared secret for the worker's `/internal/smoke` (loopback-only, and token-checked when set). |
-| `HOST` | `127.0.0.1` | Interface the artifact worker binds. |
+| `HOST` | `::` | Interface the artifact worker binds. Dual-stack on purpose: browsers resolve `localhost` to `::1` first, so an IPv4-only bind makes every game frame fail. `/internal/smoke` is guarded independently (loopback + optional token). |
 | `LEADERBOARD_MAX_SCORE` | `1000000` | Reject scores outside this magnitude. |
 | `ROLLUP_WINDOW_HOURS` | `6` | How far back the stats rollup recomputes per run. |
 | `PLAYLOOP_DB` | unset | `external` tells `pnpm start` not to start the embedded database. |
