@@ -181,6 +181,7 @@ export const SHIM_SOURCE = String.raw`
       if (paused) { entry.queued = true; entry.realId = null; return; }
       delete rafs[id];
       hasPainted = true;
+      syncDbg();
       sampleFps();
       entry.fn(vTimestamp());
       if (pendingPause && !paused) { setPaused(true); }
@@ -344,12 +345,29 @@ export const SHIM_SOURCE = String.raw`
       try { list[i](); } catch (e) { postError(e && e.message ? e.message : e, e && e.stack ? e.stack : ''); }
     }
   }
+  // Debug surface for support: readable from the host with Playwright/CDP even
+  // though the frame is sandboxed. window.__plDebug answers "did the game get
+  // the tap?" and "is its loop running?" without a build.
+  var SHIM_VERSION = '1.1.0';
+  var dbg = { version: SHIM_VERSION, paused: false, pendingPause: false, hasPainted: false, rafs: 0, inputs: 0, messages: 0, resumes: 0, pauses: 0 };
+  w.__plDebug = dbg;
+
+  function syncDbg() {
+    dbg.paused = paused;
+    dbg.pendingPause = pendingPause;
+    dbg.hasPainted = hasPainted;
+    var n = 0;
+    for (var k in rafs) { if (Object.prototype.hasOwnProperty.call(rafs, k)) { n += 1; } }
+    dbg.rafs = n;
+  }
+
   function setPaused(next) {
     // A resume always cancels a deferred pause; otherwise the game would paint
     // its first frame and then freeze forever (inputs land, nothing redraws).
     if (!next) { pendingPause = false; }
     if (next === paused) { return; }
-    if (next && !hasPainted) { pendingPause = true; return; }
+    if (next) { dbg.pauses += 1; } else { dbg.resumes += 1; }
+    if (next && !hasPainted) { pendingPause = true; dbg.pendingPause = true; return; }
     if (next) {
       pendingPause = false;
       paused = true;
@@ -367,6 +385,7 @@ export const SHIM_SOURCE = String.raw`
           if (r.realId !== null && r.realId !== undefined) { realCaf(r.realId); r.realId = null; }
           r.queued = true;
         }
+        syncDbg();
       }
       eachAudio(function (c) { return c.suspend && c.suspend(); });
     } else {
@@ -381,6 +400,7 @@ export const SHIM_SOURCE = String.raw`
       }
       for (var i = 0; i < flush.length; i += 1) { attachRaf(flush[i]); }
       eachAudio(function (c) { return c.resume && c.resume(); });
+      syncDbg();
     }
   }
 
@@ -458,7 +478,7 @@ export const SHIM_SOURCE = String.raw`
     ready: function () {
       if (readySent) { return; }
       readySent = true;
-      post('ready');
+      post('ready', { shim: SHIM_VERSION });
     },
     gameOver: function (opts) {
       var p = {};
@@ -494,6 +514,8 @@ export const SHIM_SOURCE = String.raw`
   var activePointerId = 1;
 
   function dispatchInput(p) {
+    dbg.inputs += 1;
+    syncDbg();
     var kind = String(p.kind || 'tap');
     var x = Number(p.x) || 0;
     var y = Number(p.y) || 0;
@@ -557,6 +579,7 @@ export const SHIM_SOURCE = String.raw`
     try {
       var d = ev.data;
       if (!d || d.v !== 1 || d.src !== 'playloop' || typeof d.type !== 'string') { return; }
+      dbg.messages += 1;
       // Sandboxed frames (allow-scripts, opaque origin) hand back a different
       // WindowProxy for the parent, so identity comparison is not reliable and
       // dropped every host message — pause/resume/input never arrived. Anchor
@@ -606,7 +629,7 @@ export const SHIM_SOURCE = String.raw`
   w.addEventListener('load', function () {
     if (!readySent) {
       readySent = true;
-      post('ready');
+      post('ready', { shim: SHIM_VERSION });
     }
   });
 })();

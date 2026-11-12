@@ -1,6 +1,7 @@
 import {
   parseGuestMessage,
   SDK_VERSION,
+  SHIM_VERSION,
   MAX_PAYLOAD_BYTES,
   type Envelope,
   type HostToGuest,
@@ -342,6 +343,12 @@ export class GameHost {
     switch (env.type) {
       case 'ready': {
         this.clearHandshake();
+        const shim = (env.payload as { shim?: string } | undefined)?.shim;
+        if (shim && shim !== SHIM_VERSION) {
+          // A stale play-worker serves the old shim: the game renders but can
+          // look frozen because input replay changed. Say so loudly.
+          console.warn(`[playloop] guest shim ${shim} != sdk ${SHIM_VERSION} — restart the play-worker`);
+        }
         // Replay the sticky init before anything else: safe-area and mute state
         // must be known before the guest draws its first HUD frame.
         if (Object.keys(this.initState).length > 0) this.post('init', this.initState);

@@ -78,7 +78,9 @@ describe('GET /v/:sha.html', () => {
     const res = await request(app).get(`/v/${validSha}.html`);
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toBe('text/html; charset=utf-8');
-    expect(res.headers['cache-control']).toBe('public, max-age=31536000, immutable');
+    // Content-addressed by the game, but the body inlines the shim, so it must
+    // revalidate: an immutable shim pinned players to a frozen input path.
+    expect(res.headers['cache-control']).toBe('public, max-age=0, must-revalidate');
     expect(res.headers['content-security-policy']).toBe(CSP);
     expect(res.headers['x-content-type-options']).toBe('nosniff');
   });

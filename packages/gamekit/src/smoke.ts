@@ -14,6 +14,8 @@ export type SmokeReport = {
   uncaught: string[];
   blankScreen: boolean;
   interactive: boolean;
+  /** The build reacted to the host's replayed `input` envelope (production path). */
+  replayedInput: boolean;
   fps: number;
   framesDiffer: boolean;
   screenshots: string[];
@@ -416,12 +418,31 @@ export async function runSmokeTest(html: string, opts: SmokeOptions = {}): Promi
       writeFileSync(shot1Path, shot1);
       writeFileSync(shot2Path, shot2);
 
+      // Production path: the host never lets the finger reach the frame, it
+      // replays the gesture as an `input` postMessage. A build that only reacts
+      // to real mouse events is broken on a phone, so the gate checks both.
+      const { probeReplayedInput } = await import('./input-probe');
+      let replayedInput = true;
+      try {
+        const replay = await probeReplayedInput(gameHtml, { browser });
+        replayedInput = replay.reacted || !replay.hasCanvas;
+        if (!replayedInput) {
+          uncaught.push(
+            'the game ignores replayed input (postMessage): taps reach the frame but nothing changes',
+          );
+        }
+      } catch (err) {
+        // A broken probe must not block publishing; record it as a warning.
+        console.warn('[smoke] replay probe failed:', err instanceof Error ? err.message : err);
+      }
+
       const pass =
         readyWithin3s &&
         consoleErrors.length === 0 &&
         uncaught.length === 0 &&
         !blankScreen &&
         interactive &&
+        replayedInput &&
         fps >= 30;
 
       return {
@@ -431,6 +452,7 @@ export async function runSmokeTest(html: string, opts: SmokeOptions = {}): Promi
         uncaught,
         blankScreen,
         interactive,
+        replayedInput,
         fps,
         framesDiffer,
         screenshots: [shot1Path, shot2Path],

@@ -154,7 +154,7 @@ describe('SHIM_SOURCE execution smoke', () => {
     expect(posted.length).toBe(0);
     for (const fn of listeners['load'] ?? []) fn({});
     expect(posted).toContainEqual({
-      data: { v: 1, src: 'playloop', type: 'ready' },
+      data: { v: 1, src: 'playloop', type: 'ready', payload: { shim: '1.1.0' } },
       origin: '*',
     });
   });

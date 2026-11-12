@@ -4,13 +4,14 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Poin
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { GameHost, type GameHostError } from '@playloop/sdk';
+import { GameHost, SHIM_VERSION, type GameHostError } from '@playloop/sdk';
 import type { GameCard } from '../lib/feed';
 import { useFeedStore } from '../lib/feed-store';
 import { track } from '../lib/analytics';
 import { api, RequestError } from '../lib/client-api';
 import CommentsSheet from './CommentsSheet';
 import { chromeBottom } from './AppNav';
+import { artifactSrc } from '../lib/artifact-url';
 
 type Props = {
   card: GameCard;
@@ -509,7 +510,7 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
       <iframe
         key={frameKey}
         ref={iframeRef}
-        src={card.artifactUrl}
+        src={artifactSrc(card.artifactUrl, SHIM_VERSION)}
         title={card.title}
         sandbox="allow-scripts"
         allow="autoplay; fullscreen; gamepad; accelerometer; gyroscope"

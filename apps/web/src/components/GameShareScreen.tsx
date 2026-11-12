@@ -1,5 +1,7 @@
 'use client';
 
+import { SHIM_VERSION } from '@playloop/sdk';
+import { artifactSrc } from '../lib/artifact-url';
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useMutation } from '@tanstack/react-query';
@@ -109,7 +111,7 @@ export function GameShareScreen({ game }: { game: ShareGame }) {
         {game.artifactUrl ? (
           <iframe
             ref={iframeRef}
-            src={game.artifactUrl}
+            src={artifactSrc(game.artifactUrl, SHIM_VERSION)}
             title={game.title}
             sandbox="allow-scripts"
             allow="autoplay; fullscreen; gamepad; accelerometer; gyroscope"

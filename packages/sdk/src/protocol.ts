@@ -1,3 +1,6 @@
+/** Guest shim build, reported in the ready payload so a stale worker is visible. */
+export const SHIM_VERSION = '1.1.0';
+
 export const SDK_VERSION = 1 as const;
 export const MAX_PAYLOAD_BYTES = 8 * 1024;
 

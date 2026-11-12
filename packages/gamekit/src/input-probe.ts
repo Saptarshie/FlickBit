@@ -1,0 +1,155 @@
+import { createServer } from 'node:http';
+import { chromium, type Browser, type Frame, type Page } from 'playwright';
+// @playloop/sdk is not linked into this package (see smoke.ts), so the shim is
+// imported by relative path exactly like the runtime gate does.
+import { SHIM_SOURCE } from '../../sdk/src/shim-source';
+import { injectShim } from './inject';
+
+/**
+ * Does an artifact react to the input envelope the host actually sends?
+ *
+ * The runtime gate presses real mouse buttons in the page. That is *not* the
+ * production path: players never touch the game directly (the frame has
+ * `pointer-events: none`), the host captures the gesture and replays it as a
+ * `{ type: 'input' }` postMessage. A shim regression therefore passed the gate
+ * while every game on a phone looked frozen.
+ *
+ * This probe replays that exact envelope and reports whether the canvas changed.
+ */
+export type InputProbeResult = {
+  reacted: boolean;
+  taps: number;
+  changes: number;
+  hasCanvas: boolean;
+  /** Shim-side counters, when the guest exposes them (window.__plDebug). */
+  debug: Record<string, unknown> | null;
+  errors: string[];
+};
+
+const VIEWPORT = { width: 390, height: 844 };
+
+async function serve(html: string) {
+  const source = injectShim(html, SHIM_SOURCE);
+  const server = createServer((req, res) => {
+    if (req.url === '/harness') {
+      res.setHeader('content-type', 'text/html');
+      res.end(
+        '<!doctype html><meta charset="utf-8"><body style="margin:0;background:#000">' +
+          '<iframe id="f" sandbox="allow-scripts" style="width:390px;height:844px;border:0" src="/game"></iframe>',
+      );
+    } else if (req.url === '/game') {
+      res.setHeader('content-type', 'text/html');
+      res.end(source);
+    } else {
+      res.statusCode = 404;
+      res.end('');
+    }
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
+  return { server, port: (server.address() as { port: number }).port };
+}
+
+/** Wait until the guest has painted at least one frame (or give up). */
+async function waitForGame(page: Page, frame: Frame, timeoutMs = 5000) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    // String form: esbuild's keepNames adds a `__name` helper that does not
+    // exist in the page, which makes any function-form evaluate throw.
+    const painted = await frame
+      .evaluate(
+        '(() => { var d = window.__plDebug; if (!d) return true; return !!(d.hasPainted || d.rafs > 0); })()',
+      )
+      .catch(() => false);
+    if (painted) return;
+    await page.waitForTimeout(120);
+  }
+}
+
+export async function probeReplayedInput(html: string, options: { browser?: Browser } = {}): Promise<InputProbeResult> {
+  const { server, port } = await serve(html);
+  const browser = options.browser ?? (await chromium.launch());
+  const page = await browser.newPage({ viewport: VIEWPORT });
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+
+  try {
+    await page.goto(`http://127.0.0.1:${port}/harness`, { waitUntil: 'domcontentloaded' });
+    // The iframe mounts after the harness document loads, so poll for the frame
+    // instead of assuming it is already there.
+    let frame = page.frames().find((f) => f.url().endsWith('/game'));
+    for (let i = 0; i < 50 && !frame; i += 1) {
+      await page.waitForTimeout(120);
+      frame = page.frames().find((f) => f.url().endsWith('/game'));
+    }
+    if (!frame) throw new Error('game frame never loaded');
+
+    await waitForGame(page, frame);
+    await page.waitForTimeout(600);
+
+    const snapshot = (): Promise<string> =>
+      frame.evaluate(
+        '(() => { var c = document.querySelector("canvas"); return c ? c.toDataURL() : "no-canvas"; })()',
+      );
+
+    const seen = (await frame.evaluate(
+      '(() => { window.__probeDowns = 0; window.addEventListener("pointerdown", function () { window.__probeDowns += 1; }); return !!document.querySelector("canvas"); })()',
+    )) as boolean;
+
+    // Tap across the middle of the frame, exactly like the host does.
+    const points: Array<[number, number]> = [
+      [195, 300],
+      [195, 420],
+      [195, 520],
+      [110, 420],
+      [280, 420],
+      [195, 650],
+    ];
+    let previous = await snapshot();
+    let changes = 0;
+
+    for (const [x, y] of points) {
+      await page.evaluate(
+        `new Promise(function (resolve) {
+           var f = document.getElementById('f');
+           f.contentWindow.postMessage({ v: 1, src: 'playloop', type: 'input', payload: { kind: 'tap', x: ${x}, y: ${y}, pointerId: 1 } }, '*');
+           setTimeout(resolve, 260);
+         })`,
+      );
+      const next = await snapshot();
+      if (next !== previous) changes += 1;
+      previous = next;
+    }
+
+    // A hold, for charge/jump games whose interesting state is while the
+    // pointer is down (Magma Hop and friends).
+    await page.evaluate(
+      `new Promise(function (resolve) {
+         var f = document.getElementById('f');
+         function send(kind, x, y) {
+           f.contentWindow.postMessage({ v: 1, src: 'playloop', type: 'input', payload: { kind: kind, x: x, y: y, pointerId: 1 } }, '*');
+         }
+         send('down', 195, 500);
+         setTimeout(function () { send('up', 195, 500); setTimeout(resolve, 500); }, 1200);
+       })`,
+    );
+    const afterHold = await snapshot();
+    if (afterHold !== previous) changes += 1;
+
+    const debug = (await frame
+      .evaluate('(window.__plDebug ? JSON.parse(JSON.stringify(window.__plDebug)) : null)')
+      .catch(() => null)) as Record<string, unknown> | null;
+
+    return {
+      reacted: changes > 0,
+      taps: points.length + 1,
+      changes,
+      hasCanvas: seen,
+      debug,
+      errors: errors.slice(0, 3),
+    };
+  } finally {
+    await page.close();
+    if (!options.browser) await browser.close();
+    server.close();
+  }
+}

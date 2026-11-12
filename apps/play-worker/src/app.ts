@@ -17,7 +17,14 @@ const CSP =
   "frame-src 'none'; form-action 'none'; base-uri 'none'; " +
   `frame-ancestors ${ALLOWED_EMBEDDER}`;
 
-const CACHE_CONTROL = 'public, max-age=31536000, immutable';
+/**
+ * The URL is content-addressed by the GAME hash, but the response also carries
+ * the guest shim, which changes with the SDK. `immutable, max-age=1y` therefore
+ * pinned players to whatever shim they first loaded: input replay fixes never
+ * reached them and every game looked frozen while the server was correct.
+ * Revalidate every time instead; the ETag turns it into a 304 on the wire.
+ */
+const CACHE_CONTROL = 'public, max-age=0, must-revalidate';
 
 /** Artifact filenames are exactly 64 lowercase hex chars + .html — anything else 404s. */
 const ARTIFACT_FILE_RE = /^([0-9a-f]{64})\.html$/;
