@@ -115,7 +115,9 @@ export function wrap<P extends RouteParams = RouteParams>(
       const human = humanizeDbError(err);
       // The stack and the SQL stay here; the client gets a sentence it can act on.
       console.error('[api]', human.code, human.detail);
-      return jsonError(human.code, human.message, 500);
+      // A database outage is "try again", not "internal error".
+      const status = human.code === 'db_unavailable' ? 503 : 500;
+      return jsonError(human.code, human.message, status);
     }
   };
 }

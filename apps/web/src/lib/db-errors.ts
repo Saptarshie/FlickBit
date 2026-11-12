@@ -15,8 +15,25 @@ export type HumanError = {
 };
 
 export function humanizeDbError(err: unknown): HumanError {
-  const e = err as { code?: string; message?: string; constraint?: string; detail?: string } | null;
-  const code = e?.code ?? '';
+  const e = err as {
+    code?: string;
+    message?: string;
+    constraint?: string;
+    detail?: string;
+    cause?: { code?: string; message?: string };
+  } | null;
+  // Drizzle wraps a postgres-js error, which wraps the socket error; the useful
+  // code can be two or three levels down.
+  let node: unknown = err;
+  let code = '';
+  for (let depth = 0; depth < 5 && node; depth += 1) {
+    const candidate = (node as { code?: unknown }).code;
+    if (typeof candidate === 'string' && candidate.length > 0) {
+      code = candidate;
+      break;
+    }
+    node = (node as { cause?: unknown }).cause;
+  }
   const detail = String(e?.message ?? err ?? 'unknown error').slice(0, 2000);
 
   if (code === '23503') {
@@ -35,12 +52,20 @@ export function humanizeDbError(err: unknown): HumanError {
   if (code === '23514' || code === '22P02' || code === '22001') {
     return { code: 'invalid_value', message: 'The generated details could not be stored. Retrying usually fixes it.', retryable: true, detail };
   }
+  if (code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ETIMEDOUT') {
+    return {
+      code: 'db_unavailable',
+      message: 'The database is not running. Start the stack with `pnpm start` from the repo root (it starts the database too).',
+      retryable: true,
+      detail,
+    };
+  }
   if (code === '53300' || code === '08006' || code === '08003' || code === 'ECONNRESET') {
     return { code: 'db_unavailable', message: 'The database is not reachable right now. Nothing was lost — retry in a moment.', retryable: true, detail };
   }
   return {
     code: 'internal',
-    message: 'Something went wrong while saving this build. Retry, and if it keeps failing the details are in the server log.',
+    message: 'Something went wrong on our side. Retry, and if it keeps failing the details are in the server log.',
     retryable: true,
     detail,
   };

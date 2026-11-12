@@ -152,6 +152,21 @@ Open **http://localhost:3000**.
 Docker: `docker compose up -d` still starts the original Postgres/Redis/MinIO
 stack described in `docs/02-architecture.md`; the app only requires Postgres.
 
+## 4b. Stopping it
+
+```bash
+pnpm stop
+```
+
+`pnpm dev` and `pnpm start` run three processes behind pnpm/turbo wrappers, and
+Next spawns workers of its own: closing the terminal can leave any of them
+behind, and the next start then fails with `EADDRINUSE`. `pnpm stop` finds every
+node process whose command line points into this repo, stops it, and waits until
+ports 3000, 3001 and 5432 are actually free.
+
+`pnpm start` also works from `apps/web`: it runs the same root runner, so the
+database and the artifact worker come up with it.
+
 ## 5. Using the app
 
 - **Feed** (`/`) — full-bleed vertical snap, one game per gesture (swipe, wheel,
@@ -193,15 +208,23 @@ pass/fail numbers, and how to recover a corrupted dev database.
 ## 7. Troubleshooting
 
 | Symptom | Cause | Fix |
-| --- | --- | --- |
-| "Could not load the feed" / every route 500 | The dev server's `.next-dev` was deleted or replaced (older builds shared `.next`) | Restart `pnpm dev`. Since the two output directories are separate this no longer happens; if it does, delete `apps/web/.next-dev` and restart |
-| `[db] failed to start: EADDRINUSE 5432` | Another database (or a previous `pnpm dev`) owns the port | Stop it, then `pnpm dev` again. `pnpm start` reuses a database that is already listening |
-| `[db] the data directory could not be opened` | PGlite was hard-killed mid-write. It moved the directory to `.data/pglite.broken-*` and started fresh | Nothing to do — templates and seed games republish on boot. Snapshots live in `.data/backups/` (last three, one per 12 h) |
-| Game card says "Tap to play" but the game is frozen | The build failed its runtime gate or the frame never fired `ready` | The card shows **Retry**; open the browser console (`window.__PLAYLOOP_DEBUG__ = true` exposes `window.__plInput`) |
-| Studio says "Build failed" | The model returned nothing, or the artifact failed validation after 3 repairs | The error is shown verbatim with **Retry**; rephrase shorter. `PLAYLOOP_SMOKE=0` skips only the browser gate |
-| Generation is very slow | The coder writes the whole game, then it is played and reviewed | Expected on a reasoning model; follow-ups are ~2× faster because the spec and brief are reused |
-| `pnpm build` says "no dev server detected" or vice versa | Prebuild only reports state now; builds are never blocked | Ignore it |
-| Port 3000 in use | Another app | `PORT=3005 pnpm --filter @playloop/web exec next start` |
+|---|---|---|
+| `EADDRINUSE :::3000` | an earlier stack is still running | `pnpm stop`, then start again |
+| `/api/feed` answers `503 db_unavailable` | the app was started without its database (`next start` on its own) | run `pnpm start` from the repo root (or `apps/web`, which does the same) |
+| `ECONNREFUSED 127.0.0.1:5432` | nothing listens on the database port | start the stack with `pnpm start`; check `pnpm stop` did not leave a port taken |
+| the database directory was damaged | the process was hard-killed mid-write | the next boot detects it in a child process, moves it to `.data/pglite.corrupt-<ts>` and restores the newest snapshot from `.data/backups/`; if none opens, it starts empty and reseeds |
+| `pnpm build` fails with a locked `.next` | a production server is serving from that directory | `pnpm stop`, build, start again |
+| a game ignores taps | a stale shim was cached | reload once; artifacts carry `?v=<shim>` and revalidate (see `docs/development_docs/verification.md`) |
+
+### What the database repair does
+
+PGlite's wasm module cannot be re-initialised in a process after it has aborted,
+so an in-process retry was hopeless (the old code did exactly that and left the
+stack dead). On boot a **separate** process opens the directory first; if that
+fails, the directory is moved aside and the newest snapshot that opens is copied
+back before this process touches anything. A snapshot is written on every boot,
+so the worst case is the state at the last start. Prefer `pnpm stop` over killing
+the process — it lets the database close its files.
 
 ## 8. Repo layout
 

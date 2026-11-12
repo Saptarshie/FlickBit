@@ -143,6 +143,16 @@ describe('resilience: stale sessions, failed publishes, error text', () => {
     expect(again.reused).toBe(true);
   });
 
+  it('recognises a dead database through the wrapped cause chain', () => {
+    // Drizzle -> postgres-js -> socket, exactly as it arrives at the route.
+    const socket = Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:5432'), { code: 'ECONNREFUSED' });
+    const driver = Object.assign(new Error('Failed query: select 1'), { cause: socket });
+    const outer = Object.assign(new Error('Failed query: select 1'), { cause: driver });
+    const human = humanizeDbError(outer);
+    expect(human.code).toBe('db_unavailable');
+    expect(human.message).toMatch(/pnpm start/);
+  });
+
   it('never hands a raw query to the user', () => {
     const fk = Object.assign(new Error('Failed query: insert into "games" (creator_id) values ($1)\nparams: abc'), {
       code: '23503',

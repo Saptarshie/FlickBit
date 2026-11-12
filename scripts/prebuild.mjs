@@ -14,8 +14,11 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const PORTS = [
-  { port: 3000, name: 'dev web server (pnpm dev)' },
-  { port: 3001, name: 'artifact worker (pnpm dev)' },
+  // A production `next start` serves FROM apps/web/.next, the directory this
+  // build rewrites. That normally works (Next swaps atomically) but a locked
+  // file makes the build fail with no useful message — so say it up front.
+  { port: 3000, name: 'web server', prodTip: true },
+  { port: 3001, name: 'artifact worker' },
 ];
 
 function isListening(port) {
@@ -37,8 +40,11 @@ for (const entry of PORTS) {
   if (await isListening(entry.port)) busy.push(entry);
 }
 if (busy.length > 0) {
-  console.log('[build] dev stack is running — production build goes to apps/web/.next, dev keeps .next-dev.');
+  console.log('[build] a server is already running — the build writes apps/web/.next (dev keeps .next-dev).');
   for (const entry of busy) console.log(`  - :${entry.port} ${entry.name}`);
+  if (busy.some((entry) => entry.prodTip)) {
+    console.log('[build] if this fails with EBUSY/locked files, the running server owns .next: run `pnpm stop` first.');
+  }
 } else {
   console.log('[build] no dev server detected — building clean.');
 }

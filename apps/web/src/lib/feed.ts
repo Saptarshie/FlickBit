@@ -50,8 +50,11 @@ export async function fetchFeedGames(cursor?: string): Promise<FeedPage> {
     });
   } catch (err) {
     // Swallowing this turned a backend outage into "No games yet — be the
-    // first to create one". Let the client show a real error state.
-    console.error('[feed] query failed:', err instanceof Error ? err.message : err);
+    // first to create one". Let the client show a real error state — but log one
+    // line, not the whole CTE and its stack.
+    const e = err as { code?: string; cause?: { code?: string }; message?: string };
+    const first = (e.message ?? '').split(String.fromCharCode(10))[0] ?? '';
+    console.error(`[feed] query failed (${e.code ?? e.cause?.code ?? 'unknown'}): ${first.slice(0, 160)}`);
     throw err;
   }
 

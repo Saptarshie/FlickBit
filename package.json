@@ -19,7 +19,8 @@
     "start": "node scripts/start.mjs",
     "start:db": "tsx scripts/dev-db.ts",
     "probe:input": "tsx scripts/probe-input-matrix.ts",
-    "probe:live": "tsx scripts/probe-live-input.ts"
+    "probe:live": "tsx scripts/probe-live-input.ts",
+    "stop": "node scripts/stop.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite-socket": "^0.2.18",

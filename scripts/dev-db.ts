@@ -12,6 +12,8 @@
  * Not for production: production points DATABASE_URL at a real Postgres.
  */
 import path from 'node:path';
+import net from 'node:net';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { existsSync, readFileSync } from 'node:fs';
 import { cp, mkdir, readdir, readFile, rename, rm, stat } from 'node:fs/promises';
@@ -25,6 +27,22 @@ import { seed } from '@playloop/db/seed';
 import { publishPendingSeeds } from './seeds';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
+
+function isListening(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = net.connect({ port, host: '127.0.0.1' });
+    socket.setTimeout(1000);
+    socket.once('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once('timeout', () => {
+      socket.destroy();
+      resolve(false);
+    });
+    socket.once('error', () => resolve(false));
+  });
+}
 
 // Load the repo-root .env so DB_PORT etc. behave the same as in the app.
 const envPath = path.join(root, '.env');
@@ -52,12 +70,11 @@ async function snapshot(dataDir: string): Promise<void> {
     const backups = path.join(path.dirname(dataDir), 'backups');
     await mkdir(backups, { recursive: true });
     const existing = (await readdir(backups)).filter((name) => name.startsWith('pglite-')).sort();
-    const newest = existing[existing.length - 1];
-    if (newest) {
-      const age = Date.now() - (await stat(path.join(backups, newest))).mtimeMs;
-      if (age < 12 * 60 * 60 * 1000) return;
-    }
     if (!existsSync(path.join(dataDir, 'base'))) return;
+    // Always snapshot on boot. A hard kill (no signal, as on Windows) can leave
+    // PGlite unable to flush, so the state at boot is the newest one known good.
+    const newest = existing[existing.length - 1];
+    if (newest && Date.now() - (await stat(path.join(backups, newest))).mtimeMs < 10 * 60 * 1000) return;
     const target = path.join(backups, `pglite-${new Date().toISOString().replace(/[:.]/g, '-')}`);
     await cp(dataDir, target, { recursive: true });
     console.log(`[db] snapshot written to ${path.relative(path.join(root), target)}`);
@@ -72,22 +89,64 @@ async function snapshot(dataDir: string): Promise<void> {
 }
 
 /**
- * Open the database, and if the files are unreadable (unclean shutdown), move
- * them aside and start clean instead of failing the whole dev stack. The app
- * reseeds templates and republishes seed games on the way up, so `pnpm dev`
- * keeps working with a warning rather than an abort and a dead server.
+ * Can this data directory be opened at all?
+ *
+ * PGlite compiles Postgres to wasm and the module CANNOT be re-initialised in a
+ * process after it has aborted: the old recovery path caught the abort, moved
+ * the directory and created a fresh instance — and hit the same abort, leaving
+ * the stack dead. So the check runs in a *separate* process, before this one
+ * touches the files.
  */
-async function openDatabase(dataDir: string) {
-  try {
-    return await PGlite.create({ dataDir, extensions: { vector } });
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    const broken = `${dataDir}.broken-${Date.now()}`;
-    console.warn(`[db] the data directory could not be opened (${reason}).`);
-    console.warn(`[db] moving it to ${path.relative(root, broken)} and starting a fresh database.`);
+function probeDataDir(dataDir: string): boolean {
+  const code = `
+    import { PGlite } from '@electric-sql/pglite';
+    const db = new PGlite(${JSON.stringify(dataDir)});
+    await db.query('select 1');
+    await db.close();
+  `;
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e', code], {
+    cwd: path.join(root, 'packages', 'db'),
+    encoding: 'utf8',
+    timeout: 120_000,
+  });
+  if (result.status === 0) return true;
+  // Last line only: the wasm stack is dozens of frames long and says nothing new.
+  const detail = (result.stderr || result.stdout || 'unknown error').trim().split(String.fromCharCode(10)).pop();
+  console.warn(`[db] probe failed (${detail ?? 'unknown error'})`);
+  return false;
+}
+
+/**
+ * Open the database, moving a damaged directory aside first.
+ *
+ * The directory is damaged whenever the process was killed mid-write (a hard
+ * kill on Windows sends no signal, so PGlite cannot flush). A snapshot is taken
+ * on every boot, so the newest good copy is restored automatically — losing a
+ * day of dev data is a lot better than a stack that will not start.
+ */
+async function prepareDatabase(dataDir: string) {
+  const hasData = existsSync(path.join(dataDir, 'base'));
+  if (hasData && !probeDataDir(dataDir)) {
+    const broken = `${dataDir}.corrupt-${Date.now()}`;
+    console.warn(`[db] the data directory is damaged; moving it to ${path.relative(root, broken)}`);
     await rename(dataDir, broken).catch(() => undefined);
     await mkdir(dataDir, { recursive: true });
-    return PGlite.create({ dataDir, extensions: { vector } });
+
+    // Restore the most recent snapshot that still opens.
+    const backups = path.join(root, '.data', 'backups');
+    const candidates = existsSync(backups)
+      ? (await readdir(backups)).filter((n) => n.startsWith('pglite-')).sort().reverse()
+      : [];
+    for (const name of candidates) {
+      const source = path.join(backups, name);
+      if (!probeDataDir(source)) continue;
+      await cp(source, dataDir, { recursive: true });
+      console.warn(`[db] restored the snapshot ${name}`);
+      break;
+    }
+    if (!existsSync(path.join(dataDir, 'base'))) {
+      console.warn('[db] no usable snapshot — starting a fresh database (templates are reseeded).');
+    }
   }
 }
 
@@ -99,8 +158,17 @@ async function main(): Promise<void> {
   await mkdir(dataDir, { recursive: true });
   await mkdir(artifactsDir, { recursive: true });
 
+  // Two PGlite instances over one directory is exactly how it gets corrupted.
+  if (await isListening(port)) {
+    console.log(`[db] a database is already listening on :${port} — reusing it.`);
+    return;
+  }
+
+  // Repair first, then snapshot: a damaged directory must never become the
+  // newest "good" copy.
+  await prepareDatabase(dataDir);
   await snapshot(dataDir);
-  const pg = await openDatabase(dataDir);
+  const pg = await PGlite.create({ dataDir, extensions: { vector } });
   const db = drizzle(pg, { schema });
 
   // Migrations are idempotent (drizzle tracks applied hashes).
