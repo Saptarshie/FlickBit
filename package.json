@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:db": "tsx scripts/dev-db.ts",
-    "build": "node scripts/prebuild.mjs && turbo run build",
+    "build": "node scripts/prebuild.mjs && pnpm --filter @playloop/web build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test --concurrency=1",

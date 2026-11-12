@@ -75,6 +75,16 @@ if (pids.length === 0) {
   }
 }
 
+// A killed process releases its ports before it releases its file handles, and
+// `next build` rewrites the directory a dying server still had open. Wait for
+// the processes themselves to disappear first, then for the ports.
+for (let attempt = 0; attempt < 30 && pidsForRepo().length > 0; attempt += 1) {
+  await new Promise((resolve) => setTimeout(resolve, 200));
+}
+if (pidsForRepo().length > 0) {
+  console.warn('[stop] some processes are still shutting down');
+}
+
 // Wait for the sockets to actually close before telling anyone it is free.
 for (let attempt = 0; attempt < 20; attempt += 1) {
   const busy = [];
