@@ -36,19 +36,22 @@ export const POST = wrap<{ id: string }>(async (req, ctx) => {
   const game = gameRows[0];
   if (!game) return jsonError('not_found', 'Game not found', 404);
 
-  const inserted = await db
-    .insert(likes)
-    .values({ userId, gameId })
-    .onConflictDoNothing()
-    .returning();
-  if (inserted.length > 0) {
-    await db
+  // The row and the counter move together, or neither does: a crash between
+  // them used to leave like_count permanently ahead of the likes table.
+  const inserted = await db.transaction(async (tx: typeof db) => {
+    const rows = await tx.insert(likes).values({ userId, gameId }).onConflictDoNothing().returning({ userId: likes.userId });
+    if (rows.length === 0) return 0;
+    const [updated] = await tx
       .update(games)
       .set({ likeCount: sql`${games.likeCount} + 1` })
-      .where(eq(games.id, gameId));
-    await notify(db, { userId: game.creatorId, type: 'like', actorId: userId, gameId });
+      .where(eq(games.id, gameId))
+      .returning({ likeCount: games.likeCount });
+    return updated?.likeCount ?? 0;
+  });
+  if (inserted > 0) {
+    await notify(db, { userId: game.creatorId, type: 'like', actorId: userId, gameId }).catch(() => undefined);
   }
-  return jsonOk({ liked: true, likeCount: await readLikeCount(gameId) });
+  return jsonOk({ liked: true, likeCount: inserted > 0 ? inserted : await readLikeCount(gameId) });
 });
 
 export const DELETE = wrap<{ id: string }>(async (req, ctx) => {

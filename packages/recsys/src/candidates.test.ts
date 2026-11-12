@@ -36,8 +36,14 @@ describe('candidate query bounds', () => {
 
   it.each(['trending', 'fresh', 'social', 'explore'] as const)('%s bounds the rows it fetches', async (name) => {
     const { fakeDb, seen } = capture();
-    const fn = { trending, fresh, social, explore }[name];
-    await fn(fakeDb as never, 10, { seenGameIds: ['x'] });
+    const viewer = '00000000-0000-4000-8000-000000000000';
+    const run = {
+      trending: () => trending(fakeDb as never, 10, { seenGameIds: ['x'] }),
+      fresh: () => fresh(fakeDb as never, 10, { seenGameIds: ['x'] }),
+      social: () => social(fakeDb as never, viewer, 10, { seenGameIds: ['x'] }),
+      explore: () => explore(fakeDb as never, 10, { seenGameIds: ['x'] }),
+    }[name];
+    await run();
     expect(seen.join(' ')).toMatch(/LIMIT/i);
   });
 });
@@ -187,18 +193,20 @@ describe('candidate generators', () => {
       { ts: twoHoursAgo, type: 'impression', gameId: g!.id },
     ]);
 
-    // Pre-rollup: past-hour events are invisible to trending (raw side only
-    // covers the current hour) — score stays at the 0-impression prior.
+    // Events that no rollup has claimed yet must still count: the raw side
+    // covers the gap between the last rolled bucket and now. (It used to read
+    // as zero whenever the rollup lagged, which silently flattened trending.)
     const before = await trending(db, 50);
     const beforeCand = before.find((c) => c.gameId === g!.id);
-    expect(beforeCand?.score ?? 0).toBe(0);
+    // (2 * play_15s + 3 * 1 like) / (1 impression + 20) = 5 / 21
+    expect(beforeCand?.score ?? 0).toBeGreaterThan(0);
 
     await rollupGameStats(db);
 
     const after = await trending(db, 50);
     const afterCand = after.find((c) => c.gameId === g!.id);
-    // (2 * play_15s + 3 * 1 like) / (1 impression + 20) = 5 / 21 > 0
-    expect(afterCand?.score ?? 0).toBeGreaterThan(0);
+    // Rolling up must not double count the same events.
+    expect(afterCand?.score ?? 0).toBeCloseTo(beforeCand?.score ?? 0, 6);
   });
 
   it('explore counts past-hour impressions through the rollup too', async () => {

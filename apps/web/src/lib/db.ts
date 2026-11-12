@@ -33,12 +33,17 @@ export function getSql(): ReturnType<typeof postgres> {
     // collide between sockets ("bind message supplies 11 parameters, but
     // prepared statement requires 10") and requests fail at random under
     // concurrency. Simple-protocol queries are safe over a shared session.
+    // The dev database is PGlite behind a single-socket server, so exactly one
+    // connection. A real Postgres must not inherit that: one socket serialises
+    // every request behind the slowest query (a feed page could block the whole
+    // app) and drops the server-side plan cache.
+    const singleSocket = process.env.PLAYLOOP_SINGLE_SOCKET === '1';
     globalForDb.__playloopSql = postgres(url, {
-      max: 1,
-      prepare: false,
+      max: singleSocket ? 1 : Number(process.env.DATABASE_POOL_MAX ?? 20),
+      prepare: !singleSocket,
       connect_timeout: 10,
-      idle_timeout: 2,
-      max_lifetime: 60 * 10,
+      idle_timeout: singleSocket ? 2 : 30,
+      max_lifetime: 60 * (singleSocket ? 10 : 30),
       onnotice: () => {},
     });
   }

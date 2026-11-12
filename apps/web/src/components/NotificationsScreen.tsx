@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { api, RequestError } from '../lib/client-api';
 
@@ -44,15 +44,25 @@ export default function NotificationsScreen() {
   // Opening the tab is the acknowledgement: mark everything read so the badge
   // can actually clear (nothing used to call this endpoint).
   const unread = data?.unread ?? 0;
+  const marking = useRef(false);
   useEffect(() => {
-    if (unread === 0) return;
+    if (unread === 0 || marking.current) return;
+    // `unread` stays >0 until the refetch lands, so without this guard the
+    // effect re-fires on every render and hammers the endpoint.
+    marking.current = true;
     void api
       .post('/api/notifications/read', { all: true })
       .then(() => {
         void queryClient.invalidateQueries({ queryKey: ['notifications'] });
         void queryClient.invalidateQueries({ queryKey: ['me'] });
       })
-      .catch(() => {});
+      .catch(() => {
+        // Keep the badge honest rather than stuck forever.
+        void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      })
+      .finally(() => {
+        marking.current = false;
+      });
   }, [unread, queryClient]);
 
   if (isLoading) return <div style={{ padding: '0 12px', opacity: 0.6, fontSize: 14 }}>Loading…</div>;

@@ -27,7 +27,7 @@ export const GET = wrap(async (req) => {
       FROM games g
       JOIN game_versions gv ON gv.id = g.published_version_id
       JOIN users u ON u.id = g.creator_id
-      WHERE g.status = 'published' AND g.deleted_at IS NULL AND ${tag} = ANY(g.tags)
+      WHERE g.status = 'published' AND g.deleted_at IS NULL AND g.tags @> ARRAY[${tag}]::text[]
       ORDER BY g.play_count DESC, g.published_at DESC
       LIMIT ${LIMIT}
     `;
@@ -40,7 +40,7 @@ export const GET = wrap(async (req) => {
       JOIN game_versions gv ON gv.id = g.published_version_id
       JOIN users u ON u.id = g.creator_id
       WHERE g.status = 'published' AND g.deleted_at IS NULL
-        AND (g.title ILIKE ${like} OR g.description ILIKE ${like} OR ${q.toLowerCase()} = ANY(g.tags))
+        AND (g.title ILIKE ${like} OR g.description ILIKE ${like} OR g.tags @> ARRAY[${q.toLowerCase()}]::text[])
       ORDER BY g.play_count DESC, g.published_at DESC
       LIMIT ${LIMIT}
     `;

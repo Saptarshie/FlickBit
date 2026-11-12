@@ -126,4 +126,8 @@ try {
 }
 
 console.log('[dev] database ready -> starting web + play-worker\n');
-run('apps', 'pnpm', ['exec', 'turbo', 'run', 'dev']);
+// The dev database is PGlite behind one socket; the client must not open a
+// pool (see apps/web/src/lib/db.ts).
+run('apps', 'pnpm', ['exec', 'turbo', 'run', 'dev'], {
+  env: { ...process.env, PLAYLOOP_SINGLE_SOCKET: '1' },
+});

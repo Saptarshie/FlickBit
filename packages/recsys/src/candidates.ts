@@ -31,15 +31,23 @@ export async function trending(
   const fetchLimit = Math.min(limit + seen.size + 10, 500);
 
   const query = sql`
-    WITH h AS (SELECT to_timestamp(FLOOR(EXTRACT(epoch FROM now()) / 3600) * 3600) AS t),
+    WITH h AS (SELECT to_timestamp(FLOOR(EXTRACT(epoch FROM now()) / 3600) * 3600) AS now_hour),
+    m AS (
+      SELECT GREATEST(COALESCE(MAX(s.hour), to_timestamp(0)), to_timestamp(0)) AS last_hour
+      FROM game_stats_hourly s
+    ),
+    -- Where the rolled-up history ends and raw events must take over.
+    -- Normally the current hour start; if the rollup has fallen behind, the gap
+    -- is read straight from the event log instead of being counted as zero.
+    b AS (SELECT LEAST((SELECT now_hour FROM h), (SELECT last_hour FROM m) + interval '1 hour') AS t),
     rolled AS (
       SELECT s.game_id,
         SUM(s.impressions) AS impressions,
         SUM(s.plays15) AS plays15,
         SUM(s.likes) AS likes,
         SUM(s.remixes) AS remixes
-      FROM game_stats_hourly s, h
-      WHERE s.hour < h.t
+      FROM game_stats_hourly s, b
+      WHERE s.hour < b.t AND s.hour >= b.t - interval '72 hours'
       GROUP BY s.game_id
     ),
     live AS (
@@ -48,8 +56,8 @@ export async function trending(
         COUNT(*) FILTER (WHERE e.type = 'play_15s') AS plays15,
         COUNT(*) FILTER (WHERE e.type = 'like') AS likes,
         COUNT(*) FILTER (WHERE e.type = 'remix') AS remixes
-      FROM events e, h
-      WHERE e.ts >= h.t AND e.game_id IS NOT NULL
+      FROM events e, b
+      WHERE e.ts >= b.t AND e.game_id IS NOT NULL
       GROUP BY e.game_id
     )
     SELECT

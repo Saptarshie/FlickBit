@@ -21,8 +21,16 @@ export type GameStatRow = {
   skipsFast: number;
 };
 
-const DEFAULT_FROM = new Date(0);
-const DEFAULT_TO = new Date('2999-01-01T00:00:00Z');
+/**
+ * Default window: the last few hours.
+ *
+ * The old default started at the epoch, so every scheduled run re-aggregated the
+ * entire event history. Buckets older than the window are already correct —
+ * events are appended, never back-dated beyond the window in practice.
+ */
+const DEFAULT_WINDOW_HOURS = Number(process.env.ROLLUP_WINDOW_HOURS ?? 6);
+const DEFAULT_FROM = () => new Date(Date.now() - DEFAULT_WINDOW_HOURS * 3600_000);
+const DEFAULT_TO = () => new Date(Date.now() + 3600_000);
 
 function rowsOf(result: unknown): Record<string, unknown>[] {
   if (Array.isArray(result)) return result as Record<string, unknown>[];
@@ -39,8 +47,8 @@ function rowsOf(result: unknown): Record<string, unknown>[] {
  * Events without a game_id are ignored. Hours are UTC hour buckets.
  */
 export async function rollupGameStats(exec: Exec, window: RollupWindow = {}): Promise<number> {
-  const from = window.from ?? DEFAULT_FROM;
-  const to = window.to ?? DEFAULT_TO;
+  const from = window.from ?? DEFAULT_FROM();
+  const to = window.to ?? DEFAULT_TO();
 
   const result = await exec.execute(sql`
     INSERT INTO game_stats_hourly
@@ -73,7 +81,25 @@ export async function rollupGameStats(exec: Exec, window: RollupWindow = {}): Pr
     RETURNING game_id
   `);
 
-  return rowsOf(result).length;
+  const touched = rowsOf(result).length;
+
+  // `games.play15_count` and `remix_count` are read by cards and by the trending
+  // weights, but nothing ever wrote them — every game showed 0. Derive them from
+  // the rollup (the single source of truth for engagement).
+  await exec.execute(sql`
+    UPDATE games g
+    SET play15_count = s.plays15,
+        remix_count  = s.remixes
+    FROM (
+      SELECT game_id, SUM(plays15)::int AS plays15, SUM(remixes)::int AS remixes
+      FROM game_stats_hourly
+      GROUP BY game_id
+    ) s
+    WHERE s.game_id = g.id
+      AND (g.play15_count <> s.plays15 OR g.remix_count <> s.remixes)
+  `);
+
+  return touched;
 }
 
 /** Read rolled-up hourly stats for one game, oldest hour first. */

@@ -53,7 +53,10 @@ export const GET = wrap<{ id: string }>(async (req, ctx) => {
     .from(comments)
     .leftJoin(users, eq(comments.userId, users.id))
     .where(and(eq(comments.gameId, gameId), isNull(comments.deletedAt)))
-    .orderBy(asc(comments.createdAt), asc(comments.id));
+    .orderBy(asc(comments.createdAt), asc(comments.id))
+    // Bound the response: a viral game used to ship every comment (and its
+    // author) in one payload. Newest 300 conversations, oldest first.
+    .limit(300);
 
   // One level of nesting: replies attach to their top-level parent.
   const byId = new Map<string, CommentJson>();
@@ -88,12 +91,15 @@ export const POST = wrap<{ id: string }>(async (req, ctx) => {
 
   const db = getDb();
   const gameRows = await db
-    .select({ id: games.id, creatorId: games.creatorId })
+    .select({ id: games.id, creatorId: games.creatorId, status: games.status, deletedAt: games.deletedAt })
     .from(games)
     .where(eq(games.id, gameId))
     .limit(1);
   const game = gameRows[0];
-  if (!game) return jsonError('not_found', 'Game not found', 404);
+  // A draft or taken-down game does not collect comments (nor notify anyone).
+  if (!game || game.deletedAt || game.status !== 'published') {
+    return jsonError('not_found', 'Game not found', 404);
+  }
 
   let parentAuthorId: string | null = null;
   if (input.parentId) {
@@ -114,16 +120,20 @@ export const POST = wrap<{ id: string }>(async (req, ctx) => {
     parentAuthorId = parent.userId ?? null;
   }
 
-  const [row] = await db
-    .insert(comments)
-    .values({ gameId, userId, parentId: input.parentId ?? null, body: input.body })
-    .returning();
+  // The comment and its counter land together.
+  const row = await db.transaction(async (tx: typeof db) => {
+    const [created] = await tx
+      .insert(comments)
+      .values({ gameId, userId, parentId: input.parentId ?? null, body: input.body })
+      .returning();
+    if (!created) return null;
+    await tx
+      .update(games)
+      .set({ commentCount: sql`${games.commentCount} + 1` })
+      .where(eq(games.id, gameId));
+    return created;
+  });
   if (!row) return jsonError('internal', 'Failed to create comment', 500);
-
-  await db
-    .update(games)
-    .set({ commentCount: sql`${games.commentCount} + 1` })
-    .where(eq(games.id, gameId));
 
   // Activity: the creator hears about comments on their game; a reply also
   // notifies the person being replied to.

@@ -33,7 +33,9 @@ export default function ErrorBoundary({
         <div style={{ fontSize: 40, marginBottom: 8 }}>🛠️</div>
         <h1 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Something broke on our side</h1>
         <p style={{ opacity: 0.65, fontSize: 14, marginTop: 8, lineHeight: '20px', maxWidth: 320 }}>
-          {error.message || 'The page could not be rendered.'}
+          {/* A stack message like "Cannot read properties of undefined" means
+              nothing to a player and can leak internals; keep it in the log. */}
+          {'This screen hit an unexpected error. Reloading usually fixes it.'}
         </p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 20 }}>
           <button

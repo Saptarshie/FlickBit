@@ -25,7 +25,16 @@ export default function FeedScreen() {
   const activeIndex = useFeedStore((s) => s.activeIndex);
   const muted = useFeedStore((s) => s.muted);
 
-  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isFetchNextPageError,
+  } = useInfiniteQuery({
     queryKey: ['feed'],
     queryFn: ({ pageParam }) => fetchFeedGames(pageParam as string | undefined),
     initialPageParam: undefined as string | undefined,
@@ -34,6 +43,7 @@ export default function FeedScreen() {
   });
 
   const items: GameCard[] = data?.pages.flatMap((p) => p.items) ?? [];
+  const nextPageFailed = isFetchNextPageError;
   const itemCount = items.length;
 
   useEffect(() => {
@@ -44,7 +54,9 @@ export default function FeedScreen() {
     useFeedStore.getState().registerScrollToIndex((index) => {
       const el = cardRefs.current[index];
       if (el && containerRef.current) {
-        containerRef.current.scrollTo({ top: el.offsetTop, behavior: 'smooth' });
+        // scrollIntoView is layout-agnostic; offsetTop was only right while the
+        // snap container sat at the top of the document.
+        el.scrollIntoView({ block: 'start', behavior: 'smooth' });
       }
     });
     return () => useFeedStore.getState().registerScrollToIndex(null);
@@ -108,6 +120,9 @@ export default function FeedScreen() {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      // A sheet or dialog owns the keyboard while it is open — otherwise the feed
+      // scrolls underneath it (and can unmount the card holding the draft).
+      if (document.querySelector('[aria-modal="true"], [role="dialog"]')) return;
       switch (event.key) {
         case 'ArrowDown':
         case 'PageDown':
@@ -174,13 +189,15 @@ export default function FeedScreen() {
           <div style={{ opacity: 0.65, fontSize: 14, marginTop: 6 }}>
             {isError ? 'Check the server and try again.' : 'Be the first: create a game in the studio.'}
           </div>
-          <button
-            type="button"
-            onClick={() => refetch()}
-            style={{ marginTop: 16, minWidth: 120, minHeight: 48, borderRadius: 24, border: 'none', background: '#fff', color: '#0b0b10', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}
-          >
-            Retry
-          </button>
+          {isError ? (
+            <button
+              type="button"
+              onClick={() => refetch()}
+              style={{ marginTop: 16, minWidth: 120, minHeight: 48, borderRadius: 24, border: 'none', background: '#fff', color: '#0b0b10', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}
+            >
+              Retry
+            </button>
+          ) : null}
           <div style={{ marginTop: 12 }}>
             <Link href="/studio" style={{ color: '#8ab4ff', fontSize: 14 }}>
               Open the studio →
@@ -290,14 +307,19 @@ export default function FeedScreen() {
         >
           <div style={{ textAlign: 'center' }}>
             {hasNextPage ? (
-              <button
-                type="button"
-                onClick={() => void fetchNextPage()}
-                disabled={isFetchingNextPage}
-                style={{ minHeight: 48, padding: '0 22px', borderRadius: 24, border: 'none', background: '#fff', color: '#0b0b10', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
-              >
-                {isFetchingNextPage ? 'Loading…' : 'Load more'}
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => void fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  style={{ minHeight: 48, padding: '0 22px', borderRadius: 24, border: 'none', background: '#fff', color: '#0b0b10', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {isFetchingNextPage ? 'Loading…' : nextPageFailed ? 'Retry' : 'Load more'}
+                </button>
+                {nextPageFailed ? (
+                  <p style={{ marginTop: 8, fontSize: 13, color: '#fca5a5' }}>Couldn’t load more games. Check your connection.</p>
+                ) : null}
+              </>
             ) : (
               <>
                 <div style={{ fontSize: 16, fontWeight: 700 }}>You’re all caught up</div>

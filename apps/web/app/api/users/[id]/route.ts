@@ -82,7 +82,9 @@ export const GET = wrap<{ id: string }>(async (req, ctx) => {
     .from(schema.games)
     .leftJoin(schema.gameVersions, eq(schema.gameVersions.id, schema.games.publishedVersionId))
     .where(and(eq(schema.games.creatorId, user.id), eq(schema.games.status, 'published')))
-    .orderBy(sql`${schema.games.publishedAt} desc nulls last`);
+    .orderBy(sql`${schema.games.publishedAt} desc nulls last`)
+    // A prolific creator should not ship their whole catalogue in one response.
+    .limit(60);
 
   const playOrigin = process.env.NEXT_PUBLIC_PLAY_ORIGIN || 'http://play.localhost:3001';
 

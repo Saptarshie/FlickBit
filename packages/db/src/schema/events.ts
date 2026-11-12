@@ -68,16 +68,19 @@ export async function insertEvents(
   rows: EventRow[],
 ): Promise<void> {
   if (rows.length === 0) return;
-  for (const r of rows) {
-    await exec.execute(sql`
-      insert into events (ts, user_id, anon_id, session_id, type, game_id, version_id, position, source, propensity, model_version, props)
-      values (
-        coalesce(${tsParam(r.ts)}::timestamptz, now()),
-        ${r.userId ?? null}, ${r.anonId ?? null}, ${r.sessionId ?? null}, ${r.type},
-        ${r.gameId ?? null}, ${r.versionId ?? null}, ${r.position ?? null},
-        ${r.source ?? null}, ${r.propensity ?? null}, ${r.modelVersion ?? null},
-        ${r.props ? JSON.stringify(r.props) : null}::jsonb
-      )
-    `);
-  }
+  // One INSERT for the whole batch. This is the write path of every play and
+  // skip, so 50 round trips per beacon was both slow and a connection hog.
+  const values = rows.map(
+    (r) => sql`(
+      coalesce(${tsParam(r.ts)}::timestamptz, now()),
+      ${r.userId ?? null}, ${r.anonId ?? null}, ${r.sessionId ?? null}, ${r.type},
+      ${r.gameId ?? null}, ${r.versionId ?? null}, ${r.position ?? null},
+      ${r.source ?? null}, ${r.propensity ?? null}, ${r.modelVersion ?? null},
+      ${r.props ? JSON.stringify(r.props) : null}::jsonb
+    )`,
+  );
+  await exec.execute(sql`
+    insert into events (ts, user_id, anon_id, session_id, type, game_id, version_id, position, source, propensity, model_version, props)
+    values ${sql.join(values, sql`, `)}
+  `);
 }

@@ -48,12 +48,22 @@ export const POST = wrap<{ id: string }>(async (req, ctx) => {
 
   const versionId = input.versionId ?? null;
   if (versionId) {
+    // The version must belong to THIS game: a score used to be able to point at
+    // another game's build.
     const versionRows = await db
       .select({ id: gameVersions.id })
       .from(gameVersions)
-      .where(eq(gameVersions.id, versionId))
+      .where(and(eq(gameVersions.id, versionId), eq(gameVersions.gameId, gameId)))
       .limit(1);
-    if (versionRows.length === 0) return jsonError('bad_request', 'Unknown versionId', 400);
+    if (versionRows.length === 0) return jsonError('bad_request', 'Unknown versionId for this game', 400);
+  }
+
+  // A leaderboard is only meaningful if the score is plausible: the manifest
+  // declares its own scale, and anything outside it is rejected rather than
+  // letting one client own every slot with 1e308.
+  const MAX_SCORE = Number(process.env.LEADERBOARD_MAX_SCORE ?? 1_000_000);
+  if (!Number.isFinite(input.score) || Math.abs(input.score) > MAX_SCORE) {
+    return jsonError('validation_error', `Scores must be between -${MAX_SCORE} and ${MAX_SCORE}`, 400);
   }
 
   const [row] = await db

@@ -116,6 +116,9 @@ const dbPort = Number.parseInt(process.env.DB_PORT ?? '5432', 10);
 const databaseUrl = process.env.DATABASE_URL ?? '';
 const localDb = /@(127\.0\.0\.1|localhost)[:/]/.test(databaseUrl) || databaseUrl === '';
 const externalDb = process.env.PLAYLOOP_DB === 'external' || !localDb;
+// The embedded database is PGlite behind one socket: the app must keep a single
+// connection. A real Postgres gets a real pool.
+process.env.PLAYLOOP_SINGLE_SOCKET = externalDb ? '0' : '1';
 
 if (externalDb) {
   console.log('[start] using the external database from DATABASE_URL');

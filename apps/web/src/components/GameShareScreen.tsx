@@ -2,7 +2,7 @@
 
 import { SHIM_VERSION } from '@playloop/sdk';
 import { artifactSrc } from '../lib/artifact-url';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useMutation } from '@tanstack/react-query';
 import CommentsSheet from './CommentsSheet';
@@ -60,6 +60,36 @@ export function GameShareScreen({ game }: { game: ShareGame }) {
     },
   });
 
+  const readyRef = useRef(false);
+  const pendingStartRef = useRef(false);
+  const startTimerRef = useRef<number | null>(null);
+  const [frameKey, setFrameKey] = useState(0);
+  const [loadIssue, setLoadIssue] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as { src?: string; type?: string } | null;
+      if (!data || data.src !== 'playloop') return;
+      if (data.type === 'ready') {
+        readyRef.current = true;
+        if (startTimerRef.current) {
+          window.clearTimeout(startTimerRef.current);
+          startTimerRef.current = null;
+        }
+        setLoadIssue(null);
+        if (pendingStartRef.current) {
+          pendingStartRef.current = false;
+          resumeGuest();
+        }
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => {
+      window.removeEventListener('message', onMessage);
+      if (startTimerRef.current) window.clearTimeout(startTimerRef.current);
+    };
+  }, []);
+
   const saveMutation = useMutation({
     mutationFn: (next: boolean) =>
       next ? api.post(`/api/games/${game.id}/save`) : api.del(`/api/games/${game.id}/save`),
@@ -82,15 +112,42 @@ export function GameShareScreen({ game }: { game: ShareGame }) {
         await navigator.clipboard.writeText(url);
         flash('Link copied');
       }
-    } catch {
+    } catch (err) {
+      // Cancelling the native sheet is not a failure.
+      if ((err as { name?: string })?.name === 'AbortError') return;
       flash('Could not share');
     }
   };
 
+  /**
+   * The guest posts `ready` when its shim is live. Until then a `resume` goes
+   * nowhere, so the old code could hand the visitor a dead black frame with no
+   * way back — on the main inbound landing page.
+   */
+  const resumeGuest = () => {
+    iframeRef.current?.contentWindow?.postMessage({ src: 'playloop', type: 'resume' }, '*');
+  };
+
   const start = () => {
     setStarted(true);
-    // Kick the guest into running state once the user gesture unlocked audio.
-    iframeRef.current?.contentWindow?.postMessage({ src: 'playloop', type: 'resume' }, '*');
+    setLoadIssue(null);
+    if (readyRef.current) {
+      resumeGuest();
+      return;
+    }
+    pendingStartRef.current = true;
+    startTimerRef.current = window.setTimeout(() => {
+      setLoadIssue('This game did not start. It may be offline or still building.');
+    }, 10_000);
+  };
+
+  const retry = () => {
+    if (startTimerRef.current) window.clearTimeout(startTimerRef.current);
+    readyRef.current = false;
+    pendingStartRef.current = false;
+    setLoadIssue(null);
+    setStarted(false);
+    setFrameKey((k) => k + 1);
   };
 
   return (
@@ -110,6 +167,7 @@ export function GameShareScreen({ game }: { game: ShareGame }) {
       <div style={{ position: 'relative', width: '100%', aspectRatio: '9 / 16', maxHeight: '80dvh', background: '#000', overflow: 'hidden' }}>
         {game.artifactUrl ? (
           <iframe
+            key={frameKey}
             ref={iframeRef}
             src={artifactSrc(game.artifactUrl, SHIM_VERSION)}
             title={game.title}
@@ -129,6 +187,62 @@ export function GameShareScreen({ game }: { game: ShareGame }) {
             }}
           />
         ) : null}
+        {loadIssue ? (
+          <div
+            role="alert"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 12,
+              padding: 24,
+              textAlign: 'center',
+              background: 'rgba(11,11,16,0.92)',
+              color: '#f5f5f5',
+            }}
+          >
+            <p style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>This game would not load</p>
+            <p style={{ fontSize: 13, color: '#a3a3a3', margin: 0, lineHeight: 1.5 }}>{loadIssue}</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                onClick={retry}
+                style={{
+                  minHeight: 48,
+                  padding: '0 18px',
+                  borderRadius: 12,
+                  border: 'none',
+                  background: '#10b981',
+                  color: '#04110c',
+                  fontSize: 14,
+                  fontWeight: 700,
+                }}
+              >
+                Try again
+              </button>
+              <a
+                href="/"
+                style={{
+                  minHeight: 48,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '0 18px',
+                  borderRadius: 12,
+                  background: '#262626',
+                  color: '#f5f5f5',
+                  fontSize: 14,
+                  textDecoration: 'none',
+                }}
+              >
+                More games
+              </a>
+            </div>
+          </div>
+        ) : null}
+
         {!started ? (
           <button
             type="button"

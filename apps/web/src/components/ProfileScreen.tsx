@@ -25,16 +25,27 @@ type ProfileData = {
 
 async function fetchProfile(handle: string): Promise<ProfileData> {
   const res = await fetch(`/api/users/${encodeURIComponent(handle)}`);
-  const body = await res.json();
-  if (!res.ok) throw new Error(body?.error?.message ?? 'Failed to load profile');
-  return body.data as ProfileData;
+  // Parse only after the status is known: a proxy error page is HTML, and
+  // `res.json()` on it threw "Unexpected token '<'" at the user.
+  if (res.status === 404) throw new ProfileError('not_found', 'No such creator.');
+  if (!res.ok) throw new ProfileError('unavailable', 'Couldn’t load this profile.');
+  const body = (await res.json()) as { data?: ProfileData; error?: { message?: string } };
+  if (!body.data) throw new ProfileError('unavailable', body.error?.message ?? 'Couldn’t load this profile.');
+  return body.data;
+}
+
+class ProfileError extends Error {
+  constructor(public code: 'not_found' | 'unavailable', message: string) {
+    super(message);
+  }
 }
 
 /** Mobile-first creator profile: header, follow CTA, remix-aware game grid. */
 export function ProfileScreen({ handle }: { handle: string }) {
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['profile', handle],
     queryFn: () => fetchProfile(handle),
+    retry: (count, err) => !(err instanceof ProfileError && err.code === 'not_found') && count < 2,
   });
   const [following, setFollowing] = useState<boolean | null>(null);
   const [followBusy, setFollowBusy] = useState(false);
@@ -69,7 +80,14 @@ export function ProfileScreen({ handle }: { handle: string }) {
     return (
       <main style={{ minHeight: '100dvh', background: '#0b0b10', color: '#fff', display: 'grid', placeItems: 'center' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 18, fontWeight: 700 }}>Profile not found</div>
+          <div style={{ fontSize: 18, fontWeight: 700 }}>
+            {(error as ProfileError | null)?.code === 'not_found' ? 'Profile not found' : 'Couldn’t load this profile'}
+          </div>
+          <p style={{ marginTop: 6, fontSize: 14, opacity: 0.7 }}>
+            {(error as ProfileError | null)?.code === 'not_found'
+              ? 'That creator does not exist — the link may be old.'
+              : 'Check your connection and try again.'}
+          </p>
           <button
             type="button"
             onClick={() => refetch()}

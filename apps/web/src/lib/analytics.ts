@@ -21,7 +21,21 @@ type EventType =
   | 'remix'
   | 'skip_fast';
 
+/**
+ * Ids already reported in this page session. Bounded: an infinite feed would
+ * otherwise keep every impression id for the life of the tab.
+ */
 const seen = new Set<string>();
+const SEEN_LIMIT = 500;
+function markSeen(id: string): boolean {
+  if (seen.has(id)) return false;
+  seen.add(id);
+  if (seen.size > SEEN_LIMIT) {
+    const oldest = seen.values().next().value;
+    if (oldest !== undefined) seen.delete(oldest);
+  }
+  return true;
+}
 let queue: Record<string, unknown>[] = [];
 let flushTimer: number | null = null;
 
@@ -48,9 +62,7 @@ export function track(
   options: { once?: boolean; position?: number; versionId?: string; props?: Record<string, unknown> } = {},
 ): void {
   if (gameId && options.once) {
-    const key = `${type}:${gameId}`;
-    if (seen.has(key)) return;
-    seen.add(key);
+    if (!markSeen(`${type}:${gameId}`)) return;
   }
   queue.push({
     type,

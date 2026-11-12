@@ -53,42 +53,51 @@ export async function publishArtifact(db: Db, input: PublishInput): Promise<Publ
     if (input.versionNo === undefined) versionNo = (latest?.versionNo ?? 0) + 1;
   }
 
-  if (!gameId) {
-    const [created] = await db
-      .insert(schema.games)
+  // One transaction: a game row must never exist without its version, or it
+  // passes every candidate query and is then dropped by the hydration join
+  // (the feed silently loses the card).
+  const written = await db.transaction(async (tx: Db) => {
+    let targetGameId = gameId;
+
+    if (!targetGameId) {
+      const [created] = await tx
+        .insert(schema.games)
+        .values({
+          creatorId,
+          title: metadata.title,
+          description: metadata.description,
+          tags: metadata.tags,
+          status: 'published',
+          moderation: 'approved',
+          forkedFromGameId: input.forkedFromId ?? null,
+          publishedAt: new Date(),
+        })
+        .returning({ id: schema.games.id });
+      targetGameId = created!.id;
+    } else {
+      await tx
+        .update(schema.games)
+        .set({ title: metadata.title, description: metadata.description, tags: metadata.tags, updatedAt: new Date() })
+        .where(eq(schema.games.id, targetGameId));
+    }
+
+    const [version] = await tx
+      .insert(schema.gameVersions)
       .values({
-        creatorId,
-        title: metadata.title,
-        description: metadata.description,
-        tags: metadata.tags,
-        status: 'published',
-        moderation: 'approved',
-        forkedFromGameId: input.forkedFromId ?? null,
-        publishedAt: new Date(),
+        gameId: targetGameId,
+        versionNo,
+        artifactSha256: sha256,
+        artifactBytes: bytes,
+        artifactKey: `artifacts/${sha256}.html`,
+        manifest: { ...metadata, spec },
+        createdBy: 'ai',
       })
-      .returning({ id: schema.games.id });
-    gameId = created!.id;
-  } else {
-    await db
-      .update(schema.games)
-      .set({ title: metadata.title, description: metadata.description, tags: metadata.tags, updatedAt: new Date() })
-      .where(eq(schema.games.id, gameId));
-  }
+      .returning({ id: schema.gameVersions.id });
 
-  const [version] = await db
-    .insert(schema.gameVersions)
-    .values({
-      gameId,
-      versionNo,
-      artifactSha256: sha256,
-      artifactBytes: bytes,
-      artifactKey: `artifacts/${sha256}.html`,
-      manifest: { ...metadata, spec },
-      createdBy: 'ai',
-    })
-    .returning({ id: schema.gameVersions.id });
+    await tx.update(schema.games).set({ publishedVersionId: version!.id }).where(eq(schema.games.id, targetGameId));
 
-  await db.update(schema.games).set({ publishedVersionId: version!.id }).where(eq(schema.games.id, gameId));
+    return { gameId: targetGameId!, versionId: version!.id, versionNo };
+  });
 
   // Embeddings are best-effort: the game is already playable without them.
   try {
@@ -97,7 +106,7 @@ export async function publishArtifact(db: Db, input: PublishInput): Promise<Publ
     if (vec) {
       await db.execute(
         sql`INSERT INTO game_features (game_version_id, description_text, text_vec, content_vec, feed_eligible, embedded_at, model_versions)
-            VALUES (${version!.id}, ${text}, ${toVectorLiteral(vec)}::vector, ${toVectorLiteral(vec)}::vector, true, now(), ${JSON.stringify({ embed: process.env.EMBED_MODEL ?? 'embeddinggemma' })}::jsonb)
+            VALUES (${written.versionId}, ${text}, ${toVectorLiteral(vec)}::vector, ${toVectorLiteral(vec)}::vector, true, now(), ${JSON.stringify({ embed: process.env.EMBED_MODEL ?? 'embeddinggemma' })}::jsonb)
             ON CONFLICT (game_version_id) DO UPDATE SET text_vec = EXCLUDED.text_vec, content_vec = EXCLUDED.content_vec, feed_eligible = true, embedded_at = now()`,
       );
     }
@@ -105,5 +114,5 @@ export async function publishArtifact(db: Db, input: PublishInput): Promise<Publ
     console.warn('[publish] embedding skipped:', err instanceof Error ? err.message : err);
   }
 
-  return { gameId, versionId: version!.id, versionNo, reused: false };
+  return { ...written, reused: false };
 }

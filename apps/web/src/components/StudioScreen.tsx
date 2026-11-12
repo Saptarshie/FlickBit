@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { SHIM_VERSION } from '@playloop/sdk';
+import { artifactSrc } from '@/lib/artifact-url';
 
 type Turn = {
   id: string;
@@ -60,6 +62,9 @@ export function StudioScreen() {
   const [templateId, setTemplateId] = useState('');
   const [imageKey, setImageKey] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => abortRef.current?.abort(), []);
   const [uploading, setUploading] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -135,7 +140,10 @@ export function StudioScreen() {
       const body = await res.json();
       if (!res.ok) throw new Error(body?.error?.message ?? 'Upload failed');
       setImageKey(body.data.key);
-      setImagePreview(URL.createObjectURL(file));
+      setImagePreview((previous) => {
+        if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
+        return URL.createObjectURL(file);
+      });
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Upload failed');
     } finally {
@@ -163,9 +171,15 @@ export function StudioScreen() {
     setPrompt('');
 
     try {
+      // Navigating away must stop the stream, not keep pushing events into an
+      // unmounted component for ten minutes.
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
       const res = await fetch('/api/studio/generate', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           prompt: asked,
           gameId: gameId ?? undefined,
@@ -236,6 +250,7 @@ export function StudioScreen() {
         }
       }
     } catch (err) {
+      if ((err as { name?: string })?.name === 'AbortError') return;
       const message = err instanceof Error ? err.message : 'Generation failed';
       const payload = (err as { payload?: { code?: string; sha?: string } }).payload;
       setErrorMsg(message);
@@ -301,7 +316,9 @@ export function StudioScreen() {
         }),
       });
       setSaved(res.ok);
-      if (!res.ok) setErrorMsg('Could not save details');
+      if (!res.ok) setErrorMsg('Could not save those details — retry.');
+    } catch {
+      setErrorMsg('Could not reach the server — that edit was not saved.');
     } finally {
       setSaving(false);
     }
@@ -506,12 +523,18 @@ export function StudioScreen() {
       {/* Preview */}
       {artifactUrl ? (
         <div className="relative mx-3 overflow-hidden rounded-2xl border border-neutral-800" style={{ height: '38dvh' }}>
-          <iframe ref={iframeRef} src={artifactUrl} sandbox="allow-scripts" title="Game preview" className="h-full w-full border-0" />
+          <iframe
+            ref={iframeRef}
+            src={artifactSrc(artifactUrl, SHIM_VERSION)}
+            sandbox="allow-scripts"
+            title="Game preview"
+            className="h-full w-full border-0"
+          />
           <div className="absolute right-2 top-2 flex gap-2">
             <button
               type="button"
               onClick={() => {
-                if (iframeRef.current) iframeRef.current.src = artifactUrl;
+                if (iframeRef.current) iframeRef.current.src = artifactSrc(artifactUrl, SHIM_VERSION);
               }}
               className="h-9 w-9 rounded-full border border-neutral-700 bg-neutral-900/80 text-xs"
               aria-label="Restart preview"

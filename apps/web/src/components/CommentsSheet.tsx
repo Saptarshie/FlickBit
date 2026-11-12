@@ -37,13 +37,40 @@ export default function CommentsSheet({ gameId, open, onClose, onCountChange }: 
   const comments = data?.comments ?? [];
   const total = comments.reduce((n, c) => n + 1 + c.replies.length, 0);
 
-  useEffect(() => {
-    if (open) onCountChange?.(total);
-  }, [open, total, onCountChange]);
+  const focusTimer = useRef<number | null>(null);
+  const [postError, setPostError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 250);
+    // Only report a count once it is known: firing 0 while the query is in
+    // flight overwrote the real badge, and a failed request left it at 0.
+    if (open && data) onCountChange?.(total);
+  }, [open, total, data, onCountChange]);
+
+  useEffect(() => {
+    if (!open) return;
+    focusTimer.current = window.setTimeout(() => {
+      // Closed again within the delay: focusing now would pop the keyboard over
+      // the feed for an input nobody can see.
+      if (inputRef.current?.isConnected) inputRef.current.focus();
+    }, 250);
+    return () => {
+      if (focusTimer.current) window.clearTimeout(focusTimer.current);
+      focusTimer.current = null;
+    };
   }, [open]);
+
+  // Escape closes the sheet (it used to exit play mode instead).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
 
   const post = useMutation({
     mutationFn: (body: string) => api.post(`/api/games/${gameId}/comments`, { body }),
@@ -53,7 +80,16 @@ export default function CommentsSheet({ gameId, open, onClose, onCountChange }: 
       queryClient.invalidateQueries({ queryKey: ['comments', gameId] });
     },
     onError: (err) => {
-      if (err instanceof RequestError && err.status === 401) setNeedsAuth(true);
+      if (err instanceof RequestError && err.status === 401) {
+        setNeedsAuth(true);
+        return;
+      }
+      // Everything else used to fail silently while the button re-enabled.
+      setPostError(
+        err instanceof RequestError && err.status === 429
+          ? 'Slow down a moment, then try again.'
+          : 'Could not post that comment. Check your connection and retry.',
+      );
     },
   });
 
@@ -61,12 +97,16 @@ export default function CommentsSheet({ gameId, open, onClose, onCountChange }: 
     event.preventDefault();
     const body = draft.trim();
     if (!body || post.isPending) return;
+    setPostError(null);
     post.mutate(body);
   };
 
   return (
     <div
       aria-hidden={!open}
+      // `inert` keeps the offscreen input, Post button and close button out of
+      // the tab order while the sheet is closed.
+      {...(!open ? { inert: '' as unknown as boolean } : {})}
       style={{
         position: 'fixed',
         inset: 0,
@@ -86,6 +126,7 @@ export default function CommentsSheet({ gameId, open, onClose, onCountChange }: 
       />
       <div
         role="dialog"
+        aria-modal="true"
         aria-label="Comments"
         style={{
           position: 'absolute',
@@ -106,7 +147,7 @@ export default function CommentsSheet({ gameId, open, onClose, onCountChange }: 
         }}
       >
         <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 15, fontWeight: 700 }}>{total} comments</div>
+          <div style={{ fontSize: 16, fontWeight: 700 }}>{total} comments</div>
           <button
             type="button"
             onClick={onClose}
@@ -120,7 +161,7 @@ export default function CommentsSheet({ gameId, open, onClose, onCountChange }: 
         <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px', WebkitOverflowScrolling: 'touch' }}>
           {isLoading ? <div style={{ opacity: 0.6, fontSize: 14 }}>Loading…</div> : null}
           {isError ? (
-            <button type="button" onClick={() => refetch()} style={{ background: 'none', border: 'none', color: '#8ab4ff', fontSize: 14, padding: 0, cursor: 'pointer' }}>
+            <button type="button" onClick={() => refetch()} style={{ background: 'none', border: 'none', color: '#8ab4ff', fontSize: 16, padding: 0, cursor: 'pointer' }}>
               Could not load comments — retry
             </button>
           ) : null}
@@ -149,7 +190,7 @@ export default function CommentsSheet({ gameId, open, onClose, onCountChange }: 
                 <Link href={`/u/${comment.user.handle ?? ''}`} style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, textDecoration: 'none' }}>
                   @{comment.user.handle ?? 'creator'}
                 </Link>
-                <div style={{ fontSize: 14, lineHeight: '20px', wordBreak: 'break-word' }}>{comment.body}</div>
+                <div style={{ fontSize: 16, lineHeight: '20px', wordBreak: 'break-word' }}>{comment.body}</div>
                 {comment.replies.map((reply) => (
                   <div key={reply.id} style={{ marginTop: 8, paddingLeft: 10, borderLeft: '2px solid rgba(255,255,255,0.10)' }}>
                     <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>@{reply.user.handle ?? 'creator'} </span>
@@ -162,6 +203,11 @@ export default function CommentsSheet({ gameId, open, onClose, onCountChange }: 
         </div>
 
         <form onSubmit={submit} style={{ display: 'flex', gap: 8, padding: '10px 14px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          {postError ? (
+            <p role="alert" style={{ position: 'absolute', left: 14, right: 14, bottom: 66, margin: 0, fontSize: 13, color: '#fca5a5' }}>
+              {postError}
+            </p>
+          ) : null}
           <input
             ref={inputRef}
             value={draft}
@@ -176,7 +222,7 @@ export default function CommentsSheet({ gameId, open, onClose, onCountChange }: 
               border: '1px solid rgba(255,255,255,0.14)',
               background: 'rgba(255,255,255,0.06)',
               color: '#fff',
-              fontSize: 15,
+              fontSize: 16,
               padding: '0 14px',
               outline: 'none',
             }}
@@ -193,7 +239,7 @@ export default function CommentsSheet({ gameId, open, onClose, onCountChange }: 
                 textDecoration: 'none',
                 display: 'grid',
                 placeItems: 'center',
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: 700,
               }}
             >
@@ -210,7 +256,7 @@ export default function CommentsSheet({ gameId, open, onClose, onCountChange }: 
                 border: 'none',
                 background: draft.trim() ? 'linear-gradient(135deg,#7b5cff,#ff3b8d)' : 'rgba(255,255,255,0.14)',
                 color: '#fff',
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: 700,
                 cursor: draft.trim() ? 'pointer' : 'default',
               }}

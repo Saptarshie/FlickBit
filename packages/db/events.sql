@@ -45,3 +45,8 @@ END $$;
 -- pre-created months fails the whole insert ("no partition of relation events
 -- found for row"), so a clock skew or a late backfill loses data.
 CREATE TABLE IF NOT EXISTS events_default PARTITION OF events DEFAULT;
+
+-- Read paths: the current-hour slice for trending, and per-game history.
+-- Created here because this file owns the partitioned table.
+CREATE INDEX IF NOT EXISTS events_ts_idx ON events (ts);
+CREATE INDEX IF NOT EXISTS events_game_ts_idx ON events (game_id, ts);

@@ -94,6 +94,18 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
   const [commentCount, setCommentCount] = useState(card.counts.comments);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [loadIssue, setLoadIssue] = useState<string | null>(null);
+  /**
+   * A short notice ("Link copied") is NOT a frame failure: writing it into
+   * `loadIssue` rendered the Retry chip, and that Retry destroys the iframe and
+   * aborts the run in progress.
+   */
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<number | null>(null);
+  const flash = (message: string) => {
+    setToast(message);
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 1800);
+  };
   const [frameKey, setFrameKey] = useState(0);
 
   const isPlaying = useFeedStore((s) => s.isPlaying);
@@ -107,7 +119,7 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
 
   const [authNotice, setAuthNotice] = useState<string | null>(null);
 
-  const handleAuthError = useCallback((err: unknown) => {
+  const handleAuthError = useCallback((err: unknown, action = 'do that') => {
     if (err instanceof RequestError && err.status === 401) {
       // Never navigate away: a tap on Like used to tear the user out of the
       // feed and lose their place. Offer sign-in inline instead.
@@ -115,7 +127,13 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
       window.setTimeout(() => setAuthNotice(null), 3200);
       return true;
     }
-    return false;
+    if (err instanceof RequestError && err.status === 429) {
+      flash('Too many taps — try again in a moment');
+      return true;
+    }
+    // Anything else (offline, 5xx) used to revert the icon in silence.
+    flash(`Could not ${action} — check your connection`);
+    return true;
   }, []);
 
   const likeMutation = useMutation({
@@ -123,7 +141,7 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
     onError: (err, next) => {
       setLiked(!next);
       setLikeCount((c) => Math.max(0, c + (next ? -1 : 1)));
-      handleAuthError(err);
+      handleAuthError(err, 'like this');
     },
   });
 
@@ -131,7 +149,7 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
     mutationFn: (next: boolean) => (next ? api.post(`/api/games/${card.id}/save`) : api.del(`/api/games/${card.id}/save`)),
     onError: (err, next) => {
       setSaved(!next);
-      handleAuthError(err);
+      handleAuthError(err, 'save this');
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['saved'] }),
   });
@@ -141,7 +159,7 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
       next ? api.post(`/api/users/${card.creator.id}/follow`) : api.del(`/api/users/${card.creator.id}/follow`),
     onError: (err, next) => {
       setFollows(!next);
-      handleAuthError(err);
+      handleAuthError(err, 'follow');
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['profile', card.creator.handle] }),
   });
@@ -167,18 +185,19 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
 
   const share = async () => {
     const url = `${window.location.origin}/g/${card.id}`;
-    try {
-      if (navigator.share) {
+    if (navigator.share) {
+      try {
         await navigator.share({ title: card.title, text: card.description, url });
-        return;
+      } catch (err) {
+        // Cancelling is a decision, not a failure: do not copy anyway.
+        if ((err as { name?: string })?.name === 'AbortError') return;
+        flash('Could not share');
       }
-    } catch {
-      /* user cancelled */
+      return;
     }
     try {
       await navigator.clipboard.writeText(url);
-      setLoadIssue('Link copied');
-      setTimeout(() => setLoadIssue(null), 1600);
+      flash('Link copied');
     } catch {
       router.push(`/g/${card.id}`);
     }
@@ -562,9 +581,9 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
               aria-label="Stop playing and browse the feed"
               onClick={() => useFeedStore.getState().setEngaged(null)}
               style={{
-                minWidth: 28,
-                minHeight: 28,
-                borderRadius: 14,
+                minWidth: 44,
+                minHeight: 44,
+                borderRadius: 22,
                 border: 'none',
                 background: 'rgba(255,255,255,0.16)',
                 color: '#fff',
@@ -767,6 +786,28 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
           <Icon path={ICONS.chevronDown} />
         </button>
       </div>
+
+      {/* Transient notice (copy/share) — never carries a destructive action. */}
+      {toast ? (
+        <div
+          role="status"
+          style={{
+            position: 'absolute',
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 120px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 7,
+            background: 'rgba(0,0,0,0.78)',
+            color: '#fff',
+            fontSize: 12,
+            borderRadius: 999,
+            padding: '8px 14px',
+            pointerEvents: 'none',
+          }}
+        >
+          {toast}
+        </div>
+      ) : null}
 
       {/* Non-blocking status chip with Retry — never auto-skips. */}
       {loadIssue ? (

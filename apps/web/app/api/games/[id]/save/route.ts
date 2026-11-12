@@ -30,18 +30,17 @@ export const POST = wrap<{ id: string }>(async (req, ctx) => {
   const gameRows = await db.select({ id: games.id }).from(games).where(eq(games.id, gameId)).limit(1);
   if (gameRows.length === 0) return jsonError('not_found', 'Game not found', 404);
 
-  const inserted = await db
-    .insert(saves)
-    .values({ userId, gameId })
-    .onConflictDoNothing()
-    .returning();
-  if (inserted.length > 0) {
-    await db
+  const inserted = await db.transaction(async (tx: typeof db) => {
+    const rows = await tx.insert(saves).values({ userId, gameId }).onConflictDoNothing().returning({ userId: saves.userId });
+    if (rows.length === 0) return 0;
+    const [updated] = await tx
       .update(games)
       .set({ saveCount: sql`${games.saveCount} + 1` })
-      .where(eq(games.id, gameId));
-  }
-  return jsonOk({ saved: true, saveCount: await readSaveCount(gameId) });
+      .where(eq(games.id, gameId))
+      .returning({ saveCount: games.saveCount });
+    return updated?.saveCount ?? 0;
+  });
+  return jsonOk({ saved: true, saveCount: inserted > 0 ? inserted : await readSaveCount(gameId) });
 });
 
 export const DELETE = wrap<{ id: string }>(async (req, ctx) => {

@@ -18,3 +18,6 @@ CREATE TABLE IF NOT EXISTS game_stats_hourly (
 );
 
 CREATE INDEX IF NOT EXISTS game_stats_hourly_hour_idx ON game_stats_hourly (hour);
+
+-- Trending sums the recent buckets per game.
+CREATE INDEX IF NOT EXISTS game_stats_hourly_game_hour_idx ON game_stats_hourly (game_id, hour);

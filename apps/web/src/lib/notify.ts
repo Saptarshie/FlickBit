@@ -47,13 +47,18 @@ export async function notify(
       .limit(1);
     if (existing.length > 0) return;
 
-    await db.insert(notifications).values({
-      userId,
-      type,
-      actorId,
-      gameId,
-      data: { actorHandle: actor?.handle ?? null, gameTitle },
-    });
+    // `notifications_unread_uq` (migration 0003) makes this atomic: two
+    // concurrent likes can no longer create two unread rows.
+    await db
+      .insert(notifications)
+      .values({
+        userId,
+        type,
+        actorId,
+        gameId,
+        data: { actorHandle: actor?.handle ?? null, gameTitle },
+      })
+      .onConflictDoNothing();
   } catch (err) {
     // Never fail the user action because a notification could not be written.
     console.error('[notify] failed:', err instanceof Error ? err.message : err);
