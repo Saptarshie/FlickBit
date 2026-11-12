@@ -31,7 +31,10 @@ type Row = {
   bytes: number;
   ttfbMs: number;
   paintMs: number;
+  /** Second load in the same context: engine already in the HTTP cache. */
+  warmMs: number;
   fps: number;
+  engine: string;
   error: string | null;
 };
 
@@ -62,7 +65,11 @@ async function main(): Promise<void> {
   const base = `http://127.0.0.1:${port}`;
   // The harness is the embedder; frame-ancestors must name it or every game
   // frame is blocked (the same failure production had with PLAY_ORIGIN).
-  const worker = createApp({ artifactsDir, embedders: base });
+  const worker = createApp({
+    artifactsDir,
+    runtimesDir: path.resolve('apps/play-worker/runtimes'),
+    embedders: base,
+  });
   const app = express();
   app.get('/bench/:sha', (req, res) => {
     const sha = String(req.params.sha ?? '').replace(/[^0-9a-f]/g, '');
@@ -120,12 +127,21 @@ async function main(): Promise<void> {
             ' requestAnimationFrame(tick); setTimeout(() => resolve(Math.round((f / 2200) * 1000)), 2400); })',
         )) as number;
 
+        // Warm pass: the same engine, already cached — the case that matters
+        // for the second card of a session.
+        await page.goto(`${base}/bench/${sha}`, { waitUntil: 'commit', timeout: 30_000 });
+        await page.waitForFunction('window.__readyAt > 0', undefined, { timeout: 25_000, polling: 50 }).catch(() => {});
+        const warmMs = await page.evaluate('window.__readyAt ? Math.round(window.__readyAt) : 25000');
+
+        const engine = /"runtime"\s*:\s*"([a-z0-9-]+)"/.exec(html.toString('utf8'))?.[1] ?? null;
         rows.push({
           name: path.basename(file),
           bytes: html.byteLength,
           ttfbMs: Math.round(timing.ttfb),
           paintMs,
+          warmMs,
           fps,
+          engine: engine ?? 'micro',
           error: errors[0] ?? null,
         });
       } catch (err) {
@@ -134,7 +150,9 @@ async function main(): Promise<void> {
           bytes: html.byteLength,
           ttfbMs: 0,
           paintMs: 0,
+          warmMs: 0,
           fps: 0,
+          engine: 'unknown',
           error: err instanceof Error ? err.message : String(err),
         });
       } finally {
@@ -149,11 +167,11 @@ async function main(): Promise<void> {
 
   const w = (s: string, n: number) => s.padEnd(n);
   console.log(`\ncpu throttle: ${cpuThrottle}x   viewport: 390x844 @2x\n`);
-  console.log(`${w('artifact', 26)}${w('bytes', 9)}${w('ttfb', 8)}${w('paint', 8)}${w('fps', 6)}error`);
-  console.log('-'.repeat(78));
+  console.log(`${w('artifact', 26)}${w('engine', 9)}${w('bytes', 9)}${w('cold', 8)}${w('warm', 8)}${w('fps', 6)}error`);
+  console.log('-'.repeat(86));
   for (const r of rows) {
     console.log(
-      `${w(r.name, 26)}${w(String(r.bytes), 9)}${w(`${r.ttfbMs}ms`, 8)}${w(`${r.paintMs}ms`, 8)}${w(String(r.fps), 6)}${
+      `${w(r.name, 26)}${w(r.engine, 9)}${w(String(r.bytes), 9)}${w(`${r.ttfbMs}ms`, 8)}${w(`${r.paintMs}ms`, 8)}${w(`${r.warmMs}ms`, 8)}${w(String(r.fps), 6)}${
         r.error ?? ''
       }`,
     );

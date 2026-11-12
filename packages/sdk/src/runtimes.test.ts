@@ -32,17 +32,20 @@ describe('runtime registry', () => {
 });
 
 describe('planPrefetch', () => {
-  it('skips engines that are not installed yet and never fetches micro', () => {
-    expect(planPrefetch(['micro', 'phaser4', 'babylon'])).toEqual([]);
+  it('never fetches micro, and skips an engine that is not installed yet', () => {
+    // phaser4 ships today; babylon does not (no build behind it yet).
+    expect(planPrefetch(['micro'])).toEqual([]);
+    expect(planPrefetch(['babylon'])).toEqual([]);
+    expect(planPrefetch(['phaser4']).map((r) => r.id)).toEqual(['phaser4']);
   });
 
   it('dedupes, skips already-loaded engines, and keeps the byte budget', () => {
     // Pretend phaser4 is installed; babylon is far too big to ride along.
     const saved = { ...RUNTIMES };
     try {
-      RUNTIMES.phaser4 = { ...RUNTIMES.phaser4, available: true };
       RUNTIMES.babylon = { ...RUNTIMES.babylon, available: true };
 
+      // 500 KB of budget: phaser (346 KB) fits, babylon (1.9 MB) does not.
       const chosen = planPrefetch(['phaser4', 'phaser4', null, 'micro', 'babylon'], {
         budgetBytes: 500 * 1024,
       });

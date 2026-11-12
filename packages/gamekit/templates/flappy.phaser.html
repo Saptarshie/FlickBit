@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Flappy (Phaser)</title>
+<script type="application/json" id="pl-manifest">
+{"title":"Flappy","description":"Tap to flap the bird through the gaps between pipes. Score one point per pipe.","controls":"tap","orientation":"portrait","sdkVersion":1,"tags":["arcade","flappy","endless"],"scoring":"higher","runtime":"phaser4","runtimeVersion":"4.2.1"}
+</script>
+<style>
+html,body{margin:0;height:100%;background:#0e2137;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#ph{width:100%;height:100%}
+canvas{display:block}
+</style>
+</head>
+<body>
+<div id="ph"></div>
+<script>
+/*
+ * Phaser 4 build of the flappy archetype.
+ *
+ * The engine is NOT in this file: the worker injects a script element that
+ * points at /r/phaser4@4.2.1-<hash>.js before this one runs, which is why the
+ * artifact stays ~5 KB and the 346 KB gzip is paid once per browser.
+ *
+ * Phaser is used for the loop, the canvas and the display list. Physics is
+ * hand-rolled: an archetype this small gets nothing from Arcade bodies that a
+ * dozen lines and a deterministic delta do not.
+ */
+if (!window.PlayLoop) window.PlayLoop = { ready() {}, gameOver() {}, haptic() {}, safeArea: { top: 0, bottom: 0 } };
+if (!window.Phaser) {
+  window.PlayLoop.gameOver({ score: 0 });
+  throw new Error('phaser runtime missing');
+}
+
+var W = window.innerWidth, H = window.innerHeight;
+var GROUND = 70;
+
+var state = { y: 0, vy: 0, r: 15, speed: 235, spawnT: 0.6, score: 0, over: false };
+var pipes = [];
+
+/*
+ * Phaser 4 needs a real Scene class. A plain {create, update} object is
+ * accepted by the constructor, but its update() is never called: the game
+ * renders one frame and then sits still while the loop reports 60 fps. That
+ * failure is invisible to a screenshot and obvious to a playtest — which is
+ * why the gate taps the game and reads the world back.
+ */
+class FlappyScene extends Phaser.Scene {
+  constructor() {
+    super({ key: 'flappy' });
+  }
+
+  create() {
+    var s = this;
+    s.cameras.main.setBackgroundColor('#0e2137');
+
+    s.ground = s.add.rectangle(0, 0, 10, 10, 0x173f2f).setOrigin(0, 0);
+    s.bird = s.add.circle(0, 0, state.r, 0xffd166);
+    s.scoreText = s.add.text(14, 14, 'Score 0', {
+      fontFamily: 'system-ui, sans-serif', fontSize: '20px', color: '#e9f0ff', fontStyle: 'bold'
+    }).setOrigin(0, 0);
+    s.hint = s.add.text(0, 0, 'TAP / SPACE TO FLAP', {
+      fontFamily: 'system-ui, sans-serif', fontSize: '14px', color: '#8fa7c4'
+    }).setOrigin(0.5, 1);
+
+    s.layout();
+
+    // One window listener, not canvas + window: a real tap bubbles from the
+    // canvas to window, and the shim replays exactly one pointerdown. Listening
+    // to both would flap twice per tap.
+    window.addEventListener('pointerdown', function () { s.flap(); });
+    window.addEventListener('keydown', function (e) {
+      if (e.code === 'Space' || e.code === 'ArrowUp') s.flap();
+    });
+
+    state.y = H * 0.4;
+    PlayLoop.ready();
+  }
+
+  layout() {
+    var sa = (window.PlayLoop && window.PlayLoop.safeArea) || { top: 0, bottom: 0 };
+    this.groundY = H - GROUND - sa.bottom;
+    this.top = 70 + sa.top;
+    this.ground.setPosition(0, this.groundY).setSize(W, H - this.groundY);
+    this.hint.setPosition(W / 2, H - sa.bottom - 16);
+    this.scoreText.setPosition(14, sa.top + 14);
+  }
+
+  flap() {
+    if (state.over) return;
+    state.vy = -430;
+    PlayLoop.haptic('light');
+  }
+
+  end() {
+    if (state.over) return;
+    state.over = true;
+    PlayLoop.gameOver({ score: state.score });
+  }
+
+  update(_time, deltaMs) {
+    var dt = Math.min(deltaMs / 1000, 0.05);
+    if (state.over) return;
+
+    var s = this;
+    var birdX = W * 0.3;
+    state.vy += 1450 * dt;
+    state.y += state.vy * dt;
+
+    state.spawnT -= dt;
+    if (state.spawnT <= 0) {
+      var gap = Math.max(150, Math.min(250, H * 0.3));
+      var span = Math.max(50, s.groundY - gap - s.top - 40);
+      pipes.push({
+        x: W + 40,
+        gapY: s.top + Math.random() * span,
+        gap: gap,
+        w: 62,
+        scored: false,
+        top: null,
+        bottom: null
+      });
+      state.spawnT = 1.5 * (235 / state.speed);
+    }
+    state.speed += 1.2 * dt;
+
+    for (var i = 0; i < pipes.length; i += 1) {
+      var p = pipes[i];
+      p.x -= state.speed * dt;
+
+      if (!p.top) {
+        // Phaser rectangles, created lazily so the pool matches the array.
+        p.top = s.add.rectangle(p.x, 0, p.w, p.gapY, 0x28604a).setOrigin(0, 0);
+        p.bottom = s.add.rectangle(p.x, p.gapY + p.gap, p.w, Math.max(0, s.groundY - p.gapY - p.gap), 0x28604a).setOrigin(0, 0);
+      }
+      p.top.setPosition(p.x, 0).setSize(p.w, p.gapY);
+      p.bottom.setPosition(p.x, p.gapY + p.gap).setSize(p.w, Math.max(0, s.groundY - p.gapY - p.gap));
+
+      if (!p.scored && p.x + p.w < birdX) {
+        p.scored = true;
+        state.score += 1;
+        s.scoreText.setText('Score ' + state.score);
+        PlayLoop.haptic('medium');
+      }
+
+      var inX = birdX + state.r > p.x && birdX - state.r < p.x + p.w;
+      var inGap = state.y - state.r > p.gapY && state.y + state.r < p.gapY + p.gap;
+      if (inX && !inGap) s.end();
+    }
+
+    while (pipes.length > 0 && pipes[0].x + pipes[0].w < -30) {
+      var gone = pipes.shift();
+      if (gone.top) { gone.top.destroy(); gone.bottom.destroy(); }
+    }
+
+    if (state.y - state.r < 0) { state.y = state.r; state.vy = 0; }
+    if (state.y + state.r > s.groundY) s.end();
+
+    s.bird.setPosition(birdX, state.y);
+  }
+}
+
+window.game = new Phaser.Game({
+  type: Phaser.AUTO,
+  parent: 'ph',
+  backgroundColor: '#0e2137',
+  scale: { mode: Phaser.Scale.RESIZE, width: W, height: H },
+  banner: false,
+  input: { activePointers: 1 },
+  scene: [FlappyScene]
+});
+
+window.addEventListener('resize', function () {
+  var scene = window.game.scene.scenes[0];
+  if (scene && scene.layout) scene.layout();
+});
+</script>
+</body>
+</html>

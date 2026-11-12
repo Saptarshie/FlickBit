@@ -49,8 +49,13 @@ export const RUNTIMES: Record<RuntimeId, RuntimeDescriptor> = {
     id: 'phaser4',
     version: '4.2.1',
     file: 'phaser4',
-    // Phaser 4.2.1 full build: 1,344 KB raw / 344 KB gzip (measured).
-    available: false,
+    // Phaser 4.2.1 full build: 1,344 KB raw / 346 KB gzip (measured).
+    //
+    // Tree-shaking was measured, not assumed: bundling `phaser.esm.js` with
+    // esbuild importing only { Game, Scene, Scale, AUTO } produced 1,361 KB
+    // (360 KB gz) — no gain. Phaser 4 ships one module graph with side effects,
+    // so 346 KB is the floor.
+    available: true,
     capabilities: ['2d', 'physics', 'tilemaps', 'particles', 'tweens', 'many-entities'],
     approxGzipBytes: 344 * 1024,
   },

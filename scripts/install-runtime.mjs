@@ -55,7 +55,9 @@ for (const id of ids) {
     continue;
   }
   if (!spec.dist) {
-    fail(`${id}: no dist configured — build a tree-shaken bundle first`);
+    // Declared but not built yet (Babylon needs a tree-shaken bundle first).
+    // Not an error: `pnpm start` calls this on a fresh clone.
+    console.log(`[runtime] ${id}: no bundle configured yet — skipped`);
     continue;
   }
   const pkgDir = path.join(root, 'node_modules', spec.pkg);
@@ -83,4 +85,4 @@ for (const id of ids) {
   installed += 1;
 }
 
-if (installed === 0 && !process.exitCode) fail('nothing installed');
+if (installed === 0 && !process.exitCode) console.log('[runtime] nothing to publish');

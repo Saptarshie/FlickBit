@@ -93,3 +93,50 @@ Baseline for the inlined micro runtime, 390×844 @2x:
 
 An engine card is only ready for the feed if it stays within roughly
 **+150 ms ready** and **−5 fps** of these numbers at 4× throttle.
+
+## Measured: Phaser 4 vs the micro runtime
+
+Same game (flappy), same viewport (390×844 @2x), same serving path, two CPU
+throttle levels. `ready` = navigation → the game's own `ready` message.
+
+| artifact | engine | bytes | ready 1× cold | warm | ready 4× cold | warm | fps 4× |
+|---|---|---|---|---|---|---|---|
+| flappy.html | micro | 3,693 | 119 ms | 56 ms | 654 ms | 329 ms | 61 |
+| flappy.phaser.html | phaser4 | 6,016 | 828 ms | 226 ms | 4,542 ms | 1,017 ms | 48 |
+
+Reading:
+
+- **The engine is the cost, not the game.** The artifact grew by 2.3 KB; the
+  page grew by 1.3 MB (346 KB gzip) and time-to-ready grew 7× cold, 3× warm.
+- **Tree-shaking does not help.** Bundling `phaser.esm.js` with esbuild while
+  importing only `{ Game, Scene, Scale, AUTO }` produced 1,361 KB / 360 KB gz
+  against 1,344 KB / 346 KB for the full build. Phaser 4 is one module graph
+  with side effects; 346 KB is the floor.
+- **FPS is fine** (48–61), so this is a startup problem, not a rendering one.
+
+### Decision
+
+`micro` stays the default for the eight archetypes. `phaser4` is a **heavy
+class**: prefetched 3–4 cards early, at most one per eight cards, never the
+first card of a session. A spec that needs physics bodies, tilemaps, thousands
+of objects or its own particle system can ask for it; a tap-runner cannot.
+
+### Two Phaser 4 traps worth remembering
+
+Both were found by playing the game, not by reading it:
+
+1. **A plain `{ create, update }` scene object never gets `update()` called.**
+   Phaser 4 accepts it, renders one frame, reports a healthy 60 fps loop and
+   then sits still. It must be a real `class extends Phaser.Scene`.
+2. **A missing top-level declaration fails silently at runtime.** A
+   `ReferenceError` inside `update()` is thrown once per frame, so the world
+   freezes while everything still looks "loaded" — this is exactly the class of
+   bug the input gate exists to catch, and it caught it here too.
+
+Both argue for the same thing: the gate must tap the game and read the world
+back, not diff pixels or trust `ready`.
+
+Babylon stays uninstalled. Before it ships it needs a tree-shaken build
+(`@babylonjs/core` + esbuild, targeting < 600 KB gz), a procedural-geometry-only
+art rule (no external assets inside `connect-src 'none'`), and a playtest gate —
+see `docs/user_ref/engine_adv.md` for the options weighed.

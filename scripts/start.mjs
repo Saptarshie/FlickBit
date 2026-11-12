@@ -10,10 +10,10 @@
  * Requires `pnpm build` first. Point DATABASE_URL at a real Postgres and set
  * PLAYLOOP_DB=external to skip the embedded database entirely.
  */
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import net from 'node:net';
 import path from 'node:path';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -131,6 +131,19 @@ if (externalDb) {
     console.error(`[start] database did not come up on :${dbPort}`);
     shutdown(1);
   }
+}
+
+// Engines are build outputs, not source: a fresh clone has none. Materialise
+// them from node_modules before the worker boots, or every game that pins one
+// answers 503 and the feed looks broken for no visible reason.
+const runtimesDir = path.join(root, 'apps', 'play-worker', 'runtimes');
+const hasRuntimeFiles = existsSync(runtimesDir) && readdirSync(runtimesDir).some((f) => f.endsWith('.js'));
+if (!hasRuntimeFiles) {
+  console.log('[start] no engine bundles found; publishing pinned runtimes...');
+  spawnSync(process.execPath, [path.join(root, 'scripts', 'install-runtime.mjs')], {
+    cwd: root,
+    stdio: 'inherit',
+  });
 }
 
 console.log('[start] starting play-worker and the production web server...\n');

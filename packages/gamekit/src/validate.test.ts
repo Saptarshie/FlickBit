@@ -262,3 +262,18 @@ describe('manifest.runtime', () => {
     expect(extractManifest(html)).toBeNull();
   });
 });
+
+describe('engine templates', () => {
+  it('the Phaser build of flappy declares its pinned runtime and passes the static gate', () => {
+    const html = readFileSync(new URL('../templates/flappy.phaser.html', import.meta.url), 'utf8');
+    const manifest = extractManifest(html);
+    expect(manifest).toMatchObject({ runtime: 'phaser4', runtimeVersion: '4.2.1' });
+
+    const result = validateGame(html);
+    expect(result.errors).toEqual([]);
+    // The engine is injected by the worker, never inlined: an artifact that
+    // already contains Phaser would defeat the whole shared-runtime design.
+    expect(html).not.toContain('Phaser.Game = ');
+    expect(html.length).toBeLessThan(40_000);
+  });
+});
