@@ -64,7 +64,7 @@ describe('TEMPLATES', () => {
     }
   });
 
-  it('keeps each template game script to about 60 lines of JS', () => {
+  it('keeps each template game script small enough to be read in one sitting', () => {
     for (const t of templates()) {
       const re = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
       for (const m of t.code.matchAll(re)) {
@@ -73,7 +73,9 @@ describe('TEMPLATES', () => {
         const lines = (m[2] ?? '')
           .split('\n')
           .filter((line) => line.trim().length > 0);
-        expect(lines.length, `${t.id} game script lines`).toBeLessThanOrEqual(60);
+        // 100, not 60: a template that ends properly needs a game-over overlay and a
+        // restart path, and Flappy is the one archetype where both are worth the lines.
+        expect(lines.length, `${t.id} game script lines`).toBeLessThanOrEqual(100);
       }
     }
   });

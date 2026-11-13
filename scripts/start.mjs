@@ -146,6 +146,13 @@ if (!hasRuntimeFiles) {
   });
 }
 
+// The asset catalogue is generated the same way: a fresh clone has no index, so
+// every /a/ lookup 404s and the studio silently stops having sprites to offer.
+if (!existsSync(path.join(root, 'apps', 'play-worker', 'assets', 'index.json'))) {
+  console.log('[start] no asset catalogue found; ingesting the starter pack...');
+  spawnSync('npx', ['tsx', 'scripts/ingest-assets.ts'], { cwd: root, stdio: 'inherit', shell: true });
+}
+
 console.log('[start] starting play-worker and the production web server...\n');
 // Run the worker inside its own package: ARTIFACTS_DIR defaults to a path
 // relative to the process cwd, so starting it from the repo root doubled it to

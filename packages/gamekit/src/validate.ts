@@ -24,6 +24,11 @@ export type Manifest = {
   runtime?: string;
   /** Exact engine version, pinned so an upgrade can never change an old game. */
   runtimeVersion?: string;
+  /**
+   * Content-addressed assets this game draws. The platform resolves them from
+   * /a/<file>; a manifest may name a file, never a URL.
+   */
+  assets?: Array<{ id: string; file: string }>;
 };
 
 export type ValidationResult = {
@@ -199,6 +204,21 @@ function parseManifestRaw(raw: string): { manifest: Manifest | null; error: stri
   if (rec['runtimeVersion'] !== undefined && typeof rec['runtimeVersion'] !== 'string') {
     problems.push('"runtimeVersion" must be a string');
   }
+  if (rec['assets'] !== undefined) {
+    if (!Array.isArray(rec['assets'])) {
+      problems.push('"assets" must be an array');
+    } else {
+      for (const asset of rec['assets']) {
+        const file = (asset as { file?: unknown })?.file;
+        if (typeof file !== 'string' || !/^[0-9a-f]{16}\.(webp|png|ogg|mp3)$/.test(file)) {
+          // A URL here would be an unchecked network dependency inside a frame
+          // with connect-src 'none'; only our own content-addressed names pass.
+          problems.push('each asset needs { id, file } where file matches <sha16>.(webp|png|ogg|mp3)');
+          break;
+        }
+      }
+    }
+  }
   const tags = rec['tags'];
   if (!Array.isArray(tags) || tags.some((t) => typeof t !== 'string')) {
     problems.push('"tags" must be an array of strings');
@@ -220,6 +240,11 @@ function parseManifestRaw(raw: string): { manifest: Manifest | null; error: stri
       scoring: rec['scoring'] as Scoring,
       ...(rec['runtime'] !== undefined ? { runtime: rec['runtime'] as string } : {}),
       ...(rec['runtimeVersion'] !== undefined ? { runtimeVersion: rec['runtimeVersion'] as string } : {}),
+      ...(Array.isArray(rec['assets'])
+        ? {
+            assets: (rec['assets'] as Array<{ id: string; file: string }>).map((a) => ({ id: String(a.id), file: String(a.file) })),
+          }
+        : {}),
     },
     error: null,
   };

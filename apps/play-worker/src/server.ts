@@ -31,12 +31,19 @@ mkdirSync(artifactsDir, { recursive: true });
 
 // Engines live beside the artifacts and are addressed by hash, so this one
 // directory is the whole "shared runtime" story for the server.
+// Assets sit beside the artifacts and are addressed by hash too: /a/<sha16>.webp
+// is immutable, shared by every game that draws that sprite.
+const assetsDir = process.env.ASSETS_DIR
+  ? path.resolve(repoRoot(), process.env.ASSETS_DIR)
+  : path.join(path.dirname(artifactsDir), 'assets');
+mkdirSync(assetsDir, { recursive: true });
+
 const runtimesDir = process.env.RUNTIMES_DIR
   ? path.resolve(repoRoot(), process.env.RUNTIMES_DIR)
   : path.join(path.dirname(artifactsDir), 'runtimes');
 mkdirSync(runtimesDir, { recursive: true });
 
-const app = createApp({ artifactsDir, runtimesDir });
+const app = createApp({ artifactsDir, runtimesDir, assetsDir });
 /**
  * Bind dual-stack.
  *

@@ -10,7 +10,7 @@ import { allowedEmbedders, artifactUrl, createApp, injectShim, loadRuntimes } fr
 // frame-ancestors pins who may embed an artifact (see src/app.ts).
 const CSP =
   "default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'unsafe-inline'; " +
-  "img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; " +
+  "img-src 'self' data: blob:; media-src 'self' data: blob:; font-src data:; connect-src 'none'; " +
   "frame-src 'none'; form-action 'none'; base-uri 'none'; " +
   'frame-ancestors http://localhost:3000';
 

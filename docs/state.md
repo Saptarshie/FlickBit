@@ -168,37 +168,47 @@ Mitigations now in place — numbered screenshots, explicit canvas dimensions, a
 `scripts/probe-visual.ts` dumps every frame to `.artifacts/shots/` so any claim
 can be checked against the actual PNG.
 
-## 9. Asset library — options weighed
+## 9. Assets
 
-The agent currently draws everything with canvas primitives and WebAudio. That
-is why artifacts are ~6 KB and why there is no asset pipeline, no binary
-moderation, and no attribution bookkeeping. Adding art assets is therefore a
-pipeline decision, not a file-download decision.
+Built, not planned. See `docs/development_docs/assets.md` for the contract.
 
-**Numbers that constrain it** (measured earlier): base64 inlining costs exactly
-+33 %, and gzip cannot recover it (0 % on already-compressed data). So a 300 KB
-WebP becomes 400 KB on the wire inside a self-contained artifact.
+| piece | where | status |
+|---|---|---|
+| registry (licence, tags, hashes, search, budgets) | `packages/assets/src/registry.ts` | done, 11 tests |
+| compressor (sharp: WebP, pixel-art detection, resize) | `packages/assets/src/optimize.ts` | done |
+| idempotent ingest + index | `packages/assets/src/ingest.ts` | done |
+| starter pack (12 items, CC0, ours) | `packages/assets/src/starter.ts` | ingested |
+| serving `/a/<sha16>.webp` immutable | `apps/play-worker/src/app.ts` | done, CSP `img-src 'self'` |
+| catalogue handed to the coder | `packages/ai/src/generator.ts` | done |
+| nearest-neighbour sprite drawing | `packages/sdk` `loadImage` / `drawSprite` | done, verified visually |
 
-| option | licence | fit today | verdict |
-|---|---|---|---|
-| **Kenney** (2D sprites, UI, audio) | CC0 | excellent — small, consistent, no attribution | **start here**, curated ~200 files |
-| **Quaternius** (low-poly 3D) | CC0 / QAL (no standalone redistribution) | 3D only | defer with Babylon |
-| **Poly Haven / ambientCG** (PBR) | CC0 | 3D only, heavy | defer |
-| **OpenGameArt** | mixed | every asset needs manual licence review | avoid bulk ingest |
-| **game-icons.net** | CC BY 3.0 | attribution required | optional, with attribution store |
-| **Phaser Labs** | code MIT, assets unclear | not cleared for commercial use | do not bulk copy |
+Numbers from the starter pack: **12 assets, 23.1 KB total; inlining the same
+bytes would be 30.8 KB** (+33 %, and no cross-game caching). Largest item:
+`neon_grid`, 9.2 KB at 541×1170.
 
-**Recommended shape when we do it**: an asset registry (SQLite/Postgres table:
-id, sha256, size, dimensions, licence, attribution text, tags, category) plus a
-build step that (a) picks ≤N assets matching the brief, (b) re-encodes to WebP,
-(c) inlines them as data URLs only when the total stays under the card budget,
-(d) writes an `assets` block into the manifest so a remix inherits provenance.
-Budget: 2D card ≤1.2 MB total, of which ≤600 KB assets. No 3D until Babylon
-ships.
+Not done: audio (needs FFmpeg/Opus), 3D assets (waits for a Babylon template),
+Kenney import (the `--dir` flag exists, nobody has pointed it at a pack yet), and
+budget enforcement in the publish path.
 
-**What is deliberately not built yet**: unsupervised ingestion (licence risk),
-AI upscaling in the player (cost, and nearest-neighbour is correct for pixel
-art), and a CDN (nothing to serve until assets exist).
+### Engine ablation: Phaser vs Babylon vs micro
+
+| | bytes raw | bytes gzip | boot (cold 1× / 4×) | boot (warm 1× / 4×) |
+|---|---|---|---|---|
+| micro (inlined shim, no engine) | ~6 KB per game | ~2 KB | 119 / 654 ms | 56 / 329 ms |
+| Phaser 4.2.1 + game | 1,344 KB engine | 346 KB | 828 / 4,542 ms | 226 / 1,017 ms |
+| Babylon core, minimal 3D scene | 1,732 KB | 401 KB | 175 / 308 ms* | 140 / 321 ms* |
+
+\* Babylon's figure covers engine construction plus one rendered frame of a box
+with one light and one camera — not a game. It is **not** comparable to the Phaser
+row (which boots a whole game), and it was served from localhost with no network
+throttle, so the 1.7 MB is effectively free in that measurement.
+
+What the sizes do tell us, and what matters for the decision: Babylon, imported
+per module (`@babylonjs/core/Engines/engine`, `.../scene`, ...), tree-shakes to
+**401 KB gzip for a usable 3D scene** — not the 1.9 MB often quoted. That is +55 KB
+over Phaser and buys a second dimension. A real Babylon ablation still needs a
+template + published runtime + the same game-driven benchmark; that is the next
+step, not something this table settles.
 
 ## 10. Known gaps
 

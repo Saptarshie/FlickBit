@@ -103,6 +103,11 @@ export type GenerateOptions = {
   /** Concrete defects from QA/runtime to fix in this pass. */
   feedback?: string[];
   imageDataUrl?: string;
+  /**
+   * What the platform can serve at /a/. Handed to the coder as a fixed
+   * vocabulary, so the hero is a sprite and not an eight-pixel dot.
+   */
+  assetCatalogue?: Array<{ id: string; kind: string; width?: number; height?: number; file: string; tags: string[] }>;
 };
 
 /**
@@ -119,6 +124,24 @@ export async function generateCode(
   provider: AiProvider,
   options: GenerateOptions = {},
 ): Promise<string> {
+  const assetBlock =
+    options.assetCatalogue && options.assetCatalogue.length > 0
+      ? [
+          'ASSETS — the platform already serves these at /a/, same origin as the frame.',
+          'Use them instead of drawing a shape the player has to guess at. Do not invent paths.',
+          ...options.assetCatalogue
+            .slice(0, 24)
+            .map(
+              (a) =>
+                `  ${a.id} — ${a.kind}${a.width ? ` ${a.width}x${a.height}` : ''} — ${a.file} — ${a.tags.slice(0, 4).join(', ')}`,
+            ),
+          'Load with: const img = new Image(); img.src = "/a/<file>"; img.onload = () => { ready2 = true; };',
+          'Draw only after onload; keep the game playable while it loads (draw a placeholder, not a black screen).',
+          'Set ctx.imageSmoothingEnabled = false for pixel art before drawing sprites.',
+          'Declare every file you used in the manifest: "assets":[{"id":"coin","file":"<sha16>.webp"}].',
+        ].join(NL)
+      : '';
+
   const historyBlock =
     options.history && options.history.length > 0
       ? [

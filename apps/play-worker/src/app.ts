@@ -38,7 +38,9 @@ const WEB_ORIGINS = allowedEmbedders();
 export function contentSecurityPolicy(embedders: string = WEB_ORIGINS): string {
   return (
     "default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'unsafe-inline'; " +
-    "img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; " +
+    // 'self' is required for the content-addressed sprite catalogue at /a/;
+    // connect-src stays 'none', so a game still cannot open a socket.
+    "img-src 'self' data: blob:; media-src 'self' data: blob:; font-src data:; connect-src 'none'; " +
     "frame-src 'none'; form-action 'none'; base-uri 'none'; " +
     `frame-ancestors ${embedders}`
   );
@@ -64,6 +66,8 @@ const ARTIFACT_FILE_RE = /^([0-9a-f]{64})\.html$/;
  * while a game can still pin an exact build.
  */
 const RUNTIME_FILE_RE = /^([a-z0-9-]+)@(\d+\.\d+\.\d+)-([0-9a-f]{16})\.js$/;
+/** Content-addressed assets: <sha256[0:16]>.<ext>. */
+const ASSET_FILE_RE = /^([0-9a-f]{16})\.(webp|png|ogg|mp3|json)$/;
 
 export type ServedRuntime = {
   file: string;
@@ -153,12 +157,13 @@ export function loadRuntimes(dir: string): Map<string, ServedRuntime> {
   return out;
 }
 
-export function createApp(opts: { artifactsDir: string; runtimesDir?: string; embedders?: string }): express.Express {
+export function createApp(opts: { artifactsDir: string; runtimesDir?: string; assetsDir?: string; embedders?: string }): express.Express {
   const app = express();
   // Resolved once; :sha is validated to 64 lowercase hex before any fs access,
   // so path.join can never escape this directory.
   const artifactsDir = path.resolve(opts.artifactsDir);
   const runtimesDir = opts.runtimesDir ? path.resolve(opts.runtimesDir) : null;
+  const assetsDir = opts.assetsDir ? path.resolve(opts.assetsDir) : null;
   const runtimes = runtimesDir ? loadRuntimes(runtimesDir) : EMPTY_RUNTIMES;
   const csp = contentSecurityPolicy(opts.embedders ?? WEB_ORIGINS);
 
@@ -282,6 +287,49 @@ export function createApp(opts: { artifactsDir: string; runtimesDir?: string; em
         bytes: runtime.bytes,
       })),
     });
+  });
+
+  /**
+   * The asset catalogue. Small JSON, revalidated, so the studio can list what is
+   * available without shipping a copy of the index inside every build.
+   */
+  app.get('/a/index.json', async (_req, res) => {
+    if (assetsDir === null) {
+      res.status(200).json({ version: 1, assets: [] });
+      return;
+    }
+    try {
+      const body = await readFile(path.join(assetsDir, 'index.json'));
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+      res.send(body);
+    } catch {
+      res.status(200).json({ version: 1, assets: [] });
+    }
+  });
+
+  /**
+   * Asset bytes. Same contract as engines: the file name *is* the hash, so a
+   * year-long immutable cache is truthful, and a sprite shared by fifty games is
+   * downloaded once per browser.
+   */
+  app.get('/a/:file', async (req, res) => {
+    const name = req.params.file ?? '';
+    if (ASSET_FILE_RE.exec(name) === null || assetsDir === null) {
+      sendError(res, 404, 'not_found');
+      return;
+    }
+    const ext = name.split('.').pop();
+    const type = ext === 'webp' ? 'image/webp' : ext === 'png' ? 'image/png' : ext === 'json' ? 'application/json' : 'audio/ogg';
+    try {
+      const bytes = await readFile(path.join(assetsDir, name));
+      res.setHeader('Content-Type', `${type}; charset=utf-8`.replace('; charset=utf-8', ext === 'webp' || ext === 'png' ? '' : '; charset=utf-8'));
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.send(bytes);
+    } catch {
+      sendError(res, 404, 'not_found');
+    }
   });
 
   /**

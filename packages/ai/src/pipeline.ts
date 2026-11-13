@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { RUNTIMES, resolveRuntime } from '@playloop/sdk';
 import { stampRuntime, validateGame, type ValidationResult } from '@playloop/gamekit';
@@ -34,6 +35,40 @@ import type {
  * "one specialist per role" model the studio exposes. Every stage degrades
  * gracefully — a missing brief or a failed review never blocks the artifact.
  */
+/**
+ * The asset vocabulary, read from the play origin's index (or the local copy).
+ * Deliberately small: the coder sees a list it can hold in its head, not a
+ * catalogue of 50,000 files.
+ */
+async function loadAssetCatalogue(): Promise<
+  Array<{ id: string; kind: string; width?: number; height?: number; file: string; tags: string[] }>
+> {
+  const candidates = [
+    process.env.ASSETS_INDEX,
+    'apps/play-worker/assets/index.json',
+    'assets/index.json',
+  ].filter((p): p is string => Boolean(p));
+  for (const candidate of candidates) {
+    try {
+      const raw = await readFile(candidate, 'utf8');
+      const parsed = JSON.parse(raw) as { assets?: Array<Record<string, unknown>> };
+      return (parsed.assets ?? [])
+        .filter((a) => typeof a['file'] === 'string' && typeof a['id'] === 'string')
+        .map((a) => ({
+          id: String(a['id']),
+          kind: String(a['kind'] ?? 'sprite'),
+          ...(typeof a['width'] === 'number' ? { width: a['width'] } : {}),
+          ...(typeof a['height'] === 'number' ? { height: a['height'] } : {}),
+          file: String(a['file']),
+          tags: Array.isArray(a['tags']) ? (a['tags'] as string[]) : [],
+        }));
+    } catch {
+      // try the next location
+    }
+  }
+  return [];
+}
+
 export async function runGenerationPipeline(
   options: GenerationOptions,
   provider: AiProvider,

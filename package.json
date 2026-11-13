@@ -24,9 +24,11 @@
     "bench:runtimes": "tsx scripts/bench-runtimes.ts",
     "install:runtime": "node scripts/install-runtime.mjs",
     "probe:playtest": "tsx scripts/probe-playtest.ts",
-    "probe:visual": "tsx scripts/probe-visual.ts"
+    "probe:visual": "tsx scripts/probe-visual.ts",
+    "ingest:assets": "tsx scripts/ingest-assets.ts"
   },
   "devDependencies": {
+    "@babylonjs/core": "^9.36.0",
     "@electric-sql/pglite-socket": "^0.2.18",
     "dotenv": "^18.0.9",
     "esbuild": "^0.28.2",
@@ -34,5 +36,8 @@
     "tsx": "^4.23.15",
     "turbo": "^2",
     "typescript": "^5"
+  },
+  "dependencies": {
+    "@playloop/assets": "workspace:*"
   }
 }

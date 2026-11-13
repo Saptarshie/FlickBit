@@ -495,6 +495,37 @@ export const SHIM_SOURCE = String.raw`
     submitScore: function (n) {
       post('score', { score: Number(n) });
     },
+    /**
+     * Load a sprite from the platform catalogue. Relative /a/ paths resolve
+     * against the play origin, which is the frame's own origin.
+     */
+    loadImage: function (file, timeoutMs) {
+      return new Promise(function (resolve, reject) {
+        var img = new Image();
+        var done = false;
+        var timer = realSetTimeout(function () {
+          if (done) { return; }
+          done = true;
+          reject(new Error('image timeout: ' + file));
+        }, timeoutMs || 8000);
+        img.onload = function () { if (done) { return; } done = true; realClearTimeout(timer); resolve(img); };
+        img.onerror = function () { if (done) { return; } done = true; realClearTimeout(timer); reject(new Error('image failed: ' + file)); };
+        img.src = String(file).charAt(0) === '/' ? String(file) : '/a/' + String(file);
+      });
+    },
+    /**
+     * Draw a sprite at an arbitrary size. Pixel art is scaled with nearest
+     * neighbour so a 32px sprite at 4x stays crisp instead of turning to mush;
+     * everything else keeps the browser's smoothing.
+     */
+    drawSprite: function (ctx, img, dx, dy, dw, dh, pixelArt) {
+      if (!ctx || !img) { return; }
+      var previous = ctx.imageSmoothingEnabled;
+      if (pixelArt !== false) { ctx.imageSmoothingEnabled = false; }
+      else { ctx.imageSmoothingEnabled = true; }
+      ctx.drawImage(img, dx, dy, (dw === undefined ? img.width : dw), (dh === undefined ? img.height : dh));
+      ctx.imageSmoothingEnabled = previous;
+    },
     storage: storage,
     rng: rng,
     haptic: function (type) {

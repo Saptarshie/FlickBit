@@ -1,0 +1,368 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "brick",
+      "name": "Brick",
+      "kind": "tileset",
+      "tags": [
+        "level",
+        "breakout",
+        "tile"
+      ],
+      "sha256": "1eff32d4a8bc737b0fe7ab864b5a39d14818d9a508c3995826b2f54102c88662",
+      "file": "1eff32d4a8bc737b.webp",
+      "bytes": 280,
+      "width": 96,
+      "height": 48,
+      "pixelArt": true,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    },
+    {
+      "id": "btn_pill",
+      "name": "Button Pill",
+      "kind": "ui",
+      "tags": [
+        "ui",
+        "button",
+        "controls"
+      ],
+      "sha256": "4e8071b956c1c05d265f9f903cde82ca8da4036b385a53daae1251136e560769",
+      "file": "4e8071b956c1c05d.webp",
+      "bytes": 2036,
+      "width": 256,
+      "height": 88,
+      "pixelArt": false,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    },
+    {
+      "id": "coin",
+      "name": "Coin",
+      "kind": "icon",
+      "tags": [
+        "currency",
+        "pickup",
+        "ui"
+      ],
+      "sha256": "df22c812ddd664fa53ed26f205753f08ece31020572af591051a79f8f3616355",
+      "file": "df22c812ddd664fa.webp",
+      "bytes": 1072,
+      "width": 64,
+      "height": 64,
+      "pixelArt": false,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    },
+    {
+      "id": "enemy_blob",
+      "name": "Blob Enemy",
+      "kind": "sprite",
+      "tags": [
+        "character",
+        "enemy",
+        "platformer",
+        "blob"
+      ],
+      "sha256": "be1da9024f3479866437cdbbfed53073882c1c61fcd311c8af91644e33502367",
+      "file": "be1da9024f347986.webp",
+      "bytes": 1788,
+      "width": 128,
+      "height": 128,
+      "pixelArt": false,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    },
+    {
+      "id": "heart",
+      "name": "Heart",
+      "kind": "icon",
+      "tags": [
+        "life",
+        "hud",
+        "ui"
+      ],
+      "sha256": "c53e2dbd16c371210c426cdd23701980ba22c8a3a402d08e0464d507d1ad0013",
+      "file": "c53e2dbd16c37121.webp",
+      "bytes": 602,
+      "width": 64,
+      "height": 64,
+      "pixelArt": true,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    },
+    {
+      "id": "hero_runner",
+      "name": "Runner Hero",
+      "kind": "sprite",
+      "tags": [
+        "character",
+        "player",
+        "platformer",
+        "runner"
+      ],
+      "sha256": "6db112daefbea99ca59d261a858d605dd7f209b1cbd3e6099eb602b4d8db052e",
+      "file": "6db112daefbea99c.webp",
+      "bytes": 1368,
+      "width": 128,
+      "height": 128,
+      "pixelArt": false,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    },
+    {
+      "id": "hud_panel",
+      "name": "HUD Panel",
+      "kind": "ui",
+      "tags": [
+        "ui",
+        "panel",
+        "hud"
+      ],
+      "sha256": "76abfa9f20a4b348bf33e0b65b51f81858869f29902c42362063cdaa510a6f6e",
+      "file": "76abfa9f20a4b348.webp",
+      "bytes": 958,
+      "width": 320,
+      "height": 96,
+      "pixelArt": true,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    },
+    {
+      "id": "neon_grid",
+      "name": "Neon Grid Background",
+      "kind": "background",
+      "tags": [
+        "background",
+        "neon",
+        "retro",
+        "synth"
+      ],
+      "sha256": "776d023f2411ae6424e41f580894508b5c7ca5848a9155f8ac6f61524ba9c05d",
+      "file": "776d023f2411ae64.webp",
+      "bytes": 9226,
+      "width": 541,
+      "height": 1170,
+      "pixelArt": false,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    },
+    {
+      "id": "platform",
+      "name": "Platform Tile",
+      "kind": "tileset",
+      "tags": [
+        "level",
+        "platformer",
+        "tile"
+      ],
+      "sha256": "31f36a8d82703ba4e1bd630a98d693f17ffc09c345d1b98e4c76dae06e663fc1",
+      "file": "31f36a8d82703ba4.webp",
+      "bytes": 312,
+      "width": 128,
+      "height": 48,
+      "pixelArt": true,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    },
+    {
+      "id": "sky_gradient",
+      "name": "Sky Background",
+      "kind": "background",
+      "tags": [
+        "background",
+        "sky",
+        "outdoor"
+      ],
+      "sha256": "76a7599e684f2498416e012f7c602b1ff71f7d04020b9fcf3bcad06705583d20",
+      "file": "76a7599e684f2498.webp",
+      "bytes": 3910,
+      "width": 541,
+      "height": 1170,
+      "pixelArt": false,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    },
+    {
+      "id": "spike",
+      "name": "Spike",
+      "kind": "sprite",
+      "tags": [
+        "hazard",
+        "level",
+        "platformer"
+      ],
+      "sha256": "b872697730ad201ffa0e66575d5793881fa718d55b24346d11ad45a0ce7c5f69",
+      "file": "b872697730ad201f.webp",
+      "bytes": 736,
+      "width": 128,
+      "height": 64,
+      "pixelArt": false,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    },
+    {
+      "id": "star",
+      "name": "Star",
+      "kind": "icon",
+      "tags": [
+        "pickup",
+        "score",
+        "ui"
+      ],
+      "sha256": "962d0b4395bc8cbb557b5e043c4b949c54aeed9fb4524589029b35a39f032858",
+      "file": "962d0b4395bc8cbb.webp",
+      "bytes": 1380,
+      "width": 64,
+      "height": 64,
+      "pixelArt": false,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    }
+  ]
+}

@@ -15,6 +15,7 @@ product/design rationale lives in `docs/00-…`–`docs/14-…`; this folder is 
 | [testing.md](./testing.md) | You are adding tests or the suite is red |
 | [extending.md](./extending.md) | You are adding a screen, an API route, an archetype, or an SDK feature |
 | [verification.md](./verification.md) | You are about to hand this to someone: tests, artifact audits, studio E2E, load, DB recovery |
+| [assets.md](./assets.md) | asset registry, compressor, /a/ serving, licence rules |
 | [runtimes.md](./runtimes.md) | You are adding an engine (Phaser/Babylon), or wondering how "load it once" actually works |
 
 ## Non-negotiables

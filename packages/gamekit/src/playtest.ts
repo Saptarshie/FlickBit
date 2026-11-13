@@ -113,12 +113,16 @@ function serve(html: string): Promise<{ server: Server; port: number }> {
   const source = injectShim(html, SHIM_SOURCE);
   const playOrigin = (process.env.PLAY_ORIGIN || 'http://localhost:3001').replace(/\/$/, '');
   const server = createServer((req, res) => {
-    if (req.url && req.url.startsWith('/r/')) {
+    if (req.url && (req.url.startsWith('/r/') || req.url.startsWith('/a/'))) {
       fetch(playOrigin + req.url)
         .then(async (upstream) => {
           res.statusCode = upstream.status;
-          res.setHeader('content-type', upstream.headers.get('content-type') ?? 'text/javascript');
-          res.end(await upstream.text());
+          res.setHeader('content-type', upstream.headers.get('content-type') ?? 'application/octet-stream');
+          // Bytes, not text: a WebP read as UTF-8 is corrupted and the frame
+          // reports "image failed" with no hint that the proxy was the problem.
+          // Node writes Uint8Array chunks verbatim; the cast only satisfies a
+          // declaration that lists the string overload first.
+          res.end(Buffer.from(await upstream.arrayBuffer()) as unknown as string);
         })
         .catch(() => {
           res.statusCode = 502;
