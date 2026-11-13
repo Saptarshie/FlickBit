@@ -5,6 +5,7 @@ import path from 'node:path';
 import express from 'express';
 import { extractManifest } from '@playloop/gamekit';
 import { runSmokeTest } from '@playloop/gamekit/smoke';
+import { playtest } from '@playloop/gamekit/playtest';
 import { RUNTIMES, SHIM_SOURCE, type RuntimeId, runtimeFileName } from '@playloop/sdk';
 
 /** The exact CSP required on the play origin (docs/03-game-artifact-spec.md). */
@@ -227,6 +228,27 @@ export function createApp(opts: { artifactsDir: string; runtimesDir?: string; em
    * reads it once per session to plan prefetches, so it must stay small and
    * cheap (it is a few hundred bytes).
    */
+  /**
+   * Playtest gate, beside the smoke gate and for the same reason: this is the
+   * only process that can own Playwright. It answers "can a player actually
+   * play this" — taps move the world, the run reaches an end, and a tap after
+   * the end starts a new one.
+   */
+  app.post('/internal/playtest', internalOnly, express.json({ limit: '1mb' }), async (req, res) => {
+    const html = typeof req.body?.html === 'string' ? req.body.html : '';
+    const scoring = req.body?.scoring === 'none' || req.body?.scoring === 'lower' ? req.body.scoring : 'higher';
+    if (!html) {
+      res.status(400).json({ error: { code: 'missing_html', message: 'Send { html }' } });
+      return;
+    }
+    try {
+      const report = await playtest(html, { scoring });
+      res.status(200).json(report);
+    } catch (err) {
+      res.status(500).json({ error: { code: 'playtest_failed', message: err instanceof Error ? err.message : String(err) } });
+    }
+  });
+
   app.get('/r/index.json', (_req, res) => {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');

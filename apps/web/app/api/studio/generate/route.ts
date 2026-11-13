@@ -17,6 +17,7 @@ import {
   providerFromEnv,
   runGenerationPipeline,
   toVectorLiteral,
+  type PlaytestSummary,
   type SmokeSummary,
 } from '@playloop/ai';
 
@@ -80,6 +81,48 @@ async function smokeRunner(html: string): Promise<SmokeSummary> {
     // The gate is best-effort: a dead smoke service must not block creation.
     console.warn('[studio] smoke unavailable:', err instanceof Error ? err.message : err);
     return PASS_THROUGH_SMOKE;
+  }
+}
+
+/** Pass-through used by unit tests and explicit opt-outs. */
+const PASS_THROUGH_PLAYTEST: PlaytestSummary = {
+  pass: true,
+  ready: true,
+  changes: 1,
+  taps: 0,
+  scoreStart: 0,
+  scoreEnd: 0,
+  finalScore: 0,
+  scoreMoved: true,
+  progress: true,
+  gameOverSeen: false,
+  restartWorked: null,
+  errors: [],
+  defects: [],
+  durationMs: 0,
+};
+
+/**
+ * Playtest gate. Best-effort like the smoke gate: if the worker is down the
+ * build still ships — but a build that FAILS the playtest is sent back for
+ * repair, because "loads but does not play" is the failure players report.
+ */
+async function playtestRunner(html: string, scoring: 'higher' | 'lower' | 'none'): Promise<PlaytestSummary> {
+  if (process.env.PLAYLOOP_PLAYTEST === '0' || process.env.VITEST) return PASS_THROUGH_PLAYTEST;
+
+  const playOrigin = process.env.PLAY_ORIGIN || 'http://localhost:3001';
+  try {
+    const res = await fetch(`${playOrigin}/internal/playtest`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ html, scoring }),
+      signal: AbortSignal.timeout(120_000),
+    });
+    if (!res.ok) throw new Error(`playtest service returned ${res.status}`);
+    return (await res.json()) as PlaytestSummary;
+  } catch (err) {
+    console.warn('[studio] playtest unavailable:', err instanceof Error ? err.message : err);
+    return PASS_THROUGH_PLAYTEST;
   }
 }
 
@@ -270,6 +313,7 @@ export async function POST(req: NextRequest) {
             imageDataUrl,
             spec: (priorSpec as never) ?? undefined,
             smoke: smokeRunner,
+            playtest: (html) => playtestRunner(html, 'higher'),
             onProgress: async (progress) => {
               lastProgress = progress;
               await sendEvent('progress', progress);
@@ -341,6 +385,11 @@ export async function POST(req: NextRequest) {
           content: [
             `Built “${result.metadata.title}”${result.repairsCount ? ` after ${result.repairsCount} repair(s)` : ''}.`,
             result.smoke ? `Runtime gate: ${result.smoke.pass ? 'passed' : 'FAILED'} at ${result.smoke.fps} fps.` : '',
+            result.playtest
+              ? `Playtest: ${result.playtest.pass ? 'passed' : 'FAILED'} — ${result.playtest.changes}/${result.playtest.taps} taps changed the picture${
+                  result.playtest.gameOverSeen ? ', restart ' + (result.playtest.restartWorked ? 'works' : 'BROKEN') : ''
+                }.`
+              : '',
             result.review?.summary ? `QA: ${result.review.summary}` : '',
           ]
             .filter(Boolean)
@@ -366,6 +415,7 @@ export async function POST(req: NextRequest) {
         spec: result.spec,
         design: result.design ?? null,
         smoke: result.smoke ?? null,
+        playtest: result.playtest ?? null,
         review: result.review ?? null,
         timingsMs: result.timingsMs ?? {},
         repairs: result.repairsCount,

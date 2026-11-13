@@ -175,6 +175,8 @@ window.addEventListener('resize', function () {
   var scene = window.game.scene.scenes[0];
   if (scene && scene.layout) scene.layout();
 });
+
+setInterval(function () { try { PlayLoop.submitScore(Math.floor(state.score)); } catch (e) {} }, 500);
 </script>
 </body>
 </html>

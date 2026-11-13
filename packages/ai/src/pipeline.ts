@@ -13,6 +13,7 @@ import type {
   GenerationOptions,
   GenerationProgress,
   ReviewReport,
+  PlaytestSummary,
   SmokeSummary,
 } from './types';
 
@@ -159,6 +160,38 @@ export async function runGenerationPipeline(
     }
   }
 
+  // Stage 5b: playtest — the difference between "a game" and "a video of a game".
+  // The smoke gate proves it renders and reacts; this proves a player can get
+  // somewhere: the score moves or the run ends, and a tap after the end starts
+  // a new run instead of leaving a dead screen.
+  let playtest: PlaytestSummary | null = null;
+  if (options.playtest) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      reportProgress({
+        stage: 'playtesting',
+        message: attempt === 0 ? 'Playing it the way a player would...' : 'Re-playing the fixed build...',
+        progressPercent: 80 + attempt * 3,
+      });
+      playtest = await options.playtest(code);
+      if (playtest.pass) break;
+
+      repairsCount += 1;
+      reportProgress({
+        stage: 'repairing',
+        message: `Fixing play defects: ${playtest.defects[0] ?? 'unknown'}`.slice(0, 120),
+        progressPercent: 83,
+      });
+      code = await repairCode(
+        code,
+        { ok: false, errors: playtest.defects, warnings: [] } as unknown as ValidationResult,
+        provider,
+        playtest.defects,
+      );
+      validateReport = validateGame(code);
+      if (validateReport.errors.length > 0) break;
+    }
+  }
+
   // Stage 6: QA critique — one focused pass on what a player would feel.
   let review: ReviewReport | null = null;
   if (!options.skipReview) {
@@ -212,6 +245,7 @@ export async function runGenerationPipeline(
     design,
     smoke,
     review,
+    playtest,
     timingsMs: timings,
   };
 }

@@ -161,3 +161,39 @@ laptop) can leave the data directory unreadable, and the next open aborts with
 A reset loses user accounts, likes and generated games. If the rename itself
 fails (Windows keeps a handle briefly), stop anything holding the directory and
 retry — the rename is what fails, not the recovery logic.
+
+## 6. Playtest gate (does it actually play?)
+
+The static gate proves a file is safe; the smoke gate proves it renders and
+reacts. Neither can tell a game from a video of a game: a Phaser scene whose
+`update()` is never called renders one frame, reports 60 fps and sits there.
+
+`packages/gamekit/src/playtest.ts` plays the artifact the way a player does —
+host `postMessage` input envelopes, sandboxed iframe, real engine injected via
+the worker — and reads the game's own `submitScore` / `gameOver` messages.
+
+Hard gates (these fail the build):
+
+| signal | means |
+|---|---|
+| `changes === 0` | the picture never changed after input — frozen |
+| `errors` / `httpErrors` | it threw, or asked for a file that is not there |
+| `restartWorked === false` | game over is a dead end — no way back in |
+
+Reported, not enforced: whether a point or an end screen appeared inside the
+window. A snake may legitimately not eat in six seconds, and a gate that fails
+it is a gate people learn to ignore.
+
+```bash
+pnpm probe:playtest                    # every published game, through the feed
+npx tsx scripts/quarantine-unplayable.ts --scan    # find dead cards (app up)
+npx tsx scripts/quarantine-unplayable.ts --apply   # unlist them (app down)
+```
+
+The playtest runs inside the pipeline (after smoke) and feeds its defects into
+the repair loop; the route calls the worker's `/internal/playtest`, because the
+Next app cannot own Playwright.
+
+Engine note: the harness proxies `/r/*` to the play origin. Without it, an
+artifact that pins Phaser 404s its engine, silently tests a fallback path, and
+reports "pass" for a game that never booted.

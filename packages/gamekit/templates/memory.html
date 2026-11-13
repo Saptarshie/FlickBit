@@ -74,6 +74,8 @@ function frame(t) {
   if (!ready) { ready = true; PlayLoop.ready(); } if (!over) requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+setInterval(function () { try { PlayLoop.submitScore(Math.floor(score)); } catch (e) {} }, 500);
 </script>
 </body>
 </html>

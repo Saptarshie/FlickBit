@@ -41,6 +41,7 @@ export type PipelineStage =
   | 'validating'
   | 'repairing'
   | 'testing'
+  | 'playtesting'
   | 'reviewing'
   | 'metadata'
   | 'done'
@@ -65,6 +66,27 @@ export type GameSpec = {
   winCondition?: string;
   loseCondition: string;
   audioNotes?: string;
+};
+
+/**
+ * Structural subset of gamekit's PlaytestReport, so this package stays free of
+ * a Playwright dependency.
+ */
+export type PlaytestSummary = {
+  pass: boolean;
+  ready: boolean;
+  changes: number;
+  taps: number;
+  scoreStart: number | null;
+  scoreEnd: number | null;
+  finalScore: number | null;
+  scoreMoved: boolean;
+  progress: boolean;
+  gameOverSeen: boolean;
+  restartWorked: boolean | null;
+  errors: string[];
+  defects: string[];
+  durationMs: number;
 };
 
 export type GameMetadata = {
@@ -100,6 +122,8 @@ export type GeneratedGame = {
   smoke?: SmokeSummary | null;
   /** QA critique produced after the game runs. */
   review?: ReviewReport | null;
+  /** Playtest result: did taps actually do something, and can the player restart? */
+  playtest?: PlaytestSummary | null;
 };
 
 export type GenerationOptions = {
@@ -118,6 +142,11 @@ export type GenerationOptions = {
   maxRepairs?: number;
   /** Runtime gate owned by the caller (the app injects Playwright). */
   smoke?: (html: string) => Promise<SmokeSummary>;
+  /**
+   * Playtest gate owned by the caller: send real input envelopes and check the
+   * game responds, scores and can be restarted. Runs after `smoke`.
+   */
+  playtest?: (html: string) => Promise<PlaytestSummary>;
   /** Disable the QA critique pass (costs one extra completion). */
   skipReview?: boolean;
   /** Disable the art-director stage (tests and quick iterations). */

@@ -25,6 +25,7 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./smoke": "./src/smoke.ts"
+    "./smoke": "./src/smoke.ts",
+    "./playtest": "./src/playtest.ts"
   }
 }
