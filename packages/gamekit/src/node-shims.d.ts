@@ -3,9 +3,12 @@
  * Only the tiny slice of node used by src/index.ts and src/smoke.ts is declared.
  */
 declare module 'node:fs' {
+  export function readFileSync(path: string | URL): Buffer;
   export function readFileSync(path: string | URL, encoding: 'utf8'): string;
   export function existsSync(path: string): boolean;
+  export function readdirSync(path: string): string[];
 }
+
 
 declare module 'node:path' {
   export function join(...parts: string[]): string;

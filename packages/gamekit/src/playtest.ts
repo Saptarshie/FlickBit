@@ -18,6 +18,7 @@
 import { createServer, type Server } from 'node:http';
 import { chromium, type Browser, type Frame, type Page } from 'playwright';
 import { injectShim } from './inject';
+import { injectRuntime, readRuntimeFile, sendBytes } from './runtime-inject';
 import { SHIM_SOURCE } from '@playloop/sdk';
 
 const VIEWPORT = { width: 390, height: 844 } as const;
@@ -110,9 +111,20 @@ const HARNESS = `<!doctype html><meta charset="utf-8">
  * proxied to the play origin, which is the only place those bytes exist.
  */
 function serve(html: string): Promise<{ server: Server; port: number }> {
-  const source = injectShim(html, SHIM_SOURCE);
+  // The worker injects the pinned engine on /v/; the gate must reproduce it or a
+  // Phaser/Babylon game is tested with a 404 where its engine should be.
+  const { html: withEngine } = injectRuntime(html);
+  const source = injectShim(withEngine, SHIM_SOURCE);
   const playOrigin = (process.env.PLAY_ORIGIN || 'http://localhost:3001').replace(/\/$/, '');
   const server = createServer((req, res) => {
+    // Engine from disk first: a gate run should not need the play worker up.
+    if (req.url && req.url.startsWith('/r/')) {
+      const local = readRuntimeFile(req.url.slice(3));
+      if (local) {
+        sendBytes(res, 'text/javascript; charset=utf-8', local);
+        return;
+      }
+    }
     if (req.url && (req.url.startsWith('/r/') || req.url.startsWith('/a/'))) {
       fetch(playOrigin + req.url)
         .then(async (upstream) => {
@@ -169,7 +181,9 @@ export async function playtest(html: string, options: PlaytestOptions = {}): Pro
   const viewport = options.viewport ?? VIEWPORT;
   const scoring = options.scoring ?? 'higher';
   const { server, port } = await serve(html);
-  const browser = options.browser ?? (await chromium.launch());
+  // Software GL: a 3D game must be testable on a machine with no GPU, otherwise
+    // the gate silently skips every Babylon artifact.
+    const browser = options.browser ?? (await chromium.launch({ args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] }));
   const page = await browser.newPage({ viewport });
   const errors: string[] = [];
   const httpErrors: string[] = [];

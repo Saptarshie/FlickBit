@@ -275,6 +275,174 @@
       "source": "flickbit-starter"
     },
     {
+      "id": "sfx_click",
+      "name": "Click",
+      "kind": "sfx",
+      "tags": [
+        "sfx",
+        "ui",
+        "click"
+      ],
+      "sha256": "9271b5389cf449ed6d41e930e454b889060cfea03fde6b68443e77b31b6e2928",
+      "file": "9271b5389cf449ed.ogg",
+      "bytes": 1075,
+      "pixelArt": false,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    },
+    {
+      "id": "sfx_coin",
+      "name": "Coin",
+      "kind": "sfx",
+      "tags": [
+        "sfx",
+        "pickup",
+        "currency"
+      ],
+      "sha256": "eab5c7712d79e8c1cf745557a12399029d7752da56b1d256d7d013581a7c87cc",
+      "file": "eab5c7712d79e8c1.ogg",
+      "bytes": 1947,
+      "pixelArt": false,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    },
+    {
+      "id": "sfx_explode",
+      "name": "Explosion",
+      "kind": "sfx",
+      "tags": [
+        "sfx",
+        "explosion",
+        "boom"
+      ],
+      "sha256": "b059b1c412b227ad132711d6b437be3f69abd733aba0a77436004d449d162235",
+      "file": "b059b1c412b227ad.ogg",
+      "bytes": 2823,
+      "pixelArt": false,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    },
+    {
+      "id": "sfx_hit",
+      "name": "Hit",
+      "kind": "sfx",
+      "tags": [
+        "sfx",
+        "damage",
+        "impact"
+      ],
+      "sha256": "ed8ad517c339ce485a0ddd8fec0ea69c584a29971d461ccb1a8f530922198566",
+      "file": "ed8ad517c339ce48.ogg",
+      "bytes": 1360,
+      "pixelArt": false,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    },
+    {
+      "id": "sfx_jump",
+      "name": "Jump",
+      "kind": "sfx",
+      "tags": [
+        "sfx",
+        "jump",
+        "platformer"
+      ],
+      "sha256": "cfe24e1836a9daa39b3e3147763bdcb27be8d58762971fb5cba6e6e2a5bc08ea",
+      "file": "cfe24e1836a9daa3.ogg",
+      "bytes": 1644,
+      "pixelArt": false,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    },
+    {
+      "id": "sfx_powerup",
+      "name": "Power Up",
+      "kind": "sfx",
+      "tags": [
+        "sfx",
+        "powerup",
+        "reward"
+      ],
+      "sha256": "14072c1a4d41dd1f7bc15877ab12632df5047d1321cdfdac2bbc504ae95c7e43",
+      "file": "14072c1a4d41dd1f.ogg",
+      "bytes": 2996,
+      "pixelArt": false,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "flickbit-starter"
+    },
+    {
       "id": "sky_gradient",
       "name": "Sky Background",
       "kind": "background",

@@ -3,7 +3,7 @@
 Living document. Update it when a decision changes, a gate is added, or a number
 moves. Everything here is measured on this machine unless marked *estimate*.
 
-Last updated: 2026-11-13 · HEAD `b2a16de` + visual-review work in progress.
+Last updated: 2026-11-14 · engines: micro · Phaser 4.2.1 · Babylon 9.36 · 18 catalogue assets · 16 published games.
 
 ---
 
@@ -59,6 +59,19 @@ engines 3–4 cards early on `requestIdleCallback` at `priority: 'low'`, skippin
 `saveData`/2G/3G and a 700 KB session budget. The boot animation does the first
 one during its 0.7–2.4 s.
 
+Three engines ship, and the planner picks one per game:
+
+| id | served file | raw / gzip | chosen for |
+|---|---|---|---|
+| `micro` | inlined shim, no engine | ~2 KB gz | grid puzzles, memory, sudoku, tap-timing |
+| `phaser4` | `phaser4@4.2.1-…js` | 1,344 / 346 KB | the 2D default: physics, cameras, tweens, particles |
+| `babylon` | `babylon@9.36.0-…js` | 1,735 / 411 KB | genuinely 3D mechanics only |
+
+Babylon is not a `dist` file: `runtimes/babylon/entry.js` curates 24 exports and
+`scripts/install-runtime.mjs` bundles it with esbuild. Adding a module there is a
+byte-cost decision, which is why the list is short and documented (see
+`docs/development_docs/runtimes.md`).
+
 ## 4. Generation pipeline
 
 ```
@@ -99,14 +112,16 @@ rail/✕/Esc release it.
 
 | what | number | how |
 |---|---|---|
-| micro card: ready, 1× / 4× CPU | 119 ms / 654 ms cold, 56 / 329 ms warm | `pnpm bench:runtimes` |
-| Phaser card: ready, 1× / 4× CPU | 828 ms / 4,542 ms cold, 226 / 1,017 ms warm | same |
+| micro card: ready, 1× / 4× CPU | 41 ms / 355 ms cold, 55 / 214 ms warm | `pnpm bench:runtimes` |
+| Phaser card: ready, 1× / 4× CPU | 718 ms / 3,319 ms cold, 233 / 998 ms warm | same |
+| Babylon card (3D runner) | 320 ms / 1,245 ms cold, 265 / 1,157 ms warm | same |
+| 3D frame rate | 60 fps on GPU (ANGLE D3D11), 24 fps on SwiftShader | `.artifacts/fps-gpu.ts` |
 | micro card size | 3.5–5.2 KB | artifact bytes |
 | Phaser engine | 1,344 KB raw / 346 KB gzip | measured, 4.2.1 |
-| Feed API | 27–35 ms (production, 15 games) | curl |
+| Feed API | 27–40 ms (production, 16 games) | curl |
 | `/` first byte | 6–18 ms (production) | curl |
 | Boot animation | appears 300 ms, leaves 1.34 s, once per session | Playwright |
-| Test suite | 288 tests, ~7 min serial | `pnpm test` |
+| Test suite | 310 tests, ~9 min serial | `pnpm test` |
 | Generation | 5–12 min per game (LLM-bound) | E2E runs |
 
 ## 7. Decision log
@@ -126,6 +141,9 @@ rail/✕/Esc release it.
 | D11 | Dead games are `unlisted`, never deleted | delete | hidden-but-reachable content lingers |
 | D12 | Chrome insets are the **shim's default** (top 80, right 72, bottom 70), not zero | waiting for the host's `init` | a game that reads `safeArea` once in its constructor still draws in a visible place |
 | D13 | Visual review runs on **compositor screenshots** of three moments | one screenshot / DOM read | ~3 s and one model call per build |
+| D14 | Babylon ships as a **curated esbuild bundle**, not the UMD build | shipping `babylon.max.js` (8.7 MB) | every 3D byte is paid by every 3D game; the export list is a reviewed surface |
+| D15 | 3D games declare HUD in **DOM**, not in the scene | drawing HUD on a plane | a DOM element can use `PlayLoop.safeArea`; a 3D text plane cannot |
+| D16 | Audio is content-addressed Opus, never base64 in the artifact | inline base64 WAV | +33 % bytes, and no cache sharing between games |
 
 ## 8. Findings (bugs the gates caught, in order of how much they taught)
 
@@ -182,13 +200,22 @@ Built, not planned. See `docs/development_docs/assets.md` for the contract.
 | catalogue handed to the coder | `packages/ai/src/generator.ts` | done |
 | nearest-neighbour sprite drawing | `packages/sdk` `loadImage` / `drawSprite` | done, verified visually |
 
-Numbers from the starter pack: **12 assets, 23.1 KB total; inlining the same
-bytes would be 30.8 KB** (+33 %, and no cross-game caching). Largest item:
-`neon_grid`, 9.2 KB at 541×1170.
+Catalogue: **18 assets — 12 images + 6 synthesised sound effects — 34.7 KB total;
+inlining the same bytes would be 46.2 KB** (+33 %, and no cross-game caching).
+Largest image: `neon_grid`, 9.2 KB at 541×1170. Largest sound: `sfx_explode`,
+2.8 KB of Opus.
 
-Not done: audio (needs FFmpeg/Opus), 3D assets (waits for a Babylon template),
-Kenney import (the `--dir` flag exists, nobody has pointed it at a pack yet), and
-budget enforcement in the publish path.
+Audio goes through the same pipeline: a 16-bit WAV synthesised in
+`packages/assets/src/sounds.ts` → FFmpeg → Ogg/Opus at 48 kbps mono → 1–3 KB per
+effect. Determinism matters here: the Ogg muxer randomises the stream serial, so
+`steadyOggSerial()` zeroes it and recomputes the page CRC — otherwise every
+ingest would mint a new URL for an identical sound. Ingestion is verified
+idempotent by a test that runs twice and asserts zero writes the second time.
+
+Not done: 3D assets (KTX2/Meshopt wait for a 3D game that needs models), the
+Kenney import (the `--dir` flag exists; kenney.nl gates downloads behind a
+donation interstitial, so that is a manual download once), and budget
+enforcement in the publish path.
 
 ### Engine ablation: Phaser vs Babylon vs micro
 
@@ -212,6 +239,12 @@ step, not something this table settles.
 
 ## 10. Known gaps
 
+- 3D cards run at 14 fps under the headless software rasteriser at 4× CPU (58–61
+  fps for 2D). Not a phone measurement, but a real signal: a 3D card is the only
+  class that can miss frame budget, so it should stay out of the default feed mix.
+- Visual sweep of the live feed: 8 of 16 games have a critical finding (was 5 of
+  15 before the safe-area fix). The remaining ones are content problems — empty
+  playfields, missing entities — not layout bugs, and they need regeneration.
 - Fun/balance is unmeasured. No playtest agent that plays to a goal, no
   difficulty telemetry.
 - The visual reviewer sees three stills, not motion — it cannot judge game feel.

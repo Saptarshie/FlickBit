@@ -23,7 +23,7 @@ Respond ONLY with a valid JSON object matching this schema:
   "winCondition": "Optional win condition",
   "loseCondition": "How the player loses/dies",
   "audioNotes": "WebAudio sound effect notes",
-  "runtime": "phaser4 | micro",
+  "runtime": "phaser4 | micro | babylon",
   "runtimeReason": "One sentence: why that engine"
 }
 
@@ -34,6 +34,10 @@ RUNTIME CHOICE — this is a real decision, make it deliberately:
   whenever the game benefits from any of those: platformers, shooters with
   waves, boss fights, physics toys, anything that moves more than ~40 objects,
   anything needing smooth camera work or particle juice.
+- "babylon" is the 3D engine. Choose it ONLY when the game genuinely needs a
+  third dimension — a 3D endless runner, a 3D maze, a rotating 3D puzzle, a
+  low-poly driving game. A 2D game rendered in 3D is a waste of 411 KB and a
+  weaker result than Phaser. If the idea can be done in 2D, it must be 2D.
 - "micro" is the escape hatch for games where an engine adds nothing and only
   costs startup: grid puzzles, memory/sequence games, sudoku, trivia, word
   games, card flips, tap-timing reflex tests, single-screen single-mechanic
@@ -47,7 +51,12 @@ export const CODER_SYSTEM_PROMPT = `You are a world-class HTML5 game developer. 
 CRITICAL SPEC & SECURITY RULES (VIOLATION = REJECTION):
 1. Output ONLY a single self-contained HTML file.
 2. ZERO external network requests: no fetch, XMLHttpRequest, WebSocket, EventSource, sendBeacon, Worker, SharedWorker.
-3. ZERO external resources: no external <script src>, <link href>, external images, or audio urls. Use Canvas 2D API for graphics and WebAudio oscillator/noise nodes for sound.
+3. ZERO external resources: no external <script src>, <link href>, external images, or audio urls.
+   EXCEPTION — the host's own catalogue lives at /a/<file> on the frame's origin, and the
+   engine at /r/. Those two prefixes are the only permitted network references:
+   new Image() with src "/a/<file>", and PlayLoop.playSfx("<file>"), are allowed and
+   encouraged when the ASSETS block lists them. Everything else must be drawn or
+   synthesised in code.
 4. ZERO persistent storage: no localStorage, sessionStorage, indexedDB, openDatabase, or cookies.
 5. ZERO sandbox escapes: no window.open, top, parent, alert, prompt, confirm.
 6. Mobile-first: pointerdown/pointermove/pointerup (and touch fallback). One-finger play only.
@@ -93,7 +102,7 @@ export const REPAIR_SYSTEM_PROMPT = `You are an expert debugging assistant for H
 Fix the errors while preserving the gameplay and visual design.
 
 Ensure strict compliance:
-- No external scripts, styles, or media URLs.
+- No external scripts, styles, or media URLs (the host's /a/ catalogue is the one exception).
 - No fetch, XHR, WebSocket, localStorage, cookies, alert, or window.open.
 - Include window.PlayLoop.ready() on startup. The global is PlayLoop (capital P and L); window.playloop, sendScore and sendGameOver do not exist.
 - Output ONLY the fixed complete HTML document.`;

@@ -1,3 +1,7 @@
+import { TEMPLATE_IDS } from '@playloop/gamekit';
+
+/** The seed set is the template set: adding a template must not need a test edit. */
+const TEMPLATE_COUNT = TEMPLATE_IDS.length;
 import { it, expect } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
 import { vector } from '@electric-sql/pglite-pgvector';
@@ -22,10 +26,10 @@ it('seed writes content-addressed artifacts and is idempotent on re-run', async 
   const dir = fileURLToPath(new URL('../../../.tmp-seed-artifacts', import.meta.url));
 
   const first = await seed(db, { artifactsDir: dir });
-  expect(first.templateGames).toBe(8);
+  expect(first.templateGames).toBe(TEMPLATE_COUNT);
 
   const games = await db.select().from(schema.games);
-  expect(games).toHaveLength(8);
+  expect(games).toHaveLength(TEMPLATE_COUNT);
   for (const g of games) {
     expect(g.status).toBe('published');
     expect(g.publishedVersionId).not.toBeNull();
@@ -33,7 +37,7 @@ it('seed writes content-addressed artifacts and is idempotent on re-run', async 
 
   // Every artifact file must be named by the sha256 of its own bytes.
   const versions = await db.select().from(schema.gameVersions);
-  expect(versions).toHaveLength(8);
+  expect(versions).toHaveLength(TEMPLATE_COUNT);
   const { createHash } = await import('node:crypto');
   const { readFile } = await import('node:fs/promises');
   for (const v of versions) {
@@ -45,5 +49,5 @@ it('seed writes content-addressed artifacts and is idempotent on re-run', async 
   // Re-running must not duplicate anything.
   const second = await seed(db, { artifactsDir: dir });
   expect(second.templateGames).toBe(0);
-  expect(await db.select().from(schema.games)).toHaveLength(8);
+  expect(await db.select().from(schema.games)).toHaveLength(TEMPLATE_COUNT);
 }, 60_000);

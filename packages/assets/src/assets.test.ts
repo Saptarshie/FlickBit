@@ -155,3 +155,51 @@ describe('registry', () => {
     expect(withinBudget([{ bytes: 1_200_000 }], 'standard')).toBe(true);
   });
 });
+
+describe('audio pipeline', () => {
+  it('encodes a synthesised blip to Ogg/Opus', async () => {
+    const { hasFfmpeg, optimizeAudio } = await import('./audio');
+    const { renderSound, starterSounds } = await import('./sounds');
+    if (!(await hasFfmpeg())) {
+      // A host without ffmpeg still runs the rest of the suite; the ingest path
+      // reports the skip loudly instead of failing a build.
+      expect(true).toBe(true);
+      return;
+    }
+    const wav = renderSound(starterSounds()[0]!);
+    expect(wav.subarray(0, 4).toString()).toBe('RIFF');
+    const out = await optimizeAudio(wav, { bitrateKbps: 48 });
+    expect(out.data.subarray(0, 4).toString()).toBe('OggS');
+    expect(out.bytes).toBeGreaterThan(200);
+    expect(out.bytes).toBeLessThan(wav.byteLength);
+    expect(out.file).toBe(`${out.sha256.slice(0, 16)}.ogg`);
+  });
+});
+
+describe('ingest', () => {
+  it('writes files, dedupes on re-run, and keeps licence metadata in the index', async () => {
+    const { ingestStarter } = await import('./ingest');
+    const { mkdtemp, readdir, rm } = await import('node:fs/promises');
+    const { tmpdir } = await import('node:os');
+    const path = await import('node:path');
+    const dir = await mkdtemp(path.join(tmpdir(), 'pl-ingest-'));
+
+    try {
+      const first = await ingestStarter({ outDir: dir });
+      expect(first.index.assets.length).toBeGreaterThanOrEqual(12);
+      expect(first.written).toBe(first.index.assets.length);
+      const files = await readdir(dir);
+      for (const record of first.index.assets) {
+        expect(files, record.id).toContain(record.file);
+        expect(record.licence.id).toBe('CC0-1.0');
+      }
+      expect(first.totalBytes).toBeLessThan(200_000);
+
+      const second = await ingestStarter({ outDir: dir });
+      expect(second.written).toBe(0);
+      expect(second.index.assets.length).toBe(first.index.assets.length);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 60_000);
+});

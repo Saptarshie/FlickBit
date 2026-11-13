@@ -475,6 +475,7 @@ export const SHIM_SOURCE = String.raw`
   // under the app's profile row and never move it. The host refines these on
   // every ready; until then, these are correct for the app as shipped.
   var safeArea = { top: 80, right: 72, bottom: 70 };
+  var sfxCache = {};
   var muted = false;
 
   var api = {
@@ -512,6 +513,28 @@ export const SHIM_SOURCE = String.raw`
         img.onerror = function () { if (done) { return; } done = true; realClearTimeout(timer); reject(new Error('image failed: ' + file)); };
         img.src = String(file).charAt(0) === '/' ? String(file) : '/a/' + String(file);
       });
+    },
+    /**
+     * Play a short sound from the catalogue. Sounds are fetched once and reused;
+     * mute is respected, and a rejected autoplay is swallowed (the first tap
+     * usually unlocks audio, not the page load).
+     */
+    playSfx: function (file, volume) {
+      if (muted) { return null; }
+      var key = String(file);
+      var el = sfxCache[key];
+      if (!el) {
+        el = new Audio(key.charAt(0) === '/' ? key : '/a/' + key);
+        el.preload = 'auto';
+        sfxCache[key] = el;
+      }
+      try {
+        el.currentTime = 0;
+        el.volume = typeof volume === 'number' ? Math.max(0, Math.min(1, volume)) : 0.8;
+        var p = el.play();
+        if (p && p.catch) { p.catch(function () {}); }
+      } catch (e) {}
+      return el;
     },
     /**
      * Draw a sprite at an arbitrary size. Pixel art is scaled with nearest

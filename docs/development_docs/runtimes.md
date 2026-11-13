@@ -175,3 +175,49 @@ Babylon stays uninstalled. Before it ships it needs a tree-shaken build
 (`@babylonjs/core` + esbuild, targeting < 600 KB gz), a procedural-geometry-only
 art rule (no external assets inside `connect-src 'none'`), and a playtest gate —
 see `docs/user_ref/engine_adv.md` for the options weighed.
+
+## Babylon (3D)
+
+Babylon is the only engine we **build** rather than copy. `@babylonjs/core` ships
+ES modules; the UMD build is 8.7 MB, and importing the package wholesale lands
+near 1.9 MB gzip. Both are unusable for a feed card, so
+`runtimes/babylon/entry.js` imports exactly the modules a mini-game needs and
+exposes them as the familiar `window.BABYLON`.
+
+```bash
+node scripts/install-runtime.mjs babylon
+# → apps/play-worker/runtimes/babylon@9.36.0-c4ac16d1837ef934.js
+#   1,735 KB raw · 411 KB gzip
+```
+
+### The export surface
+
+| group | available |
+|---|---|
+| core | `Engine`, `Scene` |
+| cameras | `FreeCamera`, `ArcRotateCamera`, `UniversalCamera` |
+| lights | `HemisphericLight`, `DirectionalLight`, `PointLight` |
+| meshes | `MeshBuilder` (box, sphere, cylinder, plane, ground, torus, disc), `Mesh`, `TransformNode` |
+| maths | `Vector3`, `Vector2`, `Matrix`, `Quaternion`, `Color3`, `Color4`, `Scalar`, `Space` |
+| material | `StandardMaterial`, `Texture` |
+
+Adding a module is a decision with a byte cost: it is paid by **every** 3D game
+that loads the engine, and the engine is cached per browser, so the cost is once
+per session — but the parse cost is per page load. Measure before adding:
+
+```bash
+node scripts/install-runtime.mjs babylon   # prints raw + gzip after the change
+```
+
+### Rules the gate enforces
+
+- `runtime` must be `babylon` in the manifest; the platform stamps the version.
+- `validateGame` accepts it from the allowlist; an unknown id is a static failure.
+- The smoke gate launches Chromium with `--use-angle=swiftshader`, so a 3D game is
+  testable on a machine with no GPU.
+- The playtest gate requires the same evidence as 2D: taps change the world, a
+  score is reported, and the game can be restarted after it ends.
+
+`packages/gamekit/templates/neon-run-3d.html` is the reference implementation:
+free camera, fog to hide the spawn edge, `MeshBuilder` blocks, jump physics in
+`registerBeforeRender`, DOM HUD positioned from `PlayLoop.safeArea`.

@@ -19,6 +19,26 @@ CODE RULES
  * declaration throws once per frame until the world stops moving.
  */
 function runtimeBlock(runtime?: string): string {
+  if (runtime === 'babylon') {
+    return [
+      'RUNTIME: Babylon.js 9.36 is already loaded as window.BABYLON. Do NOT include the engine in your file.',
+      'Available on window.BABYLON: Engine, Scene, FreeCamera, ArcRotateCamera, UniversalCamera, HemisphericLight, DirectionalLight, PointLight, MeshBuilder, Mesh, TransformNode, Vector3, Vector2, Color3, Color4, Matrix, Quaternion, StandardMaterial, Texture, Scalar, Space.',
+      'Required shape:',
+      '  var engine = new BABYLON.Engine(canvas, true);',
+      '  engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio || 1, 2));',
+      '  var scene = new BABYLON.Scene(engine);',
+      '  var camera = new BABYLON.FreeCamera("cam", new BABYLON.Vector3(0, 3.6, -8), scene); camera.setTarget(new BABYLON.Vector3(0, 2, 8));',
+      '  scene.registerBeforeRender(function () { /* dt-driven gameplay */ });',
+      '  engine.runRenderLoop(function () { scene.render(); });',
+      '  window.addEventListener("resize", function () { engine.resize(); });',
+      '- Babylon owns the loop: do not start your own requestAnimationFrame. Clamp dt = Math.min((now - last) / 1000, 0.05).',
+      '- Build everything from MeshBuilder (box/sphere/cylinder/plane/ground/torus/disc) and StandardMaterial. No GLB, no textures on disk.',
+      '- A 3D card must be readable at phone size: camera close to the action, strong emissive colours, fog (scene.fogMode = BABYLON.Scene.FOGMODE_EXP2) to hide the spawn edge.',
+      '- Dispose meshes that leave the scene. Babylon keeps everything alive otherwise, and a runner leaks a mesh per second.',
+      '- Put HUD text in DOM elements positioned with PlayLoop.safeArea (top / right / bottom), not in the 3D scene.',
+      '- Call window.PlayLoop.ready() once, after the first scene.render(), and PlayLoop.gameOver({score}) when the run ends.',
+    ].join(NL);
+  }
   if (runtime !== 'phaser4') {
     return [
       'RUNTIME: micro (no engine). Draw with a single <canvas> and a 2D context.',
@@ -31,7 +51,8 @@ function runtimeBlock(runtime?: string): string {
     '  class GameScene extends Phaser.Scene { constructor() { super({ key: "game" }); } create() {...} update(time, delta) {...} }',
     '  new Phaser.Game({ type: Phaser.AUTO, parent: "ph", backgroundColor: "#000", scale: { mode: Phaser.Scale.RESIZE }, scene: [GameScene] })',
     '- The scene MUST be a class. A plain { create, update } object is accepted but update() is never called: the game renders one frame and freezes while the loop still reports 60fps.',
-    '- No assets, no loading: build everything from this.add.rectangle / circle / text / graphics and this.add.particles. No textures, no audio files — use WebAudio for sound.',
+    '- Build geometry from this.add.rectangle / circle / text / graphics and this.add.particles. For sprites, use the ASSETS block below (new Image + /a/<file>); there is no texture packer to call.',
+    '- Audio is WebAudio (no files).',
     '- Phaser owns the loop, so do not start your own requestAnimationFrame; put all gameplay in update(time, delta) and clamp dt = Math.min(delta, 50) / 1000.',
     '- Destroy and recreate pooled objects (pipes, bullets, enemies) instead of leaking them; the scene runs for minutes.',
     '- Your file still calls window.PlayLoop.ready() once, on create(), and PlayLoop.gameOver({score}) at the end.',
@@ -139,6 +160,7 @@ export async function generateCode(
           'Draw only after onload; keep the game playable while it loads (draw a placeholder, not a black screen).',
           'Set ctx.imageSmoothingEnabled = false for pixel art before drawing sprites.',
           'Declare every file you used in the manifest: "assets":[{"id":"coin","file":"<sha16>.webp"}].',
+          'Sounds are in the same catalogue (kind sfx). Play them with PlayLoop.playSfx("<file>") — it caches, respects mute and swallows autoplay rejections. Never bundle audio bytes.',
         ].join(NL)
       : '';
 
@@ -166,6 +188,7 @@ export async function generateCode(
       `Requested change: ${userPrompt}`,
       historyBlock,
       feedbackBlock,
+      assetBlock,
       designBlock(options.design),
       runtimeBlock(spec.runtime),
       HARD_RULES,
@@ -195,10 +218,13 @@ export async function generateCode(
     `Loss condition: ${spec.loseCondition}`,
     historyBlock,
     feedbackBlock,
+    assetBlock,
     designBlock(options.design),
     runtimeBlock(spec.runtime),
     HARD_RULES,
-    'One self-contained file under 30 KB (~700 lines). No external URLs, fonts, images or libraries.',
+    assetBlock
+      ? 'One self-contained file under 30 KB (~700 lines). No external URLs, fonts or libraries — the only permitted network reference is /a/ (the asset catalogue).'
+      : 'One self-contained file under 30 KB (~700 lines). No external URLs, fonts, images or libraries.',
     'Show a start screen and wait for the first input before the simulation begins; never start moving on load.',
     options.imageDataUrl ? 'A concept image is attached: match its palette, mood and subject.' : '',
     // The archetype source is a crutch: with an art-direction brief it mostly

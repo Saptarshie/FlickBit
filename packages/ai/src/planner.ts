@@ -37,7 +37,10 @@ ${preferredTemplateId ? `Preferred base archetype: ${preferredTemplateId}` : ''}
     // and it lifts the ceiling on what a generated game can be. The planner may
     // wave it for games where an engine adds nothing (grid puzzles, memory,
     // turn-based, tap-timing), and invalid answers fall back to the default.
-    const runtime = parsed.runtime === 'micro' ? 'micro' : 'phaser4';
+    // micro and babylon are explicit choices; anything else (including a typo or
+    // a model that invents an engine) falls back to the default.
+    const runtime =
+      parsed.runtime === 'micro' ? 'micro' : parsed.runtime === 'babylon' ? 'babylon' : 'phaser4';
 
     return {
       title: String(parsed.title || 'PlayLoop Game'),

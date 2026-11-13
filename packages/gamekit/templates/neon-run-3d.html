@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Neon Run 3D</title>
+<script type="application/json" id="pl-manifest">
+{"title":"Neon Run 3D","description":"Run a glowing cube down a neon highway, tap to jump the blocks, and survive as the speed climbs.","controls":"tap","orientation":"portrait","sdkVersion":1,"tags":["3d","runner","babylon","arcade","neon"],"scoring":"higher","runtime":"babylon","runtimeVersion":"9.36.0"}
+</script>
+<style>
+html,body{margin:0;height:100%;background:#07030f;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+canvas{display:block;width:100%;height:100%;outline:none;touch-action:none}
+#hud{position:fixed;left:0;right:0;top:0;pointer-events:none;font:700 20px system-ui,sans-serif;color:#eaf7ff;text-shadow:0 2px 10px #000}
+#score{position:absolute;left:14px}
+#msg{position:absolute;left:0;right:0;text-align:center;font:800 28px system-ui,sans-serif;color:#ffd166;text-shadow:0 2px 12px #000}
+#go{position:absolute;left:0;right:0;text-align:center;font:800 34px system-ui,sans-serif;color:#ff2fd6;text-shadow:0 2px 14px #000}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"><div id="score">0</div><div id="msg">TAP TO RUN</div><div id="go"></div></div>
+<script>
+if (!window.PlayLoop) window.PlayLoop = { ready() {}, gameOver() {}, submitScore() {}, haptic() {}, safeArea: { top: 80, right: 72, bottom: 70 } };
+var B = window.BABYLON;
+var canvas = document.getElementById('c');
+var sa = PlayLoop.safeArea || { top: 80, right: 72, bottom: 70 };
+var scoreEl = document.getElementById('score');
+var msgEl = document.getElementById('msg');
+var goEl = document.getElementById('go');
+scoreEl.style.top = (sa.top + 6) + 'px';
+msgEl.style.top = (sa.top + 54) + 'px';
+goEl.style.top = (sa.top + 150) + 'px';
+
+var engine = new B.Engine(canvas, true, { stencil: false, antialias: true });
+engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio || 1, 2));
+var scene = new B.Scene(engine);
+scene.clearColor = new B.Color4(0.02, 0.005, 0.05, 1);
+// Fog does the work a 3D runner needs most: it hides the spawn edge and reads as speed.
+scene.fogMode = B.Scene.FOGMODE_EXP2;
+scene.fogDensity = 0.028;
+scene.fogColor = new B.Color3(0.02, 0.005, 0.05);
+
+var camera = new B.FreeCamera('cam', new B.Vector3(0, 3.6, -8.5), scene);
+camera.setTarget(new B.Vector3(0, 2.1, 8));
+camera.fov = 0.95;
+
+new B.HemisphericLight('hemi', new B.Vector3(0, 1, 0), scene).intensity = 0.5;
+var sun = new B.DirectionalLight('sun', new B.Vector3(-0.3, -1, 0.55), scene);
+sun.position = new B.Vector3(5, 14, -4);
+sun.intensity = 1.2;
+sun.diffuse = new B.Color3(1, 0.5, 0.9);
+
+var road = B.MeshBuilder.CreateGround('road', { width: 7.4, height: 200 }, scene);
+var roadMat = new B.StandardMaterial('roadMat', scene);
+roadMat.diffuseColor = new B.Color3(0.06, 0.02, 0.14);
+roadMat.emissiveColor = new B.Color3(0.1, 0.02, 0.2);
+road.material = roadMat;
+road.position.z = 80;
+
+function rail(x) {
+  var m = B.MeshBuilder.CreateBox('rail', { width: 0.16, height: 0.16, depth: 200 }, scene);
+  var mat = new B.StandardMaterial('railMat', scene);
+  mat.emissiveColor = new B.Color3(0.18, 0.95, 1);
+  m.material = mat;
+  m.position = new B.Vector3(x, 0.1, 80);
+}
+rail(-3.7);
+rail(3.7);
+
+var player = B.MeshBuilder.CreateBox('player', { width: 1, height: 1, depth: 1 }, scene);
+var playerMat = new B.StandardMaterial('playerMat', scene);
+playerMat.emissiveColor = new B.Color3(0.35, 1, 0.85);
+playerMat.diffuseColor = new B.Color3(0.35, 1, 0.85);
+player.material = playerMat;
+var GROUND_Y = 0.55;
+player.position = new B.Vector3(0, GROUND_Y, 0);
+
+var blocks = [];
+function spawnBlock(z) {
+  var h = 1 + Math.random() * 1.1;
+  var mesh = B.MeshBuilder.CreateBox('blk', { width: 1.4, height: h, depth: 1.2 }, scene);
+  var mat = new B.StandardMaterial('blkMat', scene);
+  mat.emissiveColor = new B.Color3(1, 0.15, 0.55);
+  mat.diffuseColor = new B.Color3(1, 0.15, 0.55);
+  mesh.material = mat;
+  var lane = (Math.floor(Math.random() * 3) - 1) * 1.7;
+  mesh.position = new B.Vector3(lane, h / 2, z || 62);
+  mesh.metadata = { h: h };
+  blocks.push(mesh);
+}
+
+var running = false, over = false, vy = 0, speed = 11, travelled = 0, score = 0, nextSpawn = 26;
+
+function reset() {
+  over = false; running = false; vy = 0; speed = 11; travelled = 0; score = 0; nextSpawn = 26;
+  for (var i = 0; i < blocks.length; i += 1) blocks[i].dispose();
+  blocks = [];
+  // Three blocks already on the road: a card whose first frame is an empty road
+  // reads as an unfinished prototype, whatever the code says.
+  spawnBlock(26); spawnBlock(42); spawnBlock(56);
+  player.position.y = GROUND_Y;
+  msgEl.textContent = 'TAP TO RUN';
+  goEl.textContent = '';
+  scoreEl.textContent = '0';
+  PlayLoop.submitScore(0);
+}
+reset();
+
+function jump() {
+  if (over) { reset(); return; }
+  if (!running) { running = true; msgEl.textContent = ''; }
+  if (player.position.y <= GROUND_Y + 0.02) { vy = 8.2; PlayLoop.haptic('light'); }
+}
+canvas.addEventListener('pointerdown', jump);
+window.addEventListener('keydown', function (e) { if (e.code === 'Space' || e.code === 'ArrowUp') jump(); });
+
+function end() {
+  over = true; running = false;
+  goEl.textContent = 'GAME OVER';
+  msgEl.textContent = 'TAP TO RUN AGAIN';
+  PlayLoop.gameOver({ score: score });
+}
+
+var last = 0;
+scene.registerBeforeRender(function () {
+  var now = performance.now();
+  var dt = last ? Math.min((now - last) / 1000, 0.05) : 0;
+  last = now;
+  if (!running) { return; }
+
+  speed += 0.4 * dt;
+  travelled += speed * dt;
+  vy -= 24 * dt;
+  player.position.y = Math.max(GROUND_Y, player.position.y + vy * dt);
+  if (player.position.y <= GROUND_Y) { vy = 0; }
+  player.rotation.x += dt * 0.6;
+
+  var next = Math.floor(travelled);
+  if (next !== score) { score = next; scoreEl.textContent = String(score); PlayLoop.submitScore(score); }
+  if (travelled > nextSpawn) { spawnBlock(); nextSpawn += 7 + Math.random() * 7; }
+
+  var feet = player.position.y - 0.5;
+  for (var i = blocks.length - 1; i >= 0; i -= 1) {
+    var b = blocks[i];
+    b.position.z -= speed * dt;
+    var dz = Math.abs(b.position.z - player.position.z);
+    var dx = Math.abs(b.position.x - player.position.x);
+    var top = b.position.y + b.metadata.h / 2;
+    if (dz < 1.15 && dx < 1.2 && feet < top - 0.12) { end(); return; }
+    if (b.position.z < -14) { b.dispose(); blocks.splice(i, 1); }
+  }
+});
+
+engine.runRenderLoop(function () { scene.render(); });
+window.addEventListener('resize', function () { engine.resize(); });
+PlayLoop.ready();
+</script>
+</body>
+</html>

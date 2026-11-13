@@ -9,8 +9,10 @@ import { mkdir, readdir, readFile, writeFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { optimizeImage } from './optimize';
+import { hasFfmpeg, optimizeAudio } from './audio';
 import { CC0, parseIndex, type AssetIndex, type AssetKind, type AssetRecord, type Licence } from './registry';
 import { renderStarter, starterPack } from './starter';
+import { renderSound, starterSounds } from './sounds';
 
 export type IngestEntry = {
   id: string;
@@ -53,8 +55,41 @@ export async function ingest(
   const records: AssetRecord[] = [];
   let written = 0;
   let skipped = 0;
+  const audioOk = entries.some((e) => e.kind === 'sfx' || e.kind === 'music') ? await hasFfmpeg() : false;
 
   for (const entry of entries) {
+    if (entry.kind === 'sfx' || entry.kind === 'music') {
+      if (!audioOk) {
+        console.log(`[assets] ${entry.id}: no ffmpeg, audio skipped`);
+        continue;
+      }
+      const encoded = await optimizeAudio(entry.buffer, {
+        bitrateKbps: entry.kind === 'music' ? 64 : 48,
+      });
+      const audioTarget = path.join(outDir, encoded.file);
+      if (!existsSync(audioTarget)) {
+        await writeFile(audioTarget, encoded.data);
+        written += 1;
+      } else {
+        skipped += 1;
+      }
+      records.push({
+        id: entry.id,
+        name: entry.name,
+        kind: entry.kind,
+        tags: entry.tags,
+        sha256: encoded.sha256,
+        file: encoded.file,
+        bytes: encoded.bytes,
+        pixelArt: false,
+        runtime: ['micro', 'phaser4', 'babylon'],
+        licence: entry.licence ?? CC0,
+        source: entry.source ?? 'starter',
+      });
+      byId.set(entry.id, records[records.length - 1]!);
+      continue;
+    }
+
     const optimised = await optimizeImage(entry.buffer, { kind: entry.kind });
     const target = path.join(outDir, optimised.file);
     const already = byId.get(entry.id);
@@ -111,6 +146,17 @@ export async function ingestStarter(options: { outDir: string }): Promise<Ingest
       kind: item.kind,
       tags: item.tags,
       buffer: await renderStarter(item),
+      source: 'flickbit-starter',
+      licence: CC0,
+    });
+  }
+  for (const sound of starterSounds()) {
+    entries.push({
+      id: sound.id,
+      name: sound.name,
+      kind: 'sfx',
+      tags: sound.tags,
+      buffer: renderSound(sound),
       source: 'flickbit-starter',
       licence: CC0,
     });

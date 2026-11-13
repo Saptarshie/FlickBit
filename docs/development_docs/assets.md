@@ -96,11 +96,29 @@ The starter pack is ours: CC0 by construction, no attribution needed.
 `withinBudget()` is the gate; nothing enforces it in the pipeline yet (see
 `docs/state.md` §10).
 
+## Audio
+
+Sound effects are synthesised in `packages/assets/src/sounds.ts` (16-bit WAV,
+no licensing questions) and encoded to **Ogg/Opus 48 kbps mono** by FFmpeg — 1–3 KB
+each. The ingest path treats `sfx` and `music` separately: music gets 64 kbps
+because it is long, effects get 48 kbps because they are 90–450 ms.
+
+Games play them with `PlayLoop.playSfx('<file>')`, which caches one `Audio`
+element per file, respects mute, and swallows autoplay rejections (the first tap
+unlocks audio, not the page load).
+
+Determinism: the Ogg muxer writes a random stream serial. Without normalising it,
+encoding the same blip twice produced different bytes and a content-addressed URL
+changed on every ingest. `steadyOggSerial()` zeroes the serial and recomputes each
+page's CRC — verified by a test that ingests twice and asserts the second run
+writes nothing.
+
+FFmpeg is found on `PATH`, or via `FFMPEG_PATH`. When it is missing the ingest
+reports a skip and everything else still works.
+
 ## Known limits
 
-- No audio yet: the record kinds exist (`sfx`, `music`) and the route serves
-  `ogg/mp3`, but the ingest path only handles images. Opus encoding needs FFmpeg.
-- No 3D assets: KTX2/Meshopt wait for a Babylon template.
+- No 3D assets: KTX2/Meshopt wait for a 3D game that needs models.
 - The catalogue is a JSON file, not a database: linear scan, fine at 12–500
   records, the wrong shape at 50,000.
 - Nothing imports a Kenney pack yet; the `--dir` flag is the door.

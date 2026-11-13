@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { RUNTIMES, resolveRuntime } from '@playloop/sdk';
 import { stampRuntime, validateGame, type ValidationResult } from '@playloop/gamekit';
@@ -43,10 +44,16 @@ import type {
 async function loadAssetCatalogue(): Promise<
   Array<{ id: string; kind: string; width?: number; height?: number; file: string; tags: string[] }>
 > {
+  // The Next server runs with its own cwd (apps/web), the worker with another,
+  // and tests with a third. Walk up from wherever we are instead of guessing.
+  const roots: string[] = [process.cwd()];
+  for (let dir = process.cwd(), i = 0; i < 5; i += 1) {
+    dir = path.resolve(dir, '..');
+    roots.push(dir);
+  }
   const candidates = [
     process.env.ASSETS_INDEX,
-    'apps/play-worker/assets/index.json',
-    'assets/index.json',
+    ...roots.flatMap((root) => [path.join(root, 'apps', 'play-worker', 'assets', 'index.json'), path.join(root, 'assets', 'index.json')]),
   ].filter((p): p is string => Boolean(p));
   for (const candidate of candidates) {
     try {
@@ -129,7 +136,18 @@ export async function runGenerationPipeline(
     progressPercent: 30,
   });
 
-  const codeOptions: GenerateOptions = { baseCode, isRemix, isEdit, design, history, imageDataUrl };
+  // The catalogue is read once per build: the coder needs a fixed vocabulary it
+  // can hold in its head, not a catalogue of 50,000 files.
+  const catalogue = await loadAssetCatalogue();
+  const codeOptions: GenerateOptions = {
+    baseCode,
+    isRemix,
+    isEdit,
+    design,
+    history,
+    imageDataUrl,
+    ...(catalogue.length > 0 ? { assetCatalogue: catalogue } : {}),
+  };
   let code = await generateCode(prompt, spec, provider, codeOptions);
 
   // The engine is chosen by the planner and stamped by the platform: the
@@ -196,6 +214,21 @@ export async function runGenerationPipeline(
       if (validateReport.errors.length > 0) break;
     }
   }
+
+  // Stage 5b: the catalogue exists to be used. A model that ignores it ships the
+  // same dark-green dot we were trying to get rid of, so ask once, narrowly.
+  if (catalogue.length > 0 && !/\/a\/[0-9a-f]{16}\.(?:webp|png|ogg)/.test(code)) {
+    reportProgress({ stage: 'repairing', message: 'Adding sprites from the catalogue...', progressPercent: 80 });
+    const pick = catalogue.slice(0, 6).map((a) => `${a.id} (${a.kind}, /a/${a.file})`).join(', ');
+    code = await repairCode(
+      code,
+      { ok: false, errors: [`[assets] the game draws no catalogue asset; use at least one of: ${pick}`], warnings: [] } as unknown as ValidationResult,
+      provider,
+      [`Use at least one catalogue sprite as the player or a gameplay object. Candidates: ${pick}.`,
+       'Load it with const img = new Image(); img.src = "/a/<file>"; draw only after onload, and declare it in the manifest assets array.'],
+    );
+  }
+
 
   // Stage 5b: playtest — the difference between "a game" and "a video of a game".
   // The smoke gate proves it renders and reacts; this proves a player can get

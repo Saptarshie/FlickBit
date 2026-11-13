@@ -21,13 +21,31 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
 const outDir = path.join(root, 'apps', 'play-worker', 'runtimes');
 
-/** id → { pkg, dist } */
+/** id → { pkg, dist } or { pkg, entry } for a bundle we build ourselves. */
 const ENGINES = {
   phaser4: { pkg: 'phaser', dist: 'dist/phaser.min.js' },
-  // Babylon: the UMD build is 8.7 MB; a tree-shaken bundle built from
-  // @babylonjs/core is the only sane input. Left unset until that build exists.
-  babylon: { pkg: '@babylonjs/core', dist: null },
+  // Babylon ships ES modules, not a usable UMD bundle (8.7 MB). We bundle a
+  // curated entry with esbuild; `entry` is the source of truth for what a 3D
+  // game may assume exists on window.BABYLON.
+  babylon: { pkg: '@babylonjs/core', entry: 'runtimes/babylon/entry.js' },
 };
+
+/** Build the tree-shaken bundle for an entry that is not a ready-made file. */
+async function bundle(id, entryPath) {
+  const esbuild = await import('esbuild');
+  const result = await esbuild.build({
+    entryPoints: [entryPath],
+    bundle: true,
+    minify: true,
+    format: 'iife',
+    target: ['es2020'],
+    write: false,
+    legalComments: 'none',
+  });
+  const out = result.outputFiles[0];
+  if (!out) throw new Error(`${id}: esbuild produced no output`);
+  return Buffer.from(out.contents);
+}
 
 function fail(message) {
   console.error(`[runtime] ${message}`);
@@ -54,25 +72,34 @@ for (const id of ids) {
     fail(`unknown engine "${id}" (known: ${Object.keys(ENGINES).join(', ')})`);
     continue;
   }
-  if (!spec.dist) {
-    // Declared but not built yet (Babylon needs a tree-shaken bundle first).
-    // Not an error: `pnpm start` calls this on a fresh clone.
-    console.log(`[runtime] ${id}: no bundle configured yet — skipped`);
-    continue;
-  }
   const pkgDir = path.join(root, 'node_modules', spec.pkg);
   const pinned = version(spec.pkg);
   if (pinned === null) {
     fail(`${id}: ${spec.pkg} is not installed (run \`pnpm add -w ${spec.pkg}\` first)`);
     continue;
   }
-  const src = path.join(pkgDir, spec.dist);
-  if (!existsSync(src)) {
-    fail(`${id}: ${spec.dist} not found in ${spec.pkg}@${pinned}`);
-    continue;
-  }
 
-  const bytes = readFileSync(src);
+  let bytes;
+  if (spec.dist) {
+    const src = path.join(pkgDir, spec.dist);
+    if (!existsSync(src)) {
+      fail(`${id}: ${spec.dist} not found in ${spec.pkg}@${pinned}`);
+      continue;
+    }
+    bytes = readFileSync(src);
+  } else {
+    const entryPath = path.join(root, spec.entry);
+    if (!existsSync(entryPath)) {
+      fail(`${id}: entry ${spec.entry} not found`);
+      continue;
+    }
+    try {
+      bytes = await bundle(id, entryPath);
+    } catch (err) {
+      fail(`${id}: bundle failed — ${err instanceof Error ? err.message : String(err)}`);
+      continue;
+    }
+  }
   const hex = createHash('sha384').update(bytes).digest('hex');
   const file = `${id}@${pinned}-${hex.slice(0, 16)}.js`;
   writeFileSync(path.join(outDir, file), bytes);

@@ -53,16 +53,32 @@ async function main() {
       .where(and(eq(games.title, title), eq(games.creatorId, owner.id)))
       .limit(1);
 
-    if (!game) {
-      console.log(`${id.padEnd(16)}${title.slice(0, 17).padEnd(18)}${'-'.padEnd(10)}no matching game`);
-      skipped += 1;
-      continue;
+    // A template with no game yet is a new seed — create it rather than skipping,
+    // otherwise adding an archetype means remembering a second manual step.
+    let target = game;
+    if (!target) {
+      console.log(`${id.padEnd(16)}${title.slice(0, 17).padEnd(18)}${'new'.padEnd(10)}create`);
+      if (!write) {
+        changed += 1;
+        continue;
+      }
+      const [created] = await db
+        .insert(games)
+        .values({
+          creatorId: owner.id,
+          title,
+          description: manifest?.description ?? title,
+          tags: (manifest?.tags ?? []) as string[],
+          status: 'published',
+        })
+        .returning();
+      target = created!;
     }
 
     const [latest] = await db
       .select()
       .from(gameVersions)
-      .where(eq(gameVersions.gameId, game.id))
+      .where(eq(gameVersions.gameId, target!.id))
       .orderBy(desc(gameVersions.versionNo))
       .limit(1);
 
@@ -86,7 +102,7 @@ async function main() {
     const [version] = await db
       .insert(gameVersions)
       .values({
-        gameId: game.id,
+        gameId: target.id,
         parentVersionId: latest?.id ?? null,
         versionNo,
         artifactSha256: sha,
@@ -100,7 +116,7 @@ async function main() {
     await db
       .update(games)
       .set({ publishedVersionId: version!.id, updatedAt: sql`now()` })
-      .where(eq(games.id, game.id));
+      .where(eq(games.id, target.id));
 
     changed += 1;
   }

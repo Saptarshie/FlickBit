@@ -32,6 +32,7 @@ export const TEMPLATE_IDS = [
   'memory',
   'shooter',
   'physics-toss',
+  'neon-run-3d',
 ] as const;
 
 export type TemplateId = (typeof TEMPLATE_IDS)[number];

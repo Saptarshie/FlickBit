@@ -4,6 +4,7 @@ import { chromium, type Browser, type Frame, type Page } from 'playwright';
 // imported by relative path exactly like the runtime gate does.
 import { SHIM_SOURCE } from '../../sdk/src/shim-source';
 import { injectShim } from './inject';
+import { injectRuntime, readRuntimeFile, sendBytes } from './runtime-inject';
 
 /**
  * Does an artifact react to the input envelope the host actually sends?
@@ -29,8 +30,17 @@ export type InputProbeResult = {
 const VIEWPORT = { width: 390, height: 844 };
 
 async function serve(html: string) {
-  const source = injectShim(html, SHIM_SOURCE);
+  const source = injectShim(injectRuntime(html).html, SHIM_SOURCE);
   const server = createServer((req, res) => {
+    // Engine bytes from disk: the artifact references /r/<file> and the harness
+    // is the only server in the room.
+    if (req.url && req.url.startsWith('/r/')) {
+      const bytes = readRuntimeFile(req.url.slice(3));
+      if (bytes) {
+        sendBytes(res, 'text/javascript; charset=utf-8', bytes);
+        return;
+      }
+    }
     if (req.url === '/harness') {
       res.setHeader('content-type', 'text/html');
       res.end(
@@ -63,6 +73,13 @@ async function waitForGame(page: Page, frame: Frame, timeoutMs = 5000) {
     if (painted) return;
     await page.waitForTimeout(120);
   }
+  // A WebGL game (Babylon, Phaser's WebGL renderer) never touches the 2D canvas
+  // API, so the shim's paint counter stays at zero while the game renders fine.
+  // If a canvas exists at all, let the caller decide with real pixels.
+  const hasCanvas = await frame
+    .evaluate('(() => !!document.querySelector("canvas"))()')
+    .catch(() => false);
+  if (!hasCanvas) throw new Error('game frame has no canvas');
 }
 
 export async function probeReplayedInput(html: string, options: { browser?: Browser } = {}): Promise<InputProbeResult> {
@@ -86,10 +103,29 @@ export async function probeReplayedInput(html: string, options: { browser?: Brow
     await waitForGame(page, frame);
     await page.waitForTimeout(600);
 
-    const snapshot = (): Promise<string> =>
-      frame.evaluate(
-        '(() => { var c = document.querySelector("canvas"); return c ? c.toDataURL() : "no-canvas"; })()',
-      );
+    // WebGL canvases return a blank toDataURL unless the game asked for
+    // preserveDrawingBuffer, which no game should have to do for our benefit.
+    // Screenshot those through the compositor instead.
+    const isWebgl = await frame
+      .evaluate('(() => { var c = document.querySelector("canvas"); return c ? !c.getContext("2d") : false; })()')
+      .catch(() => false);
+
+    const snapshot = async (): Promise<string> => {
+      if (isWebgl) {
+        // Canvas-level screenshot first; some sandboxed frames refuse it, so fall
+        // back to the iframe element and finally the whole page.
+        for (const target of [() => frame.locator('canvas').screenshot({ type: 'png' }), () => page.locator('#f').screenshot({ type: 'png' })]) {
+          try {
+            const png = await target();
+            return png.toString('base64');
+          } catch {
+            // try the next one
+          }
+        }
+        return 'no-canvas';
+      }
+      return frame.evaluate('(() => { var c = document.querySelector("canvas"); return c ? c.toDataURL() : "no-canvas"; })()');
+    };
 
     /**
      * Wait for the canvas to differ from `previous`, up to `timeoutMs`.

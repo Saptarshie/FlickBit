@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import ts from 'typescript';
 import { SHIM_SOURCE } from '../../sdk/src/shim-source';
 import { injectShim } from './inject';
+import { injectRuntime, readRuntimeFile, sendBytes } from './runtime-inject';
 
 export type SmokeReport = {
   pass: boolean;
@@ -273,10 +274,19 @@ export async function runSmokeTest(html: string, opts: SmokeOptions = {}): Promi
   const timeoutMs = opts.timeoutMs ?? 30_000;
   mkdirSync(workDir, { recursive: true });
 
-  const gameHtml = injectShim(html, SHIM_SOURCE);
+  const gameHtml = injectShim(injectRuntime(html).html, SHIM_SOURCE);
   const sdk = transpileSdk();
 
   const server = createServer((req, res) => {
+    // Engine bytes from disk: the artifact references /r/<file> and the harness
+    // is the only server in the room.
+    if (req.url && req.url.startsWith('/r/')) {
+      const bytes = readRuntimeFile(req.url.slice(3));
+      if (bytes) {
+        sendBytes(res, 'text/javascript; charset=utf-8', bytes);
+        return;
+      }
+    }
     const url = req.url ?? '/';
     if (url.includes(HANG_MARKER)) {
       return; // never respond: keeps window "load" from ever firing
@@ -308,7 +318,7 @@ export async function runSmokeTest(html: string, opts: SmokeOptions = {}): Promi
   const uncaught: string[] = [];
 
   try {
-    const browser = await chromium.launch();
+    const browser = await chromium.launch({ args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
     try {
       const context = await browser.newContext({ viewport: { ...VIEWPORT } });
       const page = await context.newPage();
