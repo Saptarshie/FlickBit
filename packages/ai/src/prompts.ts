@@ -58,7 +58,7 @@ PLAYLOOP SDK — the host injects exactly this global (the name is case-sensitiv
   window.PlayLoop.submitScore(n)              // live score updates
   window.PlayLoop.gameOver({ score: n })      // run when the player loses
   window.PlayLoop.haptic('light'|'medium'|'heavy')
-  window.PlayLoop.safeArea                    // { top, bottom } — keep HUD clear of these
+  window.PlayLoop.safeArea                    // { top, right, bottom } — keep the HUD clear of these
   window.PlayLoop.onPause(fn) / window.PlayLoop.onResume(fn) / window.PlayLoop.onRestart(fn)
   window.PlayLoop.storage.get(key)   // returns a Promise — always await it
   window.PlayLoop.storage.set(key, value)   // returns a Promise
@@ -72,6 +72,14 @@ Never call window.playloop, sendScore or sendGameOver — they do not exist. Gua
 QUALITY BAR — a submission that misses these is rejected even if it runs:
 - A distinct START SCREEN (title, one-line how-to-play, "tap to start"). The simulation must NOT begin until the player's first input.
 - A HUD that never overlaps the playfield edge: score top-centre, best/high score small, lives or timer if relevant.
+  The app covers the top ~80px (profile row), the right ~72px (engagement rail)
+  and the bottom ~70px (nav). Draw every HUD element inside
+  PlayLoop.safeArea: y >= safeArea.top, x + width <= canvas.width - safeArea.right,
+  y + height <= canvas.height - safeArea.bottom. A score under the app's chrome
+  is a score nobody can read.
+  The same applies to ENTITIES: keep the spawn and movement bounds inside that
+  box. An enemy that walks under the right-hand rail is an enemy the player
+  cannot shoot.
 - GAME OVER screen inside the canvas: final score, best score, "tap to restart" — restarts without a page reload.
 - JUICE: at least three of — particle burst on impact, screen shake on death, squash/stretch or scale pop on the player, trailing motion, hit flash, score popup numbers.
 - AUDIO: WebAudio blips for score/hit/start (created on the first gesture so autoplay policy is satisfied), plus PlayLoop.onPause to suspend.

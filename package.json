@@ -23,7 +23,8 @@
     "stop": "node scripts/stop.mjs",
     "bench:runtimes": "tsx scripts/bench-runtimes.ts",
     "install:runtime": "node scripts/install-runtime.mjs",
-    "probe:playtest": "tsx scripts/probe-playtest.ts"
+    "probe:playtest": "tsx scripts/probe-playtest.ts",
+    "probe:visual": "tsx scripts/probe-visual.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite-socket": "^0.2.18",

@@ -73,7 +73,7 @@ const HARNESS = `<!doctype html><meta charset="utf-8">
     var d = e.data;
     if (!d || d.v !== 1 || d.src !== 'playloop') return;
     window.__pl.events.push({ type: d.type, payload: d.payload || null });
-    if (d.type === 'ready') window.__pl.ready = true;
+    if (d.type === 'ready') { window.__pl.ready = true; window.__init(); }
     if (d.type === 'score' && d.payload && typeof d.payload.score === 'number') {
       // Score traffic after an end means a new run began — the cheapest
       // engine-agnostic proof that "tap to restart" actually works.
@@ -89,6 +89,12 @@ const HARNESS = `<!doctype html><meta charset="utf-8">
   // One tap envelope: the shim synthesises down+up for it, which is the path
   // the feed uses. Sending separate down/up messages also works for most games
   // but skips the shim's tap handling (pointerId bookkeeping, haptic gating).
+
+  // Same insets the feed sends: top profile row, right engagement rail, bottom nav.
+  var INIT = { v: 1, src: 'playloop', type: 'init',
+    payload: { safeArea: { top: 80, right: 72, bottom: 70 }, muted: true, seed: 12345 } };
+  window.__init = function () { document.getElementById('f').contentWindow.postMessage(INIT, '*'); };
+
   window.__tap = function (x, y) {
     document.getElementById('f').contentWindow.postMessage(
       { v: 1, src: 'playloop', type: 'input', payload: { kind: 'tap', x: x, y: y, pointerId: 1 } }, '*');

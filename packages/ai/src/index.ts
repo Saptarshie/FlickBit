@@ -8,6 +8,7 @@ export * from './mock-provider';
 export * from './openai-provider';
 export * from './embeddings';
 export * from './pipeline';
+export * from './visual';
 
 export * from './design';
 export * from './review';

@@ -348,7 +348,7 @@ export const SHIM_SOURCE = String.raw`
   // Debug surface for support: readable from the host with Playwright/CDP even
   // though the frame is sandboxed. window.__plDebug answers "did the game get
   // the tap?" and "is its loop running?" without a build.
-  var SHIM_VERSION = '1.1.0';
+  var SHIM_VERSION = '1.2.0';
   var dbg = { version: SHIM_VERSION, paused: false, pendingPause: false, hasPainted: false, rafs: 0, inputs: 0, messages: 0, resumes: 0, pauses: 0 };
   w.__plDebug = dbg;
 
@@ -470,7 +470,11 @@ export const SHIM_SOURCE = String.raw`
 
   /* ---- public API ---- */
   var readySent = false;
-  var safeArea = { top: 0, bottom: 0 };
+  // Defaults are the real chrome, not zero: a game that reads safeArea once in
+  // its constructor (before the host's init message arrives) used to place its HUD
+  // under the app's profile row and never move it. The host refines these on
+  // every ready; until then, these are correct for the app as shipped.
+  var safeArea = { top: 80, right: 72, bottom: 70 };
   var muted = false;
 
   var api = {
@@ -594,8 +598,10 @@ export const SHIM_SOURCE = String.raw`
         if (p.safeArea) {
           var top = Number(p.safeArea.top);
           var bottom = Number(p.safeArea.bottom);
+          var right = Number(p.safeArea.right);
           safeArea.top = isFinite(top) ? top : 0;
           safeArea.bottom = isFinite(bottom) ? bottom : 0;
+          safeArea.right = isFinite(right) ? right : 0;
         }
         if (p.seed !== undefined && p.seed !== null) { initSeed = seedToInt(p.seed); }
         if (typeof p.muted === 'boolean') { muted = p.muted; applyMute(); }

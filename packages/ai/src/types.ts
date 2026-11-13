@@ -1,4 +1,5 @@
 import type { ValidationResult } from '@playloop/gamekit';
+import type { VisualReview } from './visual';
 
 export type SmokeSummary = {
   pass: boolean;
@@ -42,6 +43,7 @@ export type PipelineStage =
   | 'repairing'
   | 'testing'
   | 'playtesting'
+  | 'visual'
   | 'reviewing'
   | 'metadata'
   | 'done'
@@ -124,6 +126,8 @@ export type GeneratedGame = {
   review?: ReviewReport | null;
   /** Playtest result: did taps actually do something, and can the player restart? */
   playtest?: PlaytestSummary | null;
+  /** What a multimodal reviewer saw in the screenshots (null when unreviewed). */
+  visual?: VisualReview | null;
 };
 
 export type GenerationOptions = {
@@ -147,6 +151,16 @@ export type GenerationOptions = {
    * game responds, scores and can be restarted. Runs after `smoke`.
    */
   playtest?: (html: string) => Promise<PlaytestSummary>;
+  /**
+   * Screenshot provider owned by the caller: captures the opening, mid-run and
+   * end frames as PNG data URLs for the visual reviewer.
+   */
+  capture?: (html: string) => Promise<{
+    start: string | null;
+    play: string | null;
+    over: string | null;
+    notes?: string[];
+  }>;
   /** Disable the QA critique pass (costs one extra completion). */
   skipReview?: boolean;
   /** Disable the art-director stage (tests and quick iterations). */

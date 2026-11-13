@@ -18,6 +18,7 @@ import {
   runGenerationPipeline,
   toVectorLiteral,
   type PlaytestSummary,
+  type VisualReview,
   type SmokeSummary,
 } from '@playloop/ai';
 
@@ -123,6 +124,36 @@ async function playtestRunner(html: string, scoring: 'higher' | 'lower' | 'none'
   } catch (err) {
     console.warn('[studio] playtest unavailable:', err instanceof Error ? err.message : err);
     return PASS_THROUGH_PLAYTEST;
+  }
+}
+
+type CapturedFrames = {
+  start: string | null;
+  play: string | null;
+  over: string | null;
+  width: number;
+  height: number;
+  notes: string[];
+};
+
+/**
+ * Screenshot provider for the visual reviewer: the worker owns the browser.
+ * A dead worker means the review is skipped, never that the build fails.
+ */
+async function captureRunner(html: string): Promise<CapturedFrames> {
+  const playOrigin = process.env.PLAY_ORIGIN || 'http://localhost:3001';
+  try {
+    const res = await fetch(`${playOrigin}/internal/capture`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ html }),
+      signal: AbortSignal.timeout(90_000),
+    });
+    if (!res.ok) throw new Error(`capture service returned ${res.status}`);
+    return (await res.json()) as CapturedFrames;
+  } catch (err) {
+    console.warn('[studio] capture unavailable:', err instanceof Error ? err.message : err);
+    return { start: null, play: null, over: null, width: 390, height: 844, notes: ['capture unavailable'] };
   }
 }
 
@@ -314,6 +345,7 @@ export async function POST(req: NextRequest) {
             spec: (priorSpec as never) ?? undefined,
             smoke: smokeRunner,
             playtest: (html) => playtestRunner(html, 'higher'),
+            capture: captureRunner,
             onProgress: async (progress) => {
               lastProgress = progress;
               await sendEvent('progress', progress);
@@ -416,6 +448,7 @@ export async function POST(req: NextRequest) {
         design: result.design ?? null,
         smoke: result.smoke ?? null,
         playtest: result.playtest ?? null,
+        visual: result.visual ?? null,
         review: result.review ?? null,
         timingsMs: result.timingsMs ?? {},
         repairs: result.repairsCount,

@@ -75,6 +75,11 @@ const SCROLL_THRESHOLD = 34;
 /** Ignore wheel bursts for this long after one card change. */
 const WHEEL_COOLDOWN_MS = 380;
 
+/** Height of the app's own top chrome (profile row + status pill), in CSS px. */
+const CHROME_TOP = 72;
+/** Width of the right-hand engagement rail, in CSS px. */
+const CHROME_RIGHT = 64;
+
 export default function GameCardView({ card, live, isActive, onNext, onPrev }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -231,12 +236,15 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
     const host = new GameHost(iframe, {
       onReady: () => {
         setLoadIssue(null);
-        // Tell the game how much of the bottom of its frame is covered by the
-        // feed chrome (nav + descriptor). Without this a HUD drawn near the
-        // bottom edge renders underneath the navigation.
+        // Tell the game which parts of its frame the app itself covers. The
+        // numbers matter: the profile row is ~72px tall and the engagement rail
+        // is ~64px wide, and a HUD drawn under either is simply invisible. This
+        // used to say `top: 12`, which is why a visual sweep found the score
+        // hidden behind the chrome on ten of fifteen games.
         host.configure({
           safeArea: {
-            top: 12,
+            top: CHROME_TOP + 8,
+            right: CHROME_RIGHT + 8,
             bottom: chromeBottom + 12,
           },
           muted: useFeedStore.getState().muted,

@@ -3,6 +3,8 @@ import { RUNTIMES, resolveRuntime } from '@playloop/sdk';
 import { stampRuntime, validateGame, type ValidationResult } from '@playloop/gamekit';
 import { designGame } from './design';
 import { generateCode, type GenerateOptions } from './generator';
+import { reviewVisual, visualDefects, type VisualReview } from './visual';
+import { extractManifest } from '@playloop/gamekit';
 import { extractOrGenerateMetadata } from './metadata';
 import { planGame } from './planner';
 import { repairCode } from './repair';
@@ -192,6 +194,48 @@ export async function runGenerationPipeline(
     }
   }
 
+  // Stage 5c: visual review — the only gate that looks at the game.
+  // Screenshots go to the multimodal model; critical findings (unreadable
+  // player, HUD under the app chrome, screen contradicting the description) get
+  // one repair pass. A missing opinion never blocks a build.
+  let visual: VisualReview | null = null;
+  if (options.capture) {
+    reportProgress({ stage: 'visual', message: 'Looking at the game the way a player will...', progressPercent: 84 });
+    try {
+      const shots = await options.capture(code);
+      const manifest = extractManifest(code);
+      visual = await reviewVisual({
+        shots,
+        spec,
+        description: manifest?.description,
+        provider,
+      });
+      const blocking = visual?.issues.filter((issue) => issue.severity === 'critical') ?? [];
+      if (visual && blocking.length > 0) {
+        repairsCount += 1;
+        reportProgress({
+          stage: 'repairing',
+          message: `Fixing what the screenshot shows: ${blocking[0]?.issue ?? ''}`.slice(0, 120),
+          progressPercent: 86,
+        });
+        const feedback = visualDefects(visual);
+        code = await repairCode(
+          code,
+          { ok: false, errors: feedback, warnings: [] } as unknown as ValidationResult,
+          provider,
+          feedback,
+        );
+        validateReport = validateGame(code);
+      }
+    } catch (err) {
+      reportProgress({
+        stage: 'visual',
+        message: `Visual review skipped: ${err instanceof Error ? err.message : String(err)}`.slice(0, 120),
+        progressPercent: 86,
+      });
+    }
+  }
+
   // Stage 6: QA critique — one focused pass on what a player would feel.
   let review: ReviewReport | null = null;
   if (!options.skipReview) {
@@ -246,6 +290,7 @@ export async function runGenerationPipeline(
     smoke,
     review,
     playtest,
+    visual,
     timingsMs: timings,
   };
 }

@@ -6,6 +6,7 @@ import express from 'express';
 import { extractManifest } from '@playloop/gamekit';
 import { runSmokeTest } from '@playloop/gamekit/smoke';
 import { playtest } from '@playloop/gamekit/playtest';
+import { captureFrames } from '@playloop/gamekit/capture';
 import { RUNTIMES, SHIM_SOURCE, type RuntimeId, runtimeFileName } from '@playloop/sdk';
 
 /** The exact CSP required on the play origin (docs/03-game-artifact-spec.md). */
@@ -246,6 +247,24 @@ export function createApp(opts: { artifactsDir: string; runtimesDir?: string; em
       res.status(200).json(report);
     } catch (err) {
       res.status(500).json({ error: { code: 'playtest_failed', message: err instanceof Error ? err.message : String(err) } });
+    }
+  });
+
+  /**
+   * Screenshots for the visual reviewer. Same isolation as the other gates, and
+   * the same rule: only this process may own a browser.
+   */
+  app.post('/internal/capture', internalOnly, express.json({ limit: '1mb' }), async (req, res) => {
+    const html = typeof req.body?.html === 'string' ? req.body.html : '';
+    if (!html) {
+      res.status(400).json({ error: { code: 'missing_html', message: 'Send { html }' } });
+      return;
+    }
+    try {
+      const frames = await captureFrames(html);
+      res.status(200).json(frames);
+    } catch (err) {
+      res.status(500).json({ error: { code: 'capture_failed', message: err instanceof Error ? err.message : String(err) } });
     }
   });
 

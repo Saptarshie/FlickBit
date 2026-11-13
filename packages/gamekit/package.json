@@ -26,6 +26,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./smoke": "./src/smoke.ts",
-    "./playtest": "./src/playtest.ts"
+    "./playtest": "./src/playtest.ts",
+    "./capture": "./src/capture.ts"
   }
 }

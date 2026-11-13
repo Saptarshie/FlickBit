@@ -17,7 +17,7 @@ canvas{display:block;width:100%;height:100%}
 <script>
 if (!window.PlayLoop) window.PlayLoop = { ready() {}, gameOver() {}, haptic() {}, safeArea: { top: 0, bottom: 0 } };
 const cv = document.getElementById('c'); const ctx = cv.getContext('2d');
-let W = 0, H = 0, last = 0, over = false, ready = false, score = 0, speed = 235, spawnT = 0.6;
+let W = 0, H = 0, last = 0, over = false, ready = false, started = false, score = 0, speed = 235, spawnT = 0.6;
 const bird = { x: 0, y: 0, vy: 0, r: 15 };
 const pipes = [];
 function resize() {
@@ -27,18 +27,32 @@ function resize() {
   cv.width = Math.floor(W * dpr); cv.height = Math.floor(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 window.addEventListener('resize', resize); resize();
-function flap() { if (!over) { bird.vy = -430; PlayLoop.haptic('light'); } }
+// Physics waits for the first tap: with the real chrome insets the bird used
+// to fall into the ground during the opening second, so the game was over
+// before the player had touched it.
+function flap() {
+  if (over) { restart(); return; }
+  started = true; bird.vy = -430; PlayLoop.haptic('light');
+}
 window.addEventListener('pointerdown', flap);
 window.addEventListener('keydown', (e) => { if (e.code === 'Space' || e.code === 'ArrowUp') flap(); });
-function end() { over = true; PlayLoop.gameOver({ score: score }); }
+function end() { over = true; bird.vy = 0; PlayLoop.gameOver({ score: score }); }
+function restart() {
+  over = false; started = false; score = 0; speed = 235; spawnT = 0.6;
+  pipes.length = 0; bird.y = H * 0.4; bird.vy = 0; last = 0;
+  requestAnimationFrame(frame);
+}
 function update(dt) {
+  if (!started) return;
   const sa = PlayLoop.safeArea || { top: 0, bottom: 0 };
-  const groundY = H - 70 - sa.bottom;
+  const ceiling = sa.top + 8;
+  const groundY = H - 64 - sa.bottom;
   bird.x = W * 0.3; bird.vy += 1450 * dt; bird.y += bird.vy * dt;
   spawnT -= dt;
   if (spawnT <= 0) {
-    const gap = Math.max(150, Math.min(250, H * 0.3)); const top = 70 + sa.top;
-    pipes.push({ x: W + 40, gapY: top + Math.random() * Math.max(50, groundY - gap - top - 40), gap: gap, w: 62, hit: false });
+    const gap = Math.min(230, Math.max(150, (groundY - ceiling) * 0.36));
+    const span = Math.max(40, groundY - ceiling - gap - 30);
+    pipes.push({ x: W + 40, gapY: ceiling + 12 + Math.random() * span, gap: gap, w: 62, hit: false });
     spawnT = 1.5 * (235 / speed);
   }
   speed += 1.2 * dt;
@@ -49,25 +63,47 @@ function update(dt) {
     if (inX && !inGap) end();
   }
   while (pipes.length > 0 && pipes[0].x + pipes[0].w < -30) pipes.shift();
-  if (bird.y - bird.r < 0) { bird.y = bird.r; bird.vy = 0; }
+  // The ceiling is the app's chrome, not the canvas: a bird that can reach
+  // y=0 spends part of every run hidden behind the profile row.
+  if (bird.y - bird.r < ceiling) { bird.y = ceiling + bird.r; bird.vy = 0; }
   if (bird.y + bird.r > groundY) end();
 }
 function draw() {
   const sa = PlayLoop.safeArea || { top: 0, bottom: 0 };
-  const groundY = H - 70 - sa.bottom;
+  const ceiling = sa.top + 8;
+  const groundY = H - 64 - sa.bottom;
   ctx.fillStyle = '#0e2137'; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#28604a';
-  for (const p of pipes) { ctx.fillRect(p.x, 0, p.w, p.gapY); ctx.fillRect(p.x, p.gapY + p.gap, p.w, Math.max(0, groundY - p.gapY - p.gap)); }
+  for (const p of pipes) {
+    ctx.fillRect(p.x, ceiling, p.w, Math.max(0, p.gapY - ceiling));
+    ctx.fillRect(p.x, p.gapY + p.gap, p.w, Math.max(0, groundY - p.gapY - p.gap));
+  }
   ctx.fillStyle = '#173f2f'; ctx.fillRect(0, groundY, W, H - groundY);
   ctx.fillStyle = '#ffd166';
   ctx.beginPath(); ctx.arc(bird.x, bird.y, bird.r, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#e9f0ff'; ctx.font = '600 20px system-ui, sans-serif';
   ctx.textAlign = 'left'; ctx.fillText('Score ' + score, 14, sa.top + 30);
-  ctx.textAlign = 'center'; ctx.fillText('TAP / SPACE TO FLAP', W / 2, H - sa.bottom - 24);
+  ctx.textAlign = 'center';
+  if (over) {
+    // Without this the frame simply stopped: the player died and the screen
+    // froze with no explanation and no way back.
+    ctx.fillStyle = 'rgba(6, 14, 26, 0.72)'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#ffd166'; ctx.font = '800 34px system-ui, sans-serif';
+    ctx.fillText('GAME OVER', W / 2, H * 0.42);
+    ctx.fillStyle = '#e9f0ff'; ctx.font = '600 22px system-ui, sans-serif';
+    ctx.fillText('Score ' + score, W / 2, H * 0.48);
+    ctx.fillStyle = '#7ee0c1'; ctx.font = '700 17px system-ui, sans-serif';
+    ctx.fillText('TAP TO PLAY AGAIN', W / 2, H * 0.58);
+  } else {
+    ctx.fillStyle = '#e9f0ff'; ctx.font = '600 20px system-ui, sans-serif';
+    ctx.fillText(started ? 'TAP / SPACE TO FLAP' : 'TAP TO START', W / 2, H - sa.bottom - 24);
+  }
 }
 function frame(t) {
-  const dt = Math.min((t - last) / 1000, 0.05); last = t; if (!over) update(dt); draw();
-  if (!ready) { ready = true; PlayLoop.ready(); } if (!over) requestAnimationFrame(frame);
+  const dt = last ? Math.min((t - last) / 1000, 0.05) : 0; last = t;
+  if (!over) update(dt); draw();
+  if (!ready) { ready = true; PlayLoop.ready(); }
+  requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 

@@ -111,7 +111,7 @@ export class GameHost {
   private invalidCount = 0;
   private playing = true;
   /** Sticky `init` payload, replayed so late settings changes take effect. */
-  private initState: { safeArea?: { top: number; bottom: number }; muted?: boolean; seed?: number } = {};
+  private initState: { safeArea?: { top: number; bottom: number; right?: number }; muted?: boolean; seed?: number } = {};
   private autoPaused = false;
   private destroyed = false;
 
@@ -187,7 +187,7 @@ export class GameHost {
    * HUD underneath the feed's bottom navigation. Send it on every `ready`
    * (the host keeps a mutable `init` that is replayed).
    */
-  configure(settings: { safeArea?: { top: number; bottom: number }; muted?: boolean; seed?: number }): void {
+  configure(settings: { safeArea?: { top: number; bottom: number; right?: number }; muted?: boolean; seed?: number }): void {
     this.initState = { ...this.initState, ...settings };
     this.post('init', this.initState);
   }

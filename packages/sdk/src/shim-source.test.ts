@@ -145,7 +145,9 @@ describe('SHIM_SOURCE execution smoke', () => {
     expect(typeof api['haptic']).toBe('function');
     expect(typeof api['share']).toBe('function');
     expect(typeof api['log']).toBe('function');
-    expect(api['safeArea']).toEqual({ top: 0, bottom: 0 });
+    // Defaults describe the app chrome, so a game that reads them in its
+    // constructor still draws somewhere visible.
+    expect(api['safeArea']).toEqual({ top: 80, right: 72, bottom: 70 });
     expect(typeof api['onPause']).toBe('function');
     expect(typeof api['onResume']).toBe('function');
     expect(typeof api['onRestart']).toBe('function');
@@ -154,7 +156,7 @@ describe('SHIM_SOURCE execution smoke', () => {
     expect(posted.length).toBe(0);
     for (const fn of listeners['load'] ?? []) fn({});
     expect(posted).toContainEqual({
-      data: { v: 1, src: 'playloop', type: 'ready', payload: { shim: '1.1.0' } },
+      data: { v: 1, src: 'playloop', type: 'ready', payload: { shim: '1.2.0' } },
       origin: '*',
     });
   });

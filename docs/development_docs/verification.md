@@ -197,3 +197,40 @@ Next app cannot own Playwright.
 Engine note: the harness proxies `/r/*` to the play origin. Without it, an
 artifact that pins Phaser 404s its engine, silently tests a fallback path, and
 reports "pass" for a game that never booted.
+
+
+## 7. Visual review (does it look like anything?)
+
+The playtest asks whether the game *responds*. The visual review asks whether a
+stranger can tell what is happening.
+
+`packages/gamekit/src/capture.ts` drives the same sandboxed harness as the
+playtest, sends the same `init` the feed sends (so the layout is the shipping
+layout), and captures three compositor screenshots: the opening screen, a
+mid-run frame, and the end state. `packages/ai/src/visual.ts` sends them to the
+multimodal model with a fixed rubric:
+
+| dimension | what a failure looks like |
+|---|---|
+| player | cannot be found in half a second at phone size, or blends into the floor |
+| hud | score/timer under the top 72px profile row or inside the 64px right rail |
+| playfield | action in a thin strip with most of the card empty |
+| match | description promises zombies, screen shows an empty road |
+| affordance | no hint, or the hint says "drag" on a tap-only card |
+| palette | insufficient contrast between player and background |
+
+Severity `critical` (unplayable-looking / contradicts the description) triggers
+one repair pass inside the pipeline. Missing review never blocks a build.
+
+```bash
+npx tsx scripts/probe-visual.ts              # whole feed, one line per game
+npx tsx scripts/probe-visual.ts --title "Neon Dead Highway"
+```
+
+Exit code is non-zero when any game has a critical finding.
+
+**First sweep of the live feed (15 games):** 5 clean, 10 with a critical
+finding. The dominant defect was the HUD under the app chrome (10 games) — a
+platform bug, not fifteen game bugs — plus "screen contradicts description"
+(Neon Dead Highway's missing zombies) and "dead space" (Tap Runner's action
+confined to the bottom fifth).
