@@ -69,6 +69,12 @@ export default function FeedScreen() {
     if (itemCount > 0 && activeIndex >= itemCount - PREFETCH_WITHIN) void fetchNextPage();
   }, [activeIndex, itemCount, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  // Tell the splash the feed can paint — it leaves on this, not on a timer.
+  const markFeedReady = useFeedStore((s) => s.markFeedReady);
+  useEffect(() => {
+    if (itemCount > 0) markFeedReady();
+  }, [itemCount, markFeedReady]);
+
   // Prefetch the engines the next few cards will need.
   //
   // Announced 3–4 cards early, on an idle callback, at low priority: by the

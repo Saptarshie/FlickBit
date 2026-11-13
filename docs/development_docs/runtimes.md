@@ -114,12 +114,47 @@ Reading:
   with side effects; 346 KB is the floor.
 - **FPS is fine** (48–61), so this is a startup problem, not a rendering one.
 
-### Decision
+### Policy: Phaser by default, micro by exception
 
-`micro` stays the default for the eight archetypes. `phaser4` is a **heavy
-class**: prefetched 3–4 cards early, at most one per eight cards, never the
-first card of a session. A spec that needs physics bodies, tilemaps, thousands
-of objects or its own particle system can ask for it; a tap-runner cannot.
+The platform's default is now **phaser4**. The cost above is a cold-start cost,
+and a feed app only pays it once: the boot animation (below) fetches the engine
+while the logo plays, so every card after that starts warm.
+
+The planner chooses per game, in the same completion that writes the spec:
+
+| the game | runtime |
+|---|---|
+| platformers, shooters with waves, physics toys, anything moving >~40 objects, anything needing cameras/tweens/particles | `phaser4` (default) |
+| grid puzzles, memory/sequence, sudoku, trivia, word games, card flips, tap-timing reflexes | `micro` |
+| unsure | `phaser4` |
+
+The model **proposes**, the platform **disposes**: `stampRuntime()` rewrites the
+manifest server-side and overwrites anything the model invented, so a manifest
+can never name an engine that is not on the allowlist. `micro` stays implicit —
+an engine-less artifact carries no `runtime` key at all.
+
+Honest caveat: "once, for days" is not guaranteed. A browser may evict the
+engine under storage pressure, and a returning user can pay the cold cost again.
+The splash window absorbs it when that happens; nothing breaks.
+
+### Cold start: the boot animation
+
+`SplashGate` is a loading state shaped like a brand moment. It exists because
+the first Phaser card would otherwise show 0.8 s (warm) to 4.5 s (cold) of black
+on a phone-class CPU.
+
+- Runs **once per tab session** (`sessionStorage`), skipped entirely under
+  `prefers-reduced-motion`.
+- Loops between a 700 ms floor and a 2400 ms ceiling, and leaves as soon as the
+  feed has painted a card — it never adds time, it only fills time that was
+  already being spent.
+- While it plays it prefetches the default engine, which is the whole point:
+  measured appearance 300 ms, dismissal 1.34 s on the local production build.
+
+Follow-up worth having: drive that prefetch from the first page's manifests
+instead of assuming `phaser4`. Today the guess is right because Phaser is the
+default; if the mix ever changes, the splash should read `/r/index.json` and the
+feed, not hardcode an id.
 
 ### Two Phaser 4 traps worth remembering
 

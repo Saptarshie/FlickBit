@@ -33,8 +33,16 @@ ${preferredTemplateId ? `Preferred base archetype: ${preferredTemplateId}` : ''}
       preferredTemplateId ||
       (KNOWN_TEMPLATES.includes(parsed.templateId) ? parsed.templateId : pickTemplateFromPrompt(prompt));
 
+    // Phaser is the default: its warm-started cost is paid once per session
+    // and it lifts the ceiling on what a generated game can be. The planner may
+    // wave it for games where an engine adds nothing (grid puzzles, memory,
+    // turn-based, tap-timing), and invalid answers fall back to the default.
+    const runtime = parsed.runtime === 'micro' ? 'micro' : 'phaser4';
+
     return {
       title: String(parsed.title || 'PlayLoop Game'),
+      runtime,
+      runtimeReason: parsed.runtimeReason ? String(parsed.runtimeReason) : undefined,
       concept: String(parsed.concept || prompt),
       genre: String(parsed.genre || 'arcade'),
       templateId,
@@ -50,6 +58,7 @@ ${preferredTemplateId ? `Preferred base archetype: ${preferredTemplateId}` : ''}
     const templateId = preferredTemplateId || pickTemplateFromPrompt(prompt);
     return {
       title: prompt.slice(0, 30).trim() || 'Custom Game',
+      runtime: 'phaser4',
       concept: prompt,
       genre: 'arcade',
       templateId,

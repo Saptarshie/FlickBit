@@ -22,6 +22,9 @@ export type FeedState = {
    * wheel, keyboard, or by leaving play mode (✕ / Esc). Null = browse mode.
    */
   engagedGameId: string | null;
+  /** True once the first page has painted at least one card (drives the splash). */
+  feedReady: boolean;
+  markFeedReady: () => void;
   /** Registered by FeedScreen so keyboard/Next can scroll the snap container. */
   scrollToIndex: ((index: number) => void) | null;
 
@@ -43,6 +46,7 @@ export const useFeedStore = create<FeedState>((set) => ({
   itemCount: 0,
   audioUnlocked: false,
   engagedGameId: null,
+  feedReady: false,
   scrollToIndex: null,
 
   setActiveIndex: (index) => set({ activeIndex: index }),
@@ -54,4 +58,5 @@ export const useFeedStore = create<FeedState>((set) => ({
   unlockAudio: () => set({ audioUnlocked: true }),
   setEngaged: (gameId) => set({ engagedGameId: gameId }),
   registerScrollToIndex: (fn) => set({ scrollToIndex: fn }),
+  markFeedReady: () => set({ feedReady: true }),
 }));

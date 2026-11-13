@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
-import { validateGame, type ValidationResult } from '@playloop/gamekit';
+import { RUNTIMES, resolveRuntime } from '@playloop/sdk';
+import { stampRuntime, validateGame, type ValidationResult } from '@playloop/gamekit';
 import { designGame } from './design';
 import { generateCode, type GenerateOptions } from './generator';
 import { extractOrGenerateMetadata } from './metadata';
@@ -92,6 +93,15 @@ export async function runGenerationPipeline(
 
   const codeOptions: GenerateOptions = { baseCode, isRemix, isEdit, design, history, imageDataUrl };
   let code = await generateCode(prompt, spec, provider, codeOptions);
+
+  // The engine is chosen by the planner and stamped by the platform: the
+  // manifest is rewritten, never dictated by the model, and `micro` (the
+  // default) stays implicit so older artifacts stay byte-comparable.
+  const runtime = resolveRuntime(spec.runtime);
+  code = stampRuntime(code, {
+    runtime: runtime.id,
+    ...(runtime.id === 'micro' ? {} : { runtimeVersion: RUNTIMES[runtime.id].version }),
+  });
 
   // Stage 4: static validation + repair
   reportProgress({ stage: 'validating', message: 'Checking sandbox safety and completeness...', progressPercent: 55 });

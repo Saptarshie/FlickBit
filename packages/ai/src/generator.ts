@@ -12,6 +12,32 @@ CODE RULES
 - Clamp dt: const dt = Math.min((now - last) / 1000, 0.05).
 - Start your reply with <!doctype html>. No preamble, no markdown fences. End with </html>.`;
 
+/**
+ * Engine instructions. Phaser is the default now, so the coder is told exactly
+ * how to use it — including the two failures that look like "it loaded fine":
+ * a plain object scene never gets update() called, and a missing top-level
+ * declaration throws once per frame until the world stops moving.
+ */
+function runtimeBlock(runtime?: string): string {
+  if (runtime !== 'phaser4') {
+    return [
+      'RUNTIME: micro (no engine). Draw with a single <canvas> and a 2D context.',
+      '- requestAnimationFrame loop, ctx.setTransform for devicePixelRatio.',
+    ].join(NL);
+  }
+  return [
+    'RUNTIME: Phaser 4.2.1 is already loaded as window.Phaser. Do NOT include the engine in your file.',
+    'Required shape:',
+    '  class GameScene extends Phaser.Scene { constructor() { super({ key: "game" }); } create() {...} update(time, delta) {...} }',
+    '  new Phaser.Game({ type: Phaser.AUTO, parent: "ph", backgroundColor: "#000", scale: { mode: Phaser.Scale.RESIZE }, scene: [GameScene] })',
+    '- The scene MUST be a class. A plain { create, update } object is accepted but update() is never called: the game renders one frame and freezes while the loop still reports 60fps.',
+    '- No assets, no loading: build everything from this.add.rectangle / circle / text / graphics and this.add.particles. No textures, no audio files — use WebAudio for sound.',
+    '- Phaser owns the loop, so do not start your own requestAnimationFrame; put all gameplay in update(time, delta) and clamp dt = Math.min(delta, 50) / 1000.',
+    '- Destroy and recreate pooled objects (pipes, bullets, enemies) instead of leaking them; the scene runs for minutes.',
+    '- Your file still calls window.PlayLoop.ready() once, on create(), and PlayLoop.gameOver({score}) at the end.',
+  ].join(NL);
+}
+
 function designBlock(design?: GameDesign): string {
   if (!design) return '';
   return [
@@ -118,6 +144,7 @@ export async function generateCode(
       historyBlock,
       feedbackBlock,
       designBlock(options.design),
+      runtimeBlock(spec.runtime),
       HARD_RULES,
       'Current game source:',
       options.baseCode,
@@ -146,6 +173,7 @@ export async function generateCode(
     historyBlock,
     feedbackBlock,
     designBlock(options.design),
+    runtimeBlock(spec.runtime),
     HARD_RULES,
     'One self-contained file under 30 KB (~700 lines). No external URLs, fonts, images or libraries.',
     'Show a start screen and wait for the first input before the simulation begins; never start moving on load.',

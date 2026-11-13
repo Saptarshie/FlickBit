@@ -48,6 +48,14 @@ export type PipelineStage =
 
 export type GameSpec = {
   title: string;
+  /**
+   * Engine the planner asked for. Absent means `micro` (gameplay only, no
+   * engine download); `phaser4` is for games that need real physics, tweens,
+   * tilemaps or thousands of entities.
+   */
+  runtime?: string;
+  /** One line from the planner explaining the choice (shown in the studio). */
+  runtimeReason?: string;
   concept: string;
   genre: string;
   templateId: string;

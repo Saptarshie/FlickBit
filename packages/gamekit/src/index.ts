@@ -102,3 +102,4 @@ export function templates(): Template[] {
 export function getTemplate(id: string): Template | undefined {
   return templates().find((t) => t.id === id);
 }
+export * from './stamp';

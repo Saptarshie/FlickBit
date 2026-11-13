@@ -22,8 +22,24 @@ Respond ONLY with a valid JSON object matching this schema:
   "palette": ["#hex1", "#hex2", "#hex3", "#hex4", "#hex5"],
   "winCondition": "Optional win condition",
   "loseCondition": "How the player loses/dies",
-  "audioNotes": "WebAudio sound effect notes"
+  "audioNotes": "WebAudio sound effect notes",
+  "runtime": "phaser4 | micro",
+  "runtimeReason": "One sentence: why that engine"
 }
+
+RUNTIME CHOICE — this is a real decision, make it deliberately:
+- "phaser4" is the DEFAULT. Phaser is already loaded in every card that asks for
+  it (no download for the player after the first game), and it gives you real
+  physics, tweens, cameras, particles and thousands of objects. Choose it
+  whenever the game benefits from any of those: platformers, shooters with
+  waves, boss fights, physics toys, anything that moves more than ~40 objects,
+  anything needing smooth camera work or particle juice.
+- "micro" is the escape hatch for games where an engine adds nothing and only
+  costs startup: grid puzzles, memory/sequence games, sudoku, trivia, word
+  games, card flips, tap-timing reflex tests, single-screen single-mechanic
+  toys. Choose it when the entire game is a handful of sprites and a timer.
+- If you are unsure, choose "phaser4".
+
 Do not wrap in markdown fences other than json if necessary.`;
 
 export const CODER_SYSTEM_PROMPT = `You are a world-class HTML5 game developer. You generate a complete, self-contained, playable HTML5 game that runs in a sandboxed iframe on mobile devices (portrait 390x844 default).

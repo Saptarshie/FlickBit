@@ -1,6 +1,7 @@
 'use client';
 
 import FeedScreen from '../src/components/FeedScreen';
+import SplashGate from '../src/components/SplashGate';
 
 /**
  * Feed route.
@@ -11,5 +12,9 @@ import FeedScreen from '../src/components/FeedScreen';
  * two cards.
  */
 export default function Home() {
-  return <FeedScreen />;
+  return (
+    <SplashGate>
+      <FeedScreen />
+    </SplashGate>
+  );
 }
