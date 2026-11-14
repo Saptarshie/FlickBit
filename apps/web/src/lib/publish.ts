@@ -9,6 +9,8 @@ export type PublishInput = {
   creatorId: string;
   sha256: string;
   bytes: number;
+  /** The artifact's own pl-manifest — carries the runtime the platform stamped. */
+  manifest?: Record<string, unknown>;
   metadata: { title: string; description: string; tags: string[] };
   spec?: unknown;
   /** Existing game for a follow-up turn; omitted for a new game. */
@@ -31,7 +33,7 @@ export type PublishResult = { gameId: string; versionId: string; versionNo: numb
  * existing version instead of tripping the `(game_id, version_no)` unique key.
  */
 export async function publishArtifact(db: Db, input: PublishInput): Promise<PublishResult> {
-  const { creatorId, sha256, bytes, metadata, spec } = input;
+  const { creatorId, sha256, bytes, metadata, spec, manifest = {} } = input;
   let gameId = input.gameId ?? null;
   let versionNo = input.versionNo ?? 1;
 
@@ -89,7 +91,10 @@ export async function publishArtifact(db: Db, input: PublishInput): Promise<Publ
         artifactSha256: sha256,
         artifactBytes: bytes,
         artifactKey: `artifacts/${sha256}.html`,
-        manifest: { ...metadata, spec },
+        // The artifact's own manifest is the source of truth: it carries the
+        // runtime the platform stamped, which the feed needs to prefetch the
+        // right engine. `metadata` is only the human-facing title/description.
+        manifest: { ...manifest, ...metadata, spec },
         createdBy: 'ai',
       })
       .returning({ id: schema.gameVersions.id });

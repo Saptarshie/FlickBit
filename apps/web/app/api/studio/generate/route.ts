@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { resolveViewer, SESSION_STALE } from '@/lib/session';
 import { humanizeDbError } from '@/lib/db-errors';
+import { extractManifest } from '@playloop/gamekit';
 import { publishArtifact } from '@/lib/publish';
 import { savePendingBuild } from '@/lib/pending-builds';
 import { getDb } from '@/lib/db';
@@ -369,6 +370,9 @@ export async function POST(req: NextRequest) {
           bytes: result.bytes,
           metadata: result.metadata,
           spec: result.spec,
+          // The artifact is the source of truth: the feed reads `runtime` from
+          // here to prefetch the right engine.
+          manifest: extractManifest(result.code) ?? {},
           gameId,
           versionNo: gameId ? undefined : versionNo,
           forkedFromId,
