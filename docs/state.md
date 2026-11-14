@@ -146,6 +146,10 @@ rail/✕/Esc release it.
 | D16 | Audio is content-addressed Opus, never base64 in the artifact | inline base64 WAV | +33 % bytes, and no cache sharing between games |
 | D17 | The runtime is **re-stamped after the final repair** | stamping once, right after generation | a QA repair that rewrites the manifest could otherwise ship an artifact that loads no engine |
 | D18 | A build that still fails the smoke gate is **not published** | shipping it with a warning | the studio shows an error and Retry instead of the feed showing a dead card |
+| D25 | Models are **rewritten to be self-contained** at ingest (external textures inlined into the binary chunk) | publishing the pack's `Textures/` folder beside `/a/` | every Kenney kit references `Textures/colormap.png`; the path collides across kits and does not exist on the play origin, so the model 404s inside the frame |
+| D26 | `/a/` and `/r/` send `Access-Control-Allow-Origin: *` | relying on same-origin | a `sandbox="allow-scripts"` frame has an opaque origin, so its own asset requests are cross-origin: `<img>` renders but the glTF loader's XHR is blocked |
+| D27 | The smoke fps floor is **15 for a 3D document**, 30 otherwise | one floor for everything | the gate runs on SwiftShader where a good Babylon scene measures ~19 fps (60 on hardware); holding 3D to 30 is an unconvergeable repair loop |
+| D28 | The coder prompt lists the **exact** `window.BABYLON` surface and names what is absent | letting the model discover it | `SolidParticleSystem is not a constructor` cost a full repair pass |
 | D22 | The artifact carries its own **`pl-plan` block** and section markers | relying on the message history | six repair passes rewrite a 60 KB file; anything the model decided four turns ago is only recoverable if it is inside the artifact |
 | D23 | Repairs receive a **journal** of what earlier passes fixed | one prompt per defect | without it a repair reverts the previous fix (this is how the assets and the runtime stamp disappeared) |
 | D24 | Rules are repeated **immediately before the document** | only at the top of the system prompt | after 40 KB of code, the top of the window is a long way away |
