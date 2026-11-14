@@ -72,6 +72,14 @@ function rankCatalogue<T extends { id: string; kind: string; tags: string[]; byt
   // The registry expects name + tags; a caller that only has ids still works.
   const indexed = catalogue.map((a) => ({ name: a.id, ...a })) as unknown as AssetRecord[];
   const ranked = searchAssets({ version: 1, assets: indexed }, { text: query, limit }) as unknown as T[];
+
+  // A 3D brief that only ever sees sprites will draw boxes. Models reach the
+  // shortlist by kind, not by matching words the author never wrote.
+  if (spec.runtime === 'babylon') {
+    const models = catalogue.filter((a) => a.kind === 'model' && !ranked.includes(a)).slice(0, Math.min(8, limit));
+    if (models.length > 0) return [...models, ...ranked].slice(0, limit);
+  }
+
   if (ranked.length >= Math.min(limit, catalogue.length)) return ranked;
 
   // Nothing matched the brief by text: fall back to what the game needs most.
@@ -299,7 +307,35 @@ export async function runGenerationPipeline(
         ],
         planCtx(),
       );
+      repairsCount += 1;
       note('assets', 'assets declared but not drawn');
+      validateReport = validateGame(code);
+    }
+  }
+
+  // A score that only appears on the game-over screen is not a score. If the card
+  // claims "higher is better", the HUD has to move while the player plays.
+  {
+    const manifest = extractManifest(code);
+    const bodyCode = code.replace(/<script[^>]*id=["']pl-manifest["'][^>]*>[\s\S]*?<\/script>/i, '');
+    if (manifest?.scoring === 'higher' && !/PlayLoop\.submitScore\s*\(/.test(bodyCode) && repairsCount < MAX_TOTAL_REPAIRS) {
+      reportProgress({ stage: 'repairing', message: 'Making the score live...', progressPercent: 82 });
+      code = await repairCode(
+        code,
+        {
+          ok: false,
+          errors: ['[score] scoring is "higher" but PlayLoop.submitScore() is never called: the number on the HUD never updates'],
+          warnings: [],
+        } as unknown as ValidationResult,
+        provider,
+        [
+          'Call PlayLoop.submitScore(n) every time the score changes (guard with if (window.PlayLoop)).',
+          'Keep drawing the score yourself as well: submitScore feeds the platform leaderboard, it does not paint the HUD.',
+        ],
+        planCtx(),
+      );
+      repairsCount += 1;
+      note('score', 'submitScore never called');
       validateReport = validateGame(code);
     }
   }
@@ -404,18 +440,23 @@ export async function runGenerationPipeline(
     review = await reviewGame({ code, spec, design, smoke, provider });
 
     const critical = review.issues.filter((issue) => issue.severity === 'critical');
-    if (critical.length > 0) {
+    const majors = review.issues.filter((issue) => issue.severity === 'major');
+    // 'revise' with several majors is the reviewer saying "this is not good enough",
+    // not "this is broken". It earns one pass while the repair budget lasts; a
+    // critical issue always earns one.
+    const worthRevising = critical.length === 0 && review.verdict === 'revise' && majors.length >= 2 && repairsCount < MAX_TOTAL_REPAIRS;
+    if (critical.length > 0 || worthRevising) {
       repairsCount += 1;
       reportProgress({
         stage: 'repairing',
-        message: `QA found ${critical.length} blocking issue(s) — fixing: ${critical[0]?.issue ?? ''}`.slice(0, 120),
+        message: `QA found ${critical.length > 0 ? `${critical.length} blocking issue(s)` : `${majors.length} major issue(s), verdict revise`} — fixing: ${(critical[0] ?? majors[0])?.issue ?? ''}`.slice(0, 120),
         progressPercent: 88,
       });
       const feedback = review.issues
         .slice(0, 6)
         .map((issue) => `[${issue.severity}] ${issue.issue} -> ${issue.fix}`);
       code = await repairCode(code, { ok: false, errors: feedback, warnings: [] } as unknown as ValidationResult, provider, feedback, planCtx());
-      note('qa', critical[0]?.issue ?? 'review issue');
+      note('qa', (critical[0] ?? majors[0])?.issue ?? 'review issue');
       validateReport = validateGame(code);
       if (validateReport.errors.length === 0 && options.smoke) {
         try {

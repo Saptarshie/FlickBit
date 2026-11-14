@@ -97,7 +97,10 @@ Rules that decide whether it feels playable:
   PlayLoop.safeArea on every edge.
 - A joystick must return a normalised vector; use it for direction AND speed so the
   player can move slowly.
-- Every control needs a press state and, if there is a HUD, they never overlap.
+- Every control needs a press state, a solid fill (not a thin outline: a 1px ring on
+  a dark field disappears under a thumb), and at least a 2px inner highlight so it
+  reads as pressable. Test it at 390px wide: if you have to squint, it is too faint.
+- If there is a HUD, controls and HUD never overlap.
 - Declare what you built: manifest "controls" = one of
   tap|drag|swipe|tilt|keys|joystick|buttons|mixed. Claiming "tap" while drawing a
   joystick is a validation defect.
@@ -148,6 +151,7 @@ QUALITY BAR — a submission that misses these is rejected even if it runs:
 - AUDIO: WebAudio blips for score/hit/start (created on the first gesture so autoplay policy is satisfied), plus PlayLoop.onPause to suspend.
 - A difficulty curve: speed/spawn rate increases with score; never an unwinnable first second.
 - One coherent palette (3–5 colours), generous spacing, no default-blue everything, no raw <div> UI over the canvas.
+- The score must be LIVE: call PlayLoop.submitScore(n) whenever it changes (the HUD is yours to draw; submitScore feeds the platform leaderboard).
 - Deterministic, frame-rate independent update using a clamped delta time (dt = min(delta, 0.05)).
 
 Deliver complete, working, bug-free HTML with a smooth 60fps requestAnimationFrame loop and a responsive 390x844 portrait layout.
