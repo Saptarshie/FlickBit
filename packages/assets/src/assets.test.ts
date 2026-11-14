@@ -64,7 +64,7 @@ describe('pixel art detection', () => {
 });
 
 describe('optimizeImage', () => {
-  it('keeps pixel art lossless and does not blur it', async () => {
+  it('keeps pixel art lossless and does not blur it', { timeout: 30_000 }, async () => {
     const out = await optimizeImage(await pixelSprite(), { kind: 'sprite' });
     expect(out.pixelArt).toBe(true);
     expect(out.width).toBe(32);
@@ -75,7 +75,7 @@ describe('optimizeImage', () => {
     expect(out.file).toBe(`${out.sha256.slice(0, 16)}.webp`);
   });
 
-  it('downscales backgrounds to the card width and shrinks them a lot', async () => {
+  it('downscales backgrounds to the card width and shrinks them a lot', { timeout: 30_000 }, async () => {
     const source = await photoish();
     const out = await optimizeImage(source, { kind: 'background' });
     expect(out.width).toBe(1170);

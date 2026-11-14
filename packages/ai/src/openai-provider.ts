@@ -88,7 +88,7 @@ export class OpenAiCompatProvider implements AiProvider {
     let result = await this.complete(messages, options.temperature, this.maxTokens);
     if (result.content.trim().length === 0) {
       // Reasoning models can spend the whole budget thinking. Retry once bigger.
-      result = await this.complete(messages, options.temperature, Math.min(this.maxTokens * 2, 64_000));
+      result = await this.complete(messages, options.temperature, 64_000);
     }
     if (result.content.trim().length === 0) {
       throw new Error(

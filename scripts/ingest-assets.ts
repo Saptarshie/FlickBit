@@ -26,7 +26,7 @@ async function main(): Promise<void> {
   const result = dir
     ? await ingest(
         await entriesFromDirectory(dir, { kind, licence: CC0, source, tags: [source.toLowerCase()] }),
-        { outDir },
+        { outDir, prune: true },
       )
     : await ingestStarter({ outDir });
 

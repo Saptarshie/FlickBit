@@ -5,7 +5,7 @@
  * bytes, so re-running over an unchanged source writes nothing and a changed
  * source writes a new file instead of overwriting a cached one.
  */
-import { mkdir, readdir, readFile, writeFile, stat } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, writeFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { optimizeImage } from './optimize';
@@ -44,7 +44,7 @@ async function readIndexFile(indexPath: string): Promise<AssetIndex> {
 
 export async function ingest(
   entries: IngestEntry[],
-  options: { outDir: string; indexFile?: string },
+  options: { outDir: string; indexFile?: string; prune?: boolean },
 ): Promise<IngestResult> {
   const outDir = options.outDir;
   const indexFile = options.indexFile ?? path.join(outDir, 'index.json');
@@ -121,6 +121,19 @@ export async function ingest(
     byId.set(record.id, record);
     // Keep the old record's identity stable in the log; the hash is what matters.
     void already;
+  }
+
+  // Assets whose bytes changed under a new encoder leave the old file behind.
+  // Prune only content-addressed names, never anything else in the directory.
+  if (options.prune) {
+    // Keep everything the *merged* index references, not just this batch — a
+    // starter-pack run must not delete the Kenney files imported before it.
+    const keep = new Set([...byId.values()].map((r) => r.file));
+    for (const file of await readdir(outDir)) {
+      if (!/^[0-9a-f]{16}\.(webp|png|ogg|mp3)$/.test(file)) continue;
+      if (keep.has(file)) continue;
+      await rm(path.join(outDir, file), { force: true });
+    }
   }
 
   const assets = [...byId.values()].sort((a, b) => a.id.localeCompare(b.id));

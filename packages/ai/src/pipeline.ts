@@ -13,6 +13,7 @@ import { repairCode } from './repair';
 import { reviewGame } from './review';
 import type {
   AiProvider,
+  GameSpec,
   GeneratedGame,
   GenerationOptions,
   GenerationProgress,
@@ -20,6 +21,14 @@ import type {
   PlaytestSummary,
   SmokeSummary,
 } from './types';
+
+/**
+ * A build can be repaired by five different gates (static, smoke, catalogue,
+ * playtest, visual, QA). Each repair rewrites the whole document, the document
+ * grows, and past ~6 rewrites the model runs out of output budget mid-file and
+ * the build is lost. Cap the total, and keep the last build that passed.
+ */
+const MAX_TOTAL_REPAIRS = 6;
 
 /**
  * Multi-agent generation pipeline.
@@ -41,6 +50,35 @@ import type {
  * Deliberately small: the coder sees a list it can hold in its head, not a
  * catalogue of 50,000 files.
  */
+/**
+ * Pick the 24 assets a coder should see.
+ *
+ * The catalogue is real now (158 items after the Kenney import) but a prompt can
+ * only carry a couple of dozen. Sending the 24 smallest files would send empty
+ * tiles; sending the first 24 would send whatever the filesystem returns first.
+ * Rank by what the game actually needs: kind, then tag overlap with the spec, then
+ * smaller files (cheaper cards).
+ */
+function rankCatalogue<T extends { id: string; kind: string; tags: string[]; bytes?: number }>(
+  catalogue: T[],
+  spec: GameSpec,
+  limit = 24,
+): T[] {
+  const want = new Set(
+    [spec.genre, spec.templateId]
+      .filter((t): t is string => typeof t === 'string')
+      .map((t) => t.toLowerCase()),
+  );
+  const kindWeight: Record<string, number> = { sprite: 4, tileset: 3, ui: 2, icon: 2, background: 1 };
+  const score = (asset: T): number => {
+    const overlap = asset.tags.filter((tag) => want.has(tag.toLowerCase())).length;
+    return (kindWeight[asset.kind] ?? 0) * 2 + overlap * 3;
+  };
+  return [...catalogue]
+    .sort((a, b) => score(b) - score(a) || (a.bytes ?? 0) - (b.bytes ?? 0))
+    .slice(0, limit);
+}
+
 async function loadAssetCatalogue(): Promise<
   Array<{ id: string; kind: string; width?: number; height?: number; file: string; tags: string[] }>
 > {
@@ -146,7 +184,7 @@ export async function runGenerationPipeline(
     design,
     history,
     imageDataUrl,
-    ...(catalogue.length > 0 ? { assetCatalogue: catalogue } : {}),
+    ...(catalogue.length > 0 ? { assetCatalogue: rankCatalogue(catalogue, spec) } : {}),
   };
   let code = await generateCode(prompt, spec, provider, codeOptions);
 
@@ -278,8 +316,19 @@ export async function runGenerationPipeline(
         description: manifest?.description,
         provider,
       });
-      const blocking = visual?.issues.filter((issue) => issue.severity === 'critical') ?? [];
-      if (visual && blocking.length > 0) {
+      // A 3D card is judged against a higher bar than "you can tell what is
+      // happening": in a 3D space, a flat untextured plane with the action
+      // squeezed into the bottom third is readable and still looks like a
+      // prototype. Below 7 it gets one repair pass on its major findings too.
+      const floor = spec.runtime === 'babylon' ? 7 : 0;
+      const canRepair = repairsCount < MAX_TOTAL_REPAIRS;
+      const blocking = visual
+        ? visual.issues.filter(
+            (issue) =>
+              issue.severity === 'critical' || (floor > 0 && visual !== null && visual.score < floor && issue.severity === 'major'),
+          )
+        : [];
+      if (visual && blocking.length > 0 && canRepair) {
         repairsCount += 1;
         reportProgress({
           stage: 'repairing',
