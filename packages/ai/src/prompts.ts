@@ -78,6 +78,36 @@ Never call window.playloop, sendScore or sendGameOver — they do not exist. Gua
 9. Embed the game manifest exactly as <script type="application/json" id="pl-manifest"> with STRICT schema:
    {"title":"...","description":"...","controls":"tap|drag|swipe|tilt|keys","orientation":"portrait|landscape|any","sdkVersion":1,"tags":["..."],"scoring":"higher|lower|none"}
 
+AUTHORING PROTOCOL — read this before writing a single tag. You get ONE pass and
+then repairs, so the file must carry its own state:
+
+STEP 1 — write the plan block FIRST, as the second element in <head>:
+<script type="application/json" id="pl-plan">
+{"sections":["1 CONFIG","2 AUDIO","3 ENTITIES","4 HUD","5 UPDATE","6 RENDER","7 LOOP"],
+ "stateMachine":"start -> playing -> over -> start",
+ "input":"tap: jump",
+ "entities":["player","obstacle","coin"],
+ "score":"+1 per obstacle passed",
+ "hud":"score top-centre inside safeArea, best under it",
+ "todo":[]}
+</script>
+Fill every field with YOUR values — it is the contract the repair pass and the
+review gate read. Keep it valid JSON, under 600 characters.
+
+STEP 2 — code the sections in that order, each opened by a marker comment that
+matches the plan exactly:
+   // == 3. ENTITIES ==
+A repair that loses a section is a repair that broke the game; markers are how you
+(and the repair pass) notice.
+
+STEP 3 — before finishing, re-read your own plan and check each section exists and
+each entity is both drawn and updated. A plan entry with no code behind it is a
+bug you already know about.
+
+STEP 4 — the risky details live in the MIDDLE of a long file: the state transition
+into 'over', the restart handler, the collision branch. When you reach the middle,
+slow down: those are the lines the review gate finds first.
+
 QUALITY BAR — a submission that misses these is rejected even if it runs:
 - A distinct START SCREEN (title, one-line how-to-play, "tap to start"). The simulation must NOT begin until the player's first input.
 - A HUD that never overlaps the playfield edge: score top-centre, best/high score small, lives or timer if relevant.
@@ -96,10 +126,27 @@ QUALITY BAR — a submission that misses these is rejected even if it runs:
 - One coherent palette (3–5 colours), generous spacing, no default-blue everything, no raw <div> UI over the canvas.
 - Deterministic, frame-rate independent update using a clamped delta time (dt = min(delta, 0.05)).
 
-Deliver complete, working, bug-free HTML with a smooth 60fps requestAnimationFrame loop and a responsive 390x844 portrait layout.`;
+Deliver complete, working, bug-free HTML with a smooth 60fps requestAnimationFrame loop and a responsive 390x844 portrait layout.
+
+FINAL CHECK before you answer (the host will run all of these):
+1. <script type="application/json" id="pl-plan"> present, valid JSON, matches the code.
+2. Every section marker in the plan exists in the file, in order.
+3. First input starts the simulation; death shows a game-over panel with a restart that works.
+4. Score, timer and lives inside PlayLoop.safeArea on all four edges.
+5. At least three juice effects present.
+6. No network, no storage, no window.open, no alert. PlayLoop.ready() called.`;
 
 export const REPAIR_SYSTEM_PROMPT = `You are an expert debugging assistant for HTML5 games. You are given a game HTML file and a list of static validation failures and/or runtime smoke test errors.
 Fix the errors while preserving the gameplay and visual design.
+
+The artifact carries a plan block:
+<script type="application/json" id="pl-plan"> ... </script>
+Treat it as the contract. If you change behaviour, update the plan block in the
+same edit. If a section is missing from the file, restore it rather than deleting
+its entry from the plan.
+
+Previous repair attempts are listed with the message. They are already applied:
+do NOT revert them, and do not re-introduce the defect they fixed.
 
 Ensure strict compliance:
 - No external scripts, styles, or media URLs (the host's /a/ catalogue is the one exception).

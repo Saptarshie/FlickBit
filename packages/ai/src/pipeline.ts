@@ -11,6 +11,7 @@ import { extractOrGenerateMetadata } from './metadata';
 import { planGame } from './planner';
 import { repairCode } from './repair';
 import { reviewGame } from './review';
+import { extractPlan, sectionIndex, type RepairNote } from './plan';
 import type {
   AiProvider,
   GameSpec,
@@ -201,6 +202,11 @@ export async function runGenerationPipeline(
   reportProgress({ stage: 'validating', message: 'Checking sandbox safety and completeness...', progressPercent: 55 });
   let validateReport: ValidationResult = validateGame(code);
   let repairsCount = 0;
+  // What every repair already changed. Passed back so the next repair cannot undo it.
+  const journal: RepairNote[] = [];
+  const planCtx = () => ({ plan: extractPlan(code), journal, sections: sectionIndex(code) });
+  const note = (stage: string, issue: string) =>
+    journal.push({ attempt: repairsCount, stage, issue: String(issue ?? '').slice(0, 160) });
 
   while (validateReport.errors.length > 0 && repairsCount < maxRepairs) {
     repairsCount += 1;
@@ -209,7 +215,8 @@ export async function runGenerationPipeline(
       message: `Fixing structural problems (attempt ${repairsCount}/${maxRepairs})...`,
       progressPercent: 55 + repairsCount * 4,
     });
-    code = await repairCode(code, validateReport, provider);
+    code = await repairCode(code, validateReport, provider, [], planCtx());
+    note('static', validateReport.errors[0] ?? 'validation failed');
     validateReport = validateGame(code);
   }
 
@@ -247,7 +254,8 @@ export async function runGenerationPipeline(
         message: `Fixing runtime defects: ${defects[0] ?? 'unknown'}`.slice(0, 120),
         progressPercent: 76,
       });
-      code = await repairCode(code, { ok: false, errors: defects, warnings: [] } as unknown as ValidationResult, provider, defects);
+      code = await repairCode(code, { ok: false, errors: defects, warnings: [] } as unknown as ValidationResult, provider, defects, planCtx());
+      note('smoke', defects[0] ?? 'runtime defect');
       validateReport = validateGame(code);
       if (validateReport.errors.length > 0) break;
     }
@@ -264,7 +272,9 @@ export async function runGenerationPipeline(
       provider,
       [`Use at least one catalogue sprite as the player or a gameplay object. Candidates: ${pick}.`,
        'Load it with const img = new Image(); img.src = "/a/<file>"; draw only after onload, and declare it in the manifest assets array.'],
+      planCtx(),
     );
+    note('assets', 'the game drew no catalogue asset');
   }
 
 
@@ -294,7 +304,9 @@ export async function runGenerationPipeline(
         { ok: false, errors: playtest.defects, warnings: [] } as unknown as ValidationResult,
         provider,
         playtest.defects,
+        planCtx(),
       );
+      note('playtest', playtest.defects[0] ?? 'play defect');
       validateReport = validateGame(code);
       if (validateReport.errors.length > 0) break;
     }
@@ -341,7 +353,9 @@ export async function runGenerationPipeline(
           { ok: false, errors: feedback, warnings: [] } as unknown as ValidationResult,
           provider,
           feedback,
+          planCtx(),
         );
+        note('visual', blocking[0]?.issue ?? 'visual defect');
         validateReport = validateGame(code);
       }
     } catch (err) {
@@ -374,7 +388,8 @@ export async function runGenerationPipeline(
       const feedback = review.issues
         .slice(0, 6)
         .map((issue) => `[${issue.severity}] ${issue.issue} -> ${issue.fix}`);
-      code = await repairCode(code, { ok: false, errors: feedback, warnings: [] } as unknown as ValidationResult, provider, feedback);
+      code = await repairCode(code, { ok: false, errors: feedback, warnings: [] } as unknown as ValidationResult, provider, feedback, planCtx());
+      note('qa', critical[0]?.issue ?? 'review issue');
       validateReport = validateGame(code);
       if (validateReport.errors.length === 0 && options.smoke) {
         try {

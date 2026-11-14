@@ -146,6 +146,9 @@ rail/✕/Esc release it.
 | D16 | Audio is content-addressed Opus, never base64 in the artifact | inline base64 WAV | +33 % bytes, and no cache sharing between games |
 | D17 | The runtime is **re-stamped after the final repair** | stamping once, right after generation | a QA repair that rewrites the manifest could otherwise ship an artifact that loads no engine |
 | D18 | A build that still fails the smoke gate is **not published** | shipping it with a warning | the studio shows an error and Retry instead of the feed showing a dead card |
+| D22 | The artifact carries its own **`pl-plan` block** and section markers | relying on the message history | six repair passes rewrite a 60 KB file; anything the model decided four turns ago is only recoverable if it is inside the artifact |
+| D23 | Repairs receive a **journal** of what earlier passes fixed | one prompt per defect | without it a repair reverts the previous fix (this is how the assets and the runtime stamp disappeared) |
+| D24 | Rules are repeated **immediately before the document** | only at the top of the system prompt | after 40 KB of code, the top of the window is a long way away |
 | D20 | Models are **published as-is** (`<sha16>.glb`, `model/gltf-binary`) | re-encoding meshes at ingest | a GLB is already a packed container; re-exporting is a modelling decision, and `@gltf-transform` DRACO would need a decoder shipped to every client |
 | D21 | The Babylon runtime now **includes the glTF loader** (944 KB gzip vs 413 KB) | two runtime ids | without it the 108 catalogue models are unreachable; the cost is paid once per browser and shared by every 3D card. Split into `babylon` / `babylon-gltf` ids if 3D cards ever need the cheap variant |
 | D19 | The version's stored manifest is the **artifact's** pl-manifest | storing `{metadata, spec}` | generated games were invisible to runtime prefetch until a backfill read the artifacts |
