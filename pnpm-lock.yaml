@@ -161,6 +161,9 @@ importers:
 
   packages/ai:
     dependencies:
+      '@playloop/assets':
+        specifier: workspace:*
+        version: link:../assets
       '@playloop/gamekit':
         specifier: workspace:*
         version: link:../gamekit

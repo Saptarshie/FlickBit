@@ -68,6 +68,8 @@ const ARTIFACT_FILE_RE = /^([0-9a-f]{64})\.html$/;
 const RUNTIME_FILE_RE = /^([a-z0-9-]+)@(\d+\.\d+\.\d+)-([0-9a-f]{16})\.js$/;
 /** Content-addressed assets: <sha256[0:16]>.<ext>. */
 const ASSET_FILE_RE = /^([0-9a-f]{16})\.(webp|png|ogg|mp3|glb|json)$/;
+// Contact sheets are browsable art, not content-addressed: sheet-2d-characters.webp
+const SHEET_FILE_RE = /^sheet-[a-z0-9-]{2,40}\.webp$/;
 
 export type ServedRuntime = {
   file: string;
@@ -315,7 +317,7 @@ export function createApp(opts: { artifactsDir: string; runtimesDir?: string; as
    */
   app.get('/a/:file', async (req, res) => {
     const name = req.params.file ?? '';
-    if (ASSET_FILE_RE.exec(name) === null || assetsDir === null) {
+    if ((ASSET_FILE_RE.exec(name) === null && SHEET_FILE_RE.exec(name) === null) || assetsDir === null) {
       sendError(res, 404, 'not_found');
       return;
     }

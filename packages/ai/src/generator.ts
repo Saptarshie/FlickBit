@@ -128,7 +128,7 @@ export type GenerateOptions = {
    * What the platform can serve at /a/. Handed to the coder as a fixed
    * vocabulary, so the hero is a sprite and not an eight-pixel dot.
    */
-  assetCatalogue?: Array<{ id: string; kind: string; width?: number; height?: number; file: string; tags: string[] }>;
+  assetCatalogue?: Array<{ id: string; kind: string; width?: number; height?: number; file: string; tags: string[]; category?: string }>;
 };
 
 /**
@@ -154,13 +154,16 @@ export async function generateCode(
             .slice(0, 24)
             .map(
               (a) =>
-                `  ${a.id} — ${a.kind}${a.width ? ` ${a.width}x${a.height}` : ''} — ${a.file} — ${a.tags.slice(0, 4).join(', ')}`,
+                `  ${a.id} [${a.category ?? a.kind}]${a.width ? ` ${a.width}x${a.height}` : ''} — /a/${a.file} — ${a.tags.slice(0, 4).join(', ')}`,
             ),
           'Load with: const img = new Image(); img.src = "/a/<file>"; img.onload = () => { ready2 = true; };',
           'Draw only after onload; keep the game playable while it loads (draw a placeholder, not a black screen).',
           'Set ctx.imageSmoothingEnabled = false for pixel art before drawing sprites.',
           'Declare every file you used in the manifest: "assets":[{"id":"coin","file":"<sha16>.webp"}].',
           'Sounds are in the same catalogue (kind sfx). Play them with PlayLoop.playSfx("<file>") — it caches, respects mute and swallows autoplay rejections. Never bundle audio bytes.',
+          'Models are published as .glb. Load one with PlayLoop.loadModel(scene, "<file>") — it returns { root, meshes, animationGroups } parented to one node; move that node, not the meshes.',
+          'The catalogue is organised in folders: 2d/characters, 2d/enemies, 2d/environments, 2d/tilesets, 2d/objects, 2d/effects, 3d/characters, 3d/environments, 3d/props, 3d/vehicles, 3d/weapons, ui/buttons, ui/panels, ui/icons, ui/hud, audio/sfx, audio/music. The list above is the shortlist chosen for this brief — if nothing fits, record that in pl-plan.todo instead of substituting a bad sprite.',
+          'A visual contact sheet of each folder exists at /a/sheet-<folder with dashes>.webp (e.g. /a/sheet-2d-characters.webp); the reviewer looks at it, so keep names consistent with what you saw in the list.',
         ].join(NL)
       : '';
 

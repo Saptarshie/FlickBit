@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import { classify } from './browse';
+import type { AssetCategory } from './registry';
 /**
  * Ingest: raw file -> optimised, content-addressed, licence-tagged asset.
  *
@@ -24,6 +26,8 @@ export type IngestEntry = {
   licence?: Licence;
   source?: string;
   sourceUrl?: string;
+  /** Browse category. Defaults to one inferred from id/kind/tags. */
+  category?: AssetCategory;
 };
 
 export type IngestResult = {
@@ -59,6 +63,12 @@ export async function ingest(
   const audioOk = entries.some((e) => e.kind === 'sfx' || e.kind === 'music') ? await hasFfmpeg() : false;
 
   for (const entry of entries) {
+    const category =
+      entry.category ??
+      classify(
+        { id: entry.id, name: entry.name, kind: entry.kind, tags: entry.tags, file: entry.id },
+        entry.source ?? '',
+      );
     if (entry.kind === 'sfx' || entry.kind === 'music') {
       if (!audioOk) {
         console.log(`[assets] ${entry.id}: no ffmpeg, audio skipped`);
@@ -83,6 +93,7 @@ export async function ingest(
         file: encoded.file,
         bytes: encoded.bytes,
         pixelArt: false,
+        category,
         runtime: ['micro', 'phaser4', 'babylon'],
         licence: entry.licence ?? CC0,
         source: entry.source ?? 'starter',
@@ -114,6 +125,7 @@ export async function ingest(
         file,
         bytes: entry.buffer.byteLength,
         pixelArt: false,
+        category,
         runtime: ['babylon'],
         licence: entry.licence ?? CC0,
         source: entry.source ?? 'starter',
@@ -145,6 +157,7 @@ export async function ingest(
       ...(optimised.width ? { width: optimised.width } : {}),
       ...(optimised.height ? { height: optimised.height } : {}),
       pixelArt: optimised.pixelArt,
+      category,
       runtime: ['micro', 'phaser4', 'babylon'],
       licence: entry.licence ?? CC0,
       source: entry.source ?? 'starter',

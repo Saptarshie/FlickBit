@@ -4,7 +4,13 @@
  */
 import { isRuntimeId, RUNTIME_IDS } from '@playloop/sdk';
 
-export type ControlKind = 'tap' | 'drag' | 'swipe' | 'tilt' | 'keys';
+/**
+ * Control vocabulary. `joystick` and `buttons` are on-screen widgets the game draws
+ * itself: a thumb-stick in the bottom-left, action buttons in the bottom-right.
+ * `mixed` is one of those plus a tap/drag gesture. A phone can do all of this with
+ * two thumbs, which is the only input budget a feed game has.
+ */
+export type ControlKind = 'tap' | 'drag' | 'swipe' | 'tilt' | 'keys' | 'joystick' | 'buttons' | 'mixed';
 export type Orientation = 'portrait' | 'landscape' | 'any';
 export type Scoring = 'higher' | 'lower' | 'none';
 export type SdkVersion = 1;
@@ -73,7 +79,7 @@ export const FORBIDDEN_PATTERNS: readonly string[] = [
   'javascript:',
 ];
 
-const CONTROLS: readonly string[] = ['tap', 'drag', 'swipe', 'tilt', 'keys'];
+const CONTROLS: readonly string[] = ['tap', 'drag', 'swipe', 'tilt', 'keys', 'joystick', 'buttons', 'mixed'];
 const ORIENTATIONS: readonly string[] = ['portrait', 'landscape', 'any'];
 const SCORINGS: readonly string[] = ['higher', 'lower', 'none'];
 
@@ -190,7 +196,7 @@ function parseManifestRaw(raw: string): { manifest: Manifest | null; error: stri
   if (!isNonEmptyString(rec['title'])) problems.push('"title" must be a non-empty string');
   if (!isNonEmptyString(rec['description'])) problems.push('"description" must be a non-empty string');
   if (typeof rec['controls'] !== 'string' || !CONTROLS.includes(rec['controls'])) {
-    problems.push('"controls" must be one of tap|drag|swipe|tilt|keys');
+    problems.push('"controls" must be one of tap|drag|swipe|tilt|keys|joystick|buttons|mixed');
   }
   if (typeof rec['orientation'] !== 'string' || !ORIENTATIONS.includes(rec['orientation'])) {
     problems.push('"orientation" must be one of portrait|landscape|any');

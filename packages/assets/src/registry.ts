@@ -14,6 +14,33 @@ import { createHash } from 'node:crypto';
 
 export type AssetKind = 'sprite' | 'tileset' | 'background' | 'ui' | 'icon' | 'sfx' | 'music' | 'model';
 
+/**
+ * A flat content-addressed store is right for delivery and wrong for retrieval.
+ * This is the retrieval vocabulary: the folders a human would browse and a model
+ * can be told about ("2d/characters"). Every asset has exactly one.
+ */
+export const CATEGORIES = [
+  '2d/characters',
+  '2d/enemies',
+  '2d/environments',
+  '2d/tilesets',
+  '2d/objects',
+  '2d/effects',
+  '3d/characters',
+  '3d/environments',
+  '3d/props',
+  '3d/vehicles',
+  '3d/weapons',
+  'ui/buttons',
+  'ui/panels',
+  'ui/icons',
+  'ui/hud',
+  'audio/sfx',
+  'audio/music',
+] as const;
+
+export type AssetCategory = (typeof CATEGORIES)[number];
+
 export type Licence = {
   /** SPDX-style identifier: 'CC0-1.0', 'CC-BY-4.0', 'QAL-1.0', ... */
   id: string;
@@ -41,6 +68,8 @@ export type AssetRecord = {
   height?: number;
   /** True when the image must be drawn with nearest-neighbour scaling. */
   pixelArt: boolean;
+  /** Where it belongs in the browse tree, e.g. '2d/characters'. */
+  category?: AssetCategory;
   /** Which runtimes can consume it (all of them, today). */
   runtime: Array<'micro' | 'phaser4' | 'babylon'>;
   licence: Licence;
@@ -91,24 +120,86 @@ export function parseIndex(json: unknown): AssetIndex {
   };
 }
 
-/** Filter for the agent: only what it is allowed to ship, only what it asked for. */
-export function searchAssets(
-  index: AssetIndex,
-  query: { text?: string; kind?: AssetKind; tags?: string[]; maxBytes?: number; commercialOnly?: boolean },
-): AssetRecord[] {
-  const needle = query.text?.toLowerCase().trim() ?? '';
+export type AssetQuery = {
+  text?: string;
+  kind?: AssetKind;
+  category?: AssetCategory | AssetCategory[];
+  tags?: string[];
+  maxBytes?: number;
+  commercialOnly?: boolean;
+  /** Top-k. Default 8: a model reading a prompt can act on a shortlist, not a catalogue. */
+  limit?: number;
+};
+
+/**
+ * Ranked retrieval, not a filter.
+ *
+ * The old version returned every match sorted by size, which is fine for "give me
+ * the 24 smallest sprites" and useless for "give me a cat". This scores each
+ * record: an exact tag/name hit beats a substring, a kind match beats a category
+ * match, and a smaller file wins only as a tie-break. Returns the top `limit`.
+ */
+export function searchAssets(index: AssetIndex, query: AssetQuery): AssetRecord[] {
+  const needle = (query.text ?? '').toLowerCase().trim();
+  const words = needle.split(/\s+/).filter(Boolean);
   const tags = (query.tags ?? []).map((t) => t.toLowerCase());
-  return index.assets
-    .filter((a) => (query.commercialOnly === false ? true : a.licence.commercialUse))
+  const categories = query.category === undefined ? [] : Array.isArray(query.category) ? query.category : [query.category];
+
+  const scored = index.assets
+    // parseIndex already rejects records without a licence; a caller passing a
+    // hand-built list gets the benefit of the doubt rather than a crash.
+    .filter((a) => (query.commercialOnly === false ? true : a.licence === undefined || a.licence.commercialUse))
     .filter((a) => (query.kind ? a.kind === query.kind : true))
+    .filter((a) => (categories.length === 0 ? true : a.category !== undefined && categories.includes(a.category)))
     .filter((a) => (query.maxBytes ? a.bytes <= query.maxBytes : true))
     .filter((a) => (tags.length === 0 ? true : tags.every((t) => a.tags.some((tag) => tag.toLowerCase() === t))))
-    .filter((a) => {
-      if (!needle) return true;
-      const hay = [a.name, a.id, a.kind, ...a.tags].join(' ').toLowerCase();
-      return needle.split(/\s+/).every((word) => hay.includes(word));
+    .map((a) => {
+      const id = a.id.toLowerCase();
+      const name = a.name.toLowerCase();
+      const tagHit = a.tags.some((tag) => tag.toLowerCase() === needle);
+      let score = 0;
+      let matched = 0;
+      if (needle.length > 0) {
+        for (const word of words) {
+          if (id === word || name === word) score += 8;
+          else if (tagHit) score += 6;
+          else if (id.includes(word) || name.includes(word)) score += 4;
+          else if (a.tags.some((tag) => tag.toLowerCase().includes(word))) score += 3;
+          else if ((a.category ?? '').includes(word)) score += 2;
+          else if (a.kind.includes(word)) score += 2;
+          else continue;
+          matched += 1;
+        }
+        if (matched === 0) return null; // no textual overlap at all
+      }
+      if (query.kind && a.kind === query.kind) score += 2;
+      if (a.category && categories.includes(a.category as AssetCategory)) score += 2;
+      // Prefer the cheaper file when everything else ties.
+      score -= Math.min(4, a.bytes / 40_000);
+      return { asset: a, score, matched };
     })
-    .sort((a, b) => a.bytes - b.bytes);
+    .filter((row): row is { asset: AssetRecord; score: number; matched: number } => row !== null);
+
+  // Precision first: if anything matches every word, those are the answer. Only
+  // fall back to partial matches when the strict reading finds nothing — a model
+  // asking for "cute pixel cat" should not get the whole catalogue back.
+  const full = scored.filter((row) => row.matched === words.length);
+  const pool = words.length === 0 || full.length > 0 ? full : scored;
+  pool.sort((x, y) => y.score - x.score || x.asset.bytes - y.asset.bytes);
+
+  return pool.slice(0, query.limit ?? 8).map((row) => row.asset);
+}
+
+/** Group by category, for a browse tree or a contact sheet per folder. */
+export function byCategory(index: AssetIndex): Map<string, AssetRecord[]> {
+  const out = new Map<string, AssetRecord[]>();
+  for (const a of index.assets) {
+    const key = a.category ?? 'uncategorised';
+    const list = out.get(key) ?? [];
+    list.push(a);
+    out.set(key, list);
+  }
+  return out;
 }
 
 /** Total bytes a game adds on a cold cache. */

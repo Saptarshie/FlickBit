@@ -122,3 +122,40 @@ reports a skip and everything else still works.
 - The catalogue is a JSON file, not a database: linear scan, fine at 12–500
   records, the wrong shape at 50,000.
 - Nothing imports a Kenney pack yet; the `--dir` flag is the door.
+
+## 9. Browsing: categories, tree, sheets, search
+
+The flat store (`<sha16>.webp`) is right for delivery and useless for retrieval. Three
+things sit on top of it.
+
+**Categories** (`registry.ts: CATEGORIES`) — one per asset, fixed vocabulary:
+`2d/{characters,enemies,environments,tilesets,objects,effects}`,
+`3d/{characters,environments,props,vehicles,weapons}`,
+`ui/{buttons,panels,icons,hud}`, `audio/{sfx,music}`.
+`classify()` infers it from id/name/tags/source path — a heuristic that is allowed to
+be wrong because the cost is a folder out of place, and the fallback is the asset's
+kind, never "uncategorised".
+
+**Browse tree** — `writeBrowseTree()` mirrors the store into
+`assets/tree/<category>/<id>.<ext>` with **hardlinks**, so browsing costs no disk and
+cannot go stale. 267 links across 12 folders.
+
+**Contact sheets** — `buildContactSheet()` renders up to 16 assets into one WebP
+(4 columns, numbered captions). This is how the model *looks* instead of reading a
+16-character hash. Small sprites are upscaled to fill the cell with nearest-neighbour,
+because a 16×16 sprite at native size in a 132px cell is a dot on a black square.
+Served at `/a/sheet-<folder with dashes>.webp` (e.g. `sheet-2d-characters.webp`),
+regenerated on every ingest. Models are skipped — a GLB has no thumbnail without a
+renderer.
+
+**Search returns a ranked top-k** — `searchAssets(index, {text, category, kind, tags,
+limit})`. Scoring: exact id/name 8, exact tag 6, substring in id/name 4, tag substring
+3, category/kind 2; smaller file wins ties. Precision first: if any record matches
+every word it wins outright, and partial matches only appear when nothing matches
+strictly. Default k = 8, the coder gets 24.
+
+**Controls are no longer tap-only.** The manifest `controls` field accepts
+`joystick`, `buttons` and `mixed` alongside tap/drag/swipe/tilt/keys, and the coder
+prompt specifies the geometry: 110–130px thumb-stick bottom-left with an 18% dead
+zone, 64–72px action buttons bottom-right with ≥48px hit areas, both inside
+`safeArea`, two pointers maximum, drawn in canvas rather than DOM.

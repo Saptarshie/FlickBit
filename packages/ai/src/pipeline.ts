@@ -12,6 +12,7 @@ import { planGame } from './planner';
 import { repairCode } from './repair';
 import { reviewGame } from './review';
 import { extractPlan, sectionIndex, type RepairNote } from './plan';
+import { searchAssets, type AssetRecord } from '@playloop/assets';
 import type {
   AiProvider,
   GameSpec,
@@ -60,28 +61,28 @@ const MAX_TOTAL_REPAIRS = 6;
  * Rank by what the game actually needs: kind, then tag overlap with the spec, then
  * smaller files (cheaper cards).
  */
-function rankCatalogue<T extends { id: string; kind: string; tags: string[]; bytes?: number }>(
+function rankCatalogue<T extends { id: string; kind: string; tags: string[]; bytes?: number; category?: string }>(
   catalogue: T[],
   spec: GameSpec,
   limit = 24,
 ): T[] {
-  const want = new Set(
-    [spec.genre, spec.templateId]
-      .filter((t): t is string => typeof t === 'string')
-      .map((t) => t.toLowerCase()),
-  );
-  const kindWeight: Record<string, number> = { sprite: 4, tileset: 3, ui: 2, icon: 2, background: 1 };
-  const score = (asset: T): number => {
-    const overlap = asset.tags.filter((tag) => want.has(tag.toLowerCase())).length;
-    return (kindWeight[asset.kind] ?? 0) * 2 + overlap * 3;
-  };
-  return [...catalogue]
-    .sort((a, b) => score(b) - score(a) || (a.bytes ?? 0) - (b.bytes ?? 0))
-    .slice(0, limit);
+  // Ask the registry, not a hand-rolled sort: it scores name/tag/category matches
+  // against the brief and returns the top-k instead of "the first 24 files".
+  const query = [spec.title, spec.genre, spec.coreMechanic, spec.concept].filter(Boolean).join(' ');
+  // The registry expects name + tags; a caller that only has ids still works.
+  const indexed = catalogue.map((a) => ({ name: a.id, ...a })) as unknown as AssetRecord[];
+  const ranked = searchAssets({ version: 1, assets: indexed }, { text: query, limit }) as unknown as T[];
+  if (ranked.length >= Math.min(limit, catalogue.length)) return ranked;
+
+  // Nothing matched the brief by text: fall back to what the game needs most.
+  const weight: Record<string, number> = { sprite: 4, tileset: 3, ui: 2, icon: 2, background: 1, model: 3 };
+  const rest = catalogue.filter((a) => !ranked.includes(a));
+  rest.sort((a, b) => (weight[b.kind] ?? 0) - (weight[a.kind] ?? 0) || (a.bytes ?? 0) - (b.bytes ?? 0));
+  return [...ranked, ...rest].slice(0, limit);
 }
 
 async function loadAssetCatalogue(): Promise<
-  Array<{ id: string; kind: string; width?: number; height?: number; file: string; tags: string[] }>
+  Array<{ id: string; kind: string; width?: number; height?: number; file: string; tags: string[]; category?: string }>
 > {
   // The Next server runs with its own cwd (apps/web), the worker with another,
   // and tests with a third. Walk up from wherever we are instead of guessing.
@@ -103,6 +104,7 @@ async function loadAssetCatalogue(): Promise<
         .map((a) => ({
           id: String(a['id']),
           kind: String(a['kind'] ?? 'sprite'),
+          category: typeof a['category'] === 'string' ? a['category'] : undefined,
           ...(typeof a['width'] === 'number' ? { width: a['width'] } : {}),
           ...(typeof a['height'] === 'number' ? { height: a['height'] } : {}),
           file: String(a['file']),

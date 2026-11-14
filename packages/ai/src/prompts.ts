@@ -78,6 +78,30 @@ Never call window.playloop, sendScore or sendGameOver — they do not exist. Gua
 9. Embed the game manifest exactly as <script type="application/json" id="pl-manifest"> with STRICT schema:
    {"title":"...","description":"...","controls":"tap|drag|swipe|tilt|keys","orientation":"portrait|landscape|any","sdkVersion":1,"tags":["..."],"scoring":"higher|lower|none"}
 
+CONTROL SCHEMES — pick the one the brief deserves, then declare it in the manifest:
+  tap      one finger anywhere. Good for one-button games, too thin for anything else.
+  drag     one finger drags an object (flick, slice, aim).
+  swipe    discrete directional flicks.
+  joystick an on-screen thumb-stick: 110-130px circle, bottom-left, dead zone ~18%,
+           inset by safeArea.bottom + 12. Track with setPointerCapture, support a
+           second simultaneous pointer, show it only while touched on mobile.
+  buttons  one to three action buttons, 64-72px, bottom-right, >=48px hit area,
+           visible pressed state, one pointer each so a jump and a shot can overlap.
+  mixed    joystick + one button — the standard for runners and twin-stick-lite games.
+
+Rules that decide whether it feels playable:
+- The bottom 40% of the screen is the thumb zone. Put controls there; never put
+  gameplay you must see under a thumb.
+- Two thumbs are allowed. Never require more than two simultaneous pointers.
+- Draw controls in canvas (not DOM buttons over it) and keep them inside
+  PlayLoop.safeArea on every edge.
+- A joystick must return a normalised vector; use it for direction AND speed so the
+  player can move slowly.
+- Every control needs a press state and, if there is a HUD, they never overlap.
+- Declare what you built: manifest "controls" = one of
+  tap|drag|swipe|tilt|keys|joystick|buttons|mixed. Claiming "tap" while drawing a
+  joystick is a validation defect.
+
 AUTHORING PROTOCOL — read this before writing a single tag. You get ONE pass and
 then repairs, so the file must carry its own state:
 

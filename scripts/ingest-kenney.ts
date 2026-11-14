@@ -13,7 +13,7 @@
 import 'dotenv/config';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { ingest, CC0, type IngestEntry, type AssetKind } from '@playloop/assets';
+import { buildCategorySheets, classify, ingest, writeBrowseTree, CC0, type IngestEntry, type AssetKind } from '@playloop/assets';
 
 const OUT = path.resolve(process.cwd(), 'apps/play-worker/assets');
 
@@ -75,8 +75,10 @@ async function main(): Promise<void> {
     const n = (seen.get(id) ?? 0) + 1;
     seen.set(id, n);
 
+    const category = classify({ id, name: base, kind: rule.kind, tags: rule.tags, file: base }, rel);
     entries.push({
       id: n === 1 ? id : `${id}_${n}`,
+      category,
       name: `${rule.tags[0]} ${base}`,
       kind: rule.kind,
       tags: [...rule.tags, 'kenney', pack],
@@ -88,11 +90,13 @@ async function main(): Promise<void> {
   }
 
   const result = await ingest(entries, { outDir: OUT, prune: true });
+  const tree = await writeBrowseTree(result.index, OUT);
+  const sheets = await buildCategorySheets(result.index.assets, OUT, OUT);
   const added = result.records.reduce((sum, r) => sum + r.bytes, 0);
   console.log(
     `${pack}: ${entries.length} files → ${result.written} new, ${result.skipped} already present · ` +
       `${(added / 1024).toFixed(1)} KB this batch · catalogue now ${result.index.assets.length} assets / ` +
-      `${(result.totalBytes / 1024).toFixed(1)} KB`,
+      `${(result.totalBytes / 1024).toFixed(1)} KB · tree ${tree.dirs} dirs/${tree.files} links · ${sheets.length} sheets`,
   );
 }
 

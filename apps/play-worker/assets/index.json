@@ -16,6 +16,7 @@
       "width": 96,
       "height": 48,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -46,6 +47,7 @@
       "width": 256,
       "height": 88,
       "pixelArt": false,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -76,6 +78,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": false,
+      "category": "ui/icons",
       "runtime": [
         "micro",
         "phaser4",
@@ -107,6 +110,7 @@
       "width": 128,
       "height": 128,
       "pixelArt": false,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -137,6 +141,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/icons",
       "runtime": [
         "micro",
         "phaser4",
@@ -168,6 +173,7 @@
       "width": 128,
       "height": 128,
       "pixelArt": false,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -198,6 +204,7 @@
       "width": 320,
       "height": 96,
       "pixelArt": false,
+      "category": "ui/panels",
       "runtime": [
         "micro",
         "phaser4",
@@ -229,6 +236,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -261,6 +269,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -293,6 +302,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -325,6 +335,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -357,6 +368,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -389,6 +401,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -421,6 +434,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -453,6 +467,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -485,6 +500,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -517,6 +533,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -549,6 +566,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -581,6 +599,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -613,6 +632,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -645,6 +665,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -677,6 +698,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -709,6 +731,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -743,6 +766,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -777,6 +801,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -811,6 +836,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -845,6 +871,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -879,6 +906,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -913,6 +941,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -947,6 +976,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -981,6 +1011,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1015,6 +1046,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1049,6 +1081,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1083,6 +1116,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1117,6 +1151,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1151,6 +1186,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1185,6 +1221,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1219,6 +1256,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1253,6 +1291,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1287,6 +1326,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1321,6 +1361,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1355,6 +1396,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1389,6 +1431,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1423,6 +1466,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1457,6 +1501,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1491,6 +1536,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1525,6 +1571,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1559,6 +1606,7 @@
       "width": 199,
       "height": 74,
       "pixelArt": false,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1593,6 +1641,7 @@
       "width": 192,
       "height": 72,
       "pixelArt": false,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -1628,6 +1677,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -1663,6 +1713,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -1698,6 +1749,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -1733,6 +1785,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -1768,6 +1821,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -1803,6 +1857,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -1838,6 +1893,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -1873,6 +1929,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -1908,6 +1965,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -1943,6 +2001,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -1978,6 +2037,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2013,6 +2073,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2048,6 +2109,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2083,6 +2145,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2118,6 +2181,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2153,6 +2217,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2188,6 +2253,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2223,6 +2289,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2258,6 +2325,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2293,6 +2361,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2328,6 +2397,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2363,6 +2433,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2398,6 +2469,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2433,6 +2505,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2468,6 +2541,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2503,6 +2577,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2538,6 +2613,7 @@
       "width": 24,
       "height": 24,
       "pixelArt": true,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2573,6 +2649,7 @@
       "width": 224,
       "height": 74,
       "pixelArt": false,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2608,6 +2685,7 @@
       "width": 216,
       "height": 72,
       "pixelArt": false,
+      "category": "2d/characters",
       "runtime": [
         "micro",
         "phaser4",
@@ -2640,6 +2718,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -2672,6 +2751,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -2704,6 +2784,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -2736,6 +2817,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -2768,6 +2850,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -2800,6 +2883,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -2832,6 +2916,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -2864,6 +2949,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -2896,6 +2982,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -2928,6 +3015,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -2960,6 +3048,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -2992,6 +3081,7 @@
       "width": 32,
       "height": 32,
       "pixelArt": true,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -3024,6 +3114,7 @@
       "width": 512,
       "height": 512,
       "pixelArt": false,
+      "category": "2d/objects",
       "runtime": [
         "micro",
         "phaser4",
@@ -3056,6 +3147,7 @@
       "file": "e37ffcbb07467909.glb",
       "bytes": 15956,
       "pixelArt": false,
+      "category": "3d/props",
       "runtime": [
         "babylon"
       ],
@@ -3085,6 +3177,7 @@
       "file": "b08d4e8863532f28.glb",
       "bytes": 15972,
       "pixelArt": false,
+      "category": "3d/props",
       "runtime": [
         "babylon"
       ],
@@ -3114,6 +3207,7 @@
       "file": "9fbf9a309fed2063.glb",
       "bytes": 5140,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3143,6 +3237,7 @@
       "file": "ef15989c3d5c7392.glb",
       "bytes": 16832,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3172,6 +3267,7 @@
       "file": "c85521e13dcf55ba.glb",
       "bytes": 14344,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3201,6 +3297,7 @@
       "file": "9e85a7701066df75.glb",
       "bytes": 2664,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3230,6 +3327,7 @@
       "file": "2702a769c258d3ce.glb",
       "bytes": 5124,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3259,6 +3357,7 @@
       "file": "eb324dc26cba18de.glb",
       "bytes": 15568,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3288,6 +3387,7 @@
       "file": "46937dab90f4e147.glb",
       "bytes": 27264,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3317,6 +3417,7 @@
       "file": "613fe82e80dcc630.glb",
       "bytes": 18124,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3346,6 +3447,7 @@
       "file": "afdc6cfaeee2af0e.glb",
       "bytes": 4096,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3375,6 +3477,7 @@
       "file": "ea92ccd429dd940c.glb",
       "bytes": 10824,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3404,6 +3507,7 @@
       "file": "5581b5e4054d9844.glb",
       "bytes": 10824,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3433,6 +3537,7 @@
       "file": "18f99ef86a3703cc.glb",
       "bytes": 7280,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3462,6 +3567,7 @@
       "file": "3975b1b858f7632c.glb",
       "bytes": 32448,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3491,6 +3597,7 @@
       "file": "93a667533de98008.glb",
       "bytes": 20000,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3520,6 +3627,7 @@
       "file": "25dd53124dd1805a.glb",
       "bytes": 5248,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3549,6 +3657,7 @@
       "file": "fdee44be5069104f.glb",
       "bytes": 11068,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3578,6 +3687,7 @@
       "file": "931e03deb7539b59.glb",
       "bytes": 11692,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3607,6 +3717,7 @@
       "file": "45755bb1778af0e7.glb",
       "bytes": 12048,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3636,6 +3747,7 @@
       "file": "3c1f032f5c366f7a.glb",
       "bytes": 6952,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3665,6 +3777,7 @@
       "file": "d36d7a0eb8397b3e.glb",
       "bytes": 12436,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3694,6 +3807,7 @@
       "file": "e86f6169f36ef852.glb",
       "bytes": 18780,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3723,6 +3837,7 @@
       "file": "f0057024cd44af7a.glb",
       "bytes": 20652,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3752,6 +3867,7 @@
       "file": "a88781746485cd9c.glb",
       "bytes": 15932,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3781,6 +3897,7 @@
       "file": "8532387d6061a68e.glb",
       "bytes": 18004,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3810,6 +3927,7 @@
       "file": "221c4290ae68408f.glb",
       "bytes": 2940,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3839,6 +3957,7 @@
       "file": "945e2f6052099336.glb",
       "bytes": 8300,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3868,6 +3987,7 @@
       "file": "60bbc8dd385a493d.glb",
       "bytes": 4716,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3897,6 +4017,7 @@
       "file": "a4207827898e393a.glb",
       "bytes": 8344,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3926,6 +4047,7 @@
       "file": "89a6f35780c57da3.glb",
       "bytes": 8116,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3955,6 +4077,7 @@
       "file": "ca83e1d7b9fd3ccb.glb",
       "bytes": 36420,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -3984,6 +4107,7 @@
       "file": "70feaa3b92ecade5.glb",
       "bytes": 21872,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4013,6 +4137,7 @@
       "file": "9128031e00de4a70.glb",
       "bytes": 19784,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4042,6 +4167,7 @@
       "file": "ecfeea6fd9e6e3c4.glb",
       "bytes": 26024,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4071,6 +4197,7 @@
       "file": "0678ee0347c3553a.glb",
       "bytes": 18168,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4100,6 +4227,7 @@
       "file": "fce9b61f00a92cce.glb",
       "bytes": 7996,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4129,6 +4257,7 @@
       "file": "0e35de46b50067ee.glb",
       "bytes": 7956,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4158,6 +4287,7 @@
       "file": "66fd49be148f32e8.glb",
       "bytes": 7529,
       "pixelArt": false,
+      "category": "3d/props",
       "runtime": [
         "babylon"
       ],
@@ -4187,6 +4317,7 @@
       "file": "d9bc817e776e34fc.glb",
       "bytes": 16968,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4216,6 +4347,7 @@
       "file": "23cf274b464fa686.glb",
       "bytes": 7284,
       "pixelArt": false,
+      "category": "3d/props",
       "runtime": [
         "babylon"
       ],
@@ -4245,6 +4377,7 @@
       "file": "263fc3c7bedcfcd2.glb",
       "bytes": 15192,
       "pixelArt": false,
+      "category": "3d/props",
       "runtime": [
         "babylon"
       ],
@@ -4274,6 +4407,7 @@
       "file": "e6a4433f5770b9fc.glb",
       "bytes": 6660,
       "pixelArt": false,
+      "category": "3d/props",
       "runtime": [
         "babylon"
       ],
@@ -4303,6 +4437,7 @@
       "file": "9561b6afd1d55119.glb",
       "bytes": 6664,
       "pixelArt": false,
+      "category": "3d/props",
       "runtime": [
         "babylon"
       ],
@@ -4332,6 +4467,7 @@
       "file": "741368448bd21991.glb",
       "bytes": 13652,
       "pixelArt": false,
+      "category": "3d/props",
       "runtime": [
         "babylon"
       ],
@@ -4361,6 +4497,7 @@
       "file": "74e94f48dffb40ac.glb",
       "bytes": 25460,
       "pixelArt": false,
+      "category": "3d/props",
       "runtime": [
         "babylon"
       ],
@@ -4390,6 +4527,7 @@
       "file": "ea4cb3ff2999afc8.glb",
       "bytes": 6240,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4419,6 +4557,7 @@
       "file": "937335f237c65a01.glb",
       "bytes": 10656,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4448,6 +4587,7 @@
       "file": "b6031010c49ce6fc.glb",
       "bytes": 10668,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4477,6 +4617,7 @@
       "file": "fdc3d5b07f619dca.glb",
       "bytes": 13880,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4506,6 +4647,7 @@
       "file": "470e9637694bba58.glb",
       "bytes": 1788,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4535,6 +4677,7 @@
       "file": "2593ba3265f3ecdf.glb",
       "bytes": 12732,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4564,6 +4707,7 @@
       "file": "7d41f469c9ed3000.glb",
       "bytes": 23240,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4593,6 +4737,7 @@
       "file": "7ea1ee769eb063b1.glb",
       "bytes": 16204,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4622,6 +4767,7 @@
       "file": "d860d3a053e1fc7b.glb",
       "bytes": 15192,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4651,6 +4797,7 @@
       "file": "8b2317b6820dd978.glb",
       "bytes": 64608,
       "pixelArt": false,
+      "category": "3d/weapons",
       "runtime": [
         "babylon"
       ],
@@ -4680,6 +4827,7 @@
       "file": "a19ed023a15af7e1.glb",
       "bytes": 54576,
       "pixelArt": false,
+      "category": "3d/weapons",
       "runtime": [
         "babylon"
       ],
@@ -4709,6 +4857,7 @@
       "file": "35a7484ff7463022.glb",
       "bytes": 86164,
       "pixelArt": false,
+      "category": "3d/weapons",
       "runtime": [
         "babylon"
       ],
@@ -4738,6 +4887,7 @@
       "file": "e0663eb42a97c5d9.glb",
       "bytes": 71252,
       "pixelArt": false,
+      "category": "3d/weapons",
       "runtime": [
         "babylon"
       ],
@@ -4767,6 +4917,7 @@
       "file": "6473c77747b1d0a2.glb",
       "bytes": 103620,
       "pixelArt": false,
+      "category": "3d/weapons",
       "runtime": [
         "babylon"
       ],
@@ -4796,6 +4947,7 @@
       "file": "f895ff0152fb004c.glb",
       "bytes": 68036,
       "pixelArt": false,
+      "category": "3d/weapons",
       "runtime": [
         "babylon"
       ],
@@ -4825,6 +4977,7 @@
       "file": "81909d6c33b181a9.glb",
       "bytes": 144200,
       "pixelArt": false,
+      "category": "3d/weapons",
       "runtime": [
         "babylon"
       ],
@@ -4854,6 +5007,7 @@
       "file": "6504a432e6e72a51.glb",
       "bytes": 119700,
       "pixelArt": false,
+      "category": "3d/weapons",
       "runtime": [
         "babylon"
       ],
@@ -4883,6 +5037,7 @@
       "file": "123711fd475e35d0.glb",
       "bytes": 139848,
       "pixelArt": false,
+      "category": "3d/weapons",
       "runtime": [
         "babylon"
       ],
@@ -4912,6 +5067,7 @@
       "file": "6706dee3ec118323.glb",
       "bytes": 66012,
       "pixelArt": false,
+      "category": "3d/weapons",
       "runtime": [
         "babylon"
       ],
@@ -4941,6 +5097,7 @@
       "file": "ec21b1d65c04ba63.glb",
       "bytes": 9836,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4970,6 +5127,7 @@
       "file": "22b52789ae3b0b20.glb",
       "bytes": 9556,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -4999,6 +5157,7 @@
       "file": "575e6463b9bc58b8.glb",
       "bytes": 41724,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5028,6 +5187,7 @@
       "file": "1185110eb885e706.glb",
       "bytes": 8336,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5057,6 +5217,7 @@
       "file": "131045c750296bc8.glb",
       "bytes": 33568,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5086,6 +5247,7 @@
       "file": "6bd3fb7fd8069419.glb",
       "bytes": 8400,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5115,6 +5277,7 @@
       "file": "c2c0c2fe60bac1b0.glb",
       "bytes": 12540,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5144,6 +5307,7 @@
       "file": "22a043cde795ebc6.glb",
       "bytes": 13848,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5173,6 +5337,7 @@
       "file": "66c7697375b61acd.glb",
       "bytes": 13852,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5202,6 +5367,7 @@
       "file": "f2dd82eca828d2b4.glb",
       "bytes": 47488,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5231,6 +5397,7 @@
       "file": "ae2e4f11247fef4e.glb",
       "bytes": 16564,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5260,6 +5427,7 @@
       "file": "90ccb41a792ea3c5.glb",
       "bytes": 29724,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5289,6 +5457,7 @@
       "file": "996887e98957eeea.glb",
       "bytes": 4456,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5318,6 +5487,7 @@
       "file": "7c48a3a8f8af838c.glb",
       "bytes": 3684,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5347,6 +5517,7 @@
       "file": "0d9b180fba2229bf.glb",
       "bytes": 6908,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5376,6 +5547,7 @@
       "file": "34a43b162b0984df.glb",
       "bytes": 7744,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5405,6 +5577,7 @@
       "file": "a12235eb6e86d1e1.glb",
       "bytes": 5380,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5434,6 +5607,7 @@
       "file": "1a7d065cb548b73a.glb",
       "bytes": 28996,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5463,6 +5637,7 @@
       "file": "dd5d242d41654cf4.glb",
       "bytes": 23568,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5492,6 +5667,7 @@
       "file": "aa95f69fd90b20c2.glb",
       "bytes": 19752,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5521,6 +5697,7 @@
       "file": "68c186f978135ba7.glb",
       "bytes": 30852,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5550,6 +5727,7 @@
       "file": "94215209b27f5274.glb",
       "bytes": 14036,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5579,6 +5757,7 @@
       "file": "5e98cdf2bf4d885e.glb",
       "bytes": 13276,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5608,6 +5787,7 @@
       "file": "56b5677ad749ab11.glb",
       "bytes": 14088,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5637,6 +5817,7 @@
       "file": "5516fb45c3158e03.glb",
       "bytes": 11256,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5666,6 +5847,7 @@
       "file": "b9345255366bc887.glb",
       "bytes": 11288,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5695,6 +5877,7 @@
       "file": "8e673350705e369a.glb",
       "bytes": 22788,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5724,6 +5907,7 @@
       "file": "2127ee2431efa89c.glb",
       "bytes": 11296,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5753,6 +5937,7 @@
       "file": "222537f0daa91677.glb",
       "bytes": 27408,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5782,6 +5967,7 @@
       "file": "a72a7c237857a9fb.glb",
       "bytes": 21248,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5811,6 +5997,7 @@
       "file": "50b4d452ee818afa.glb",
       "bytes": 7952,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5840,6 +6027,7 @@
       "file": "ad5b2d7225241eb0.glb",
       "bytes": 15816,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5869,6 +6057,7 @@
       "file": "f07a2ed87d6a636a.glb",
       "bytes": 5684,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5898,6 +6087,7 @@
       "file": "82d27b869162b6a9.glb",
       "bytes": 15264,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5927,6 +6117,7 @@
       "file": "2a64baa9c8adf458.glb",
       "bytes": 12976,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5956,6 +6147,7 @@
       "file": "95a7e63c7716d31a.glb",
       "bytes": 80020,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -5985,6 +6177,7 @@
       "file": "fd687db9c9fe6e3e.glb",
       "bytes": 16028,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -6014,6 +6207,7 @@
       "file": "8daf5cccceace888.glb",
       "bytes": 37560,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -6043,6 +6237,7 @@
       "file": "4f0baca90eb52d96.glb",
       "bytes": 12132,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -6072,6 +6267,7 @@
       "file": "2241397b813c0698.glb",
       "bytes": 8016,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -6101,6 +6297,7 @@
       "file": "3e0a2fb0c7d6b4d8.glb",
       "bytes": 9384,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -6130,6 +6327,7 @@
       "file": "f01e3005f2cfe745.glb",
       "bytes": 17092,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -6159,6 +6357,7 @@
       "file": "d1791d278f01ad43.glb",
       "bytes": 40896,
       "pixelArt": false,
+      "category": "3d/environments",
       "runtime": [
         "babylon"
       ],
@@ -6191,6 +6390,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6226,6 +6426,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6261,6 +6462,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6296,6 +6498,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6331,6 +6534,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6366,6 +6570,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6401,6 +6606,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6436,6 +6642,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6471,6 +6678,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6506,6 +6714,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6541,6 +6750,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6576,6 +6786,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6611,6 +6822,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6646,6 +6858,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6681,6 +6894,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6716,6 +6930,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6751,6 +6966,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6786,6 +7002,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6821,6 +7038,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6856,6 +7074,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6891,6 +7110,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6926,6 +7146,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6961,6 +7182,7 @@
       "width": 18,
       "height": 18,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -6996,6 +7218,7 @@
       "width": 379,
       "height": 170,
       "pixelArt": false,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -7031,6 +7254,7 @@
       "width": 360,
       "height": 162,
       "pixelArt": false,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -7065,6 +7289,7 @@
       "width": 192,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7099,6 +7324,7 @@
       "width": 192,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7133,6 +7359,7 @@
       "width": 192,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7167,6 +7394,7 @@
       "width": 192,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7201,6 +7429,7 @@
       "width": 192,
       "height": 64,
       "pixelArt": false,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7235,6 +7464,7 @@
       "width": 192,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7269,6 +7499,7 @@
       "width": 192,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7303,6 +7534,7 @@
       "width": 192,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7337,6 +7569,7 @@
       "width": 192,
       "height": 64,
       "pixelArt": false,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7371,6 +7604,7 @@
       "width": 192,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7405,6 +7639,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": false,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7439,6 +7674,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": false,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7473,6 +7709,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": false,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7507,6 +7744,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": false,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7541,6 +7779,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": false,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7575,6 +7814,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": false,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7609,6 +7849,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7643,6 +7884,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7677,6 +7919,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": false,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7711,6 +7954,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7745,6 +7989,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7779,6 +8024,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7813,6 +8059,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7847,6 +8094,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7881,6 +8129,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7915,6 +8164,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7949,6 +8199,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -7983,6 +8234,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -8017,6 +8269,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -8051,6 +8304,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -8085,6 +8339,7 @@
       "width": 20,
       "height": 18,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -8119,6 +8374,7 @@
       "width": 16,
       "height": 16,
       "pixelArt": true,
+      "category": "ui/buttons",
       "runtime": [
         "micro",
         "phaser4",
@@ -8151,6 +8407,7 @@
       "width": 541,
       "height": 1170,
       "pixelArt": false,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -8181,6 +8438,7 @@
       "width": 128,
       "height": 48,
       "pixelArt": true,
+      "category": "2d/tilesets",
       "runtime": [
         "micro",
         "phaser4",
@@ -8209,6 +8467,7 @@
       "file": "9271b5389cf449ed.ogg",
       "bytes": 1075,
       "pixelArt": false,
+      "category": "audio/sfx",
       "runtime": [
         "micro",
         "phaser4",
@@ -8237,6 +8496,7 @@
       "file": "eab5c7712d79e8c1.ogg",
       "bytes": 1947,
       "pixelArt": false,
+      "category": "audio/sfx",
       "runtime": [
         "micro",
         "phaser4",
@@ -8265,6 +8525,7 @@
       "file": "b059b1c412b227ad.ogg",
       "bytes": 2823,
       "pixelArt": false,
+      "category": "audio/sfx",
       "runtime": [
         "micro",
         "phaser4",
@@ -8293,6 +8554,7 @@
       "file": "ed8ad517c339ce48.ogg",
       "bytes": 1360,
       "pixelArt": false,
+      "category": "audio/sfx",
       "runtime": [
         "micro",
         "phaser4",
@@ -8321,6 +8583,7 @@
       "file": "cfe24e1836a9daa3.ogg",
       "bytes": 1644,
       "pixelArt": false,
+      "category": "audio/sfx",
       "runtime": [
         "micro",
         "phaser4",
@@ -8349,6 +8612,7 @@
       "file": "14072c1a4d41dd1f.ogg",
       "bytes": 2996,
       "pixelArt": false,
+      "category": "audio/sfx",
       "runtime": [
         "micro",
         "phaser4",
@@ -8379,6 +8643,7 @@
       "width": 541,
       "height": 1170,
       "pixelArt": false,
+      "category": "2d/environments",
       "runtime": [
         "micro",
         "phaser4",
@@ -8409,6 +8674,7 @@
       "width": 128,
       "height": 64,
       "pixelArt": false,
+      "category": "2d/enemies",
       "runtime": [
         "micro",
         "phaser4",
@@ -8439,6 +8705,7 @@
       "width": 64,
       "height": 64,
       "pixelArt": false,
+      "category": "ui/icons",
       "runtime": [
         "micro",
         "phaser4",
