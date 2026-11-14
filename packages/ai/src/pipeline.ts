@@ -337,6 +337,37 @@ export async function runGenerationPipeline(
     }
   }
 
+  // A build that still does not boot after every repair is not shippable. The
+  // feed would show a dead card and the player would blame the app, so fail
+  // loudly and let the studio offer Retry.
+  if (smoke !== null && !smoke.pass) {
+    const why = [
+      ...smoke.uncaught.slice(0, 2),
+      smoke.blankScreen ? 'the first frame renders blank' : '',
+      !smoke.interactive ? 'the game does not react to taps' : '',
+    ].filter(Boolean).join('; ');
+    const err = new Error(`The game does not run after ${repairsCount} repair(s): ${why || 'runtime gate failed'}`);
+    reportProgress({ stage: 'failed', message: err.message, progressPercent: 100, error: err.message });
+    throw err;
+  }
+
+  // Re-stamp the runtime last.
+  //
+  // Every repair rewrites the whole document, and a QA repair that drops the
+  // manifest's runtime block leaves an artifact that never loads its engine — a
+  // served page with no Phaser and no Babylon, which looks like a blank game.
+  // Stamping after the final repair is the only ordering that survives them.
+  code = stampRuntime(code, {
+    runtime: runtime.id,
+    ...(runtime.id === 'micro' ? {} : { runtimeVersion: RUNTIMES[runtime.id].version }),
+  });
+  validateReport = validateGame(code);
+  if (validateReport.errors.length > 0) {
+    const err = new Error(`Artifact became invalid after the final repair: ${validateReport.errors.join('; ')}`);
+    reportProgress({ stage: 'failed', message: err.message, progressPercent: 100, error: err.message });
+    throw err;
+  }
+
   // Stage 7: metadata
   reportProgress({ stage: 'metadata', message: 'Naming the game and extracting tags...', progressPercent: 92 });
   const metadata = await extractOrGenerateMetadata(code, spec, provider);

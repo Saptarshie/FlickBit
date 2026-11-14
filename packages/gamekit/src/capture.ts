@@ -14,7 +14,7 @@
 import { createServer, type Server } from 'node:http';
 import { chromium } from 'playwright';
 import { injectShim } from './inject';
-import { injectRuntime, readRuntimeFile, sendBytes } from './runtime-inject';
+import { assetContentType, injectRuntime, readAssetFile, readRuntimeFile, sendBytes } from './runtime-inject';
 import { SHIM_SOURCE } from '@playloop/sdk';
 
 const VIEWPORT = { width: 390, height: 844 } as const;
@@ -68,6 +68,14 @@ function serve(html: string, playOrigin: string): Promise<{ server: Server; port
       const local = readRuntimeFile(req.url.slice(3));
       if (local) {
         sendBytes(res, 'text/javascript; charset=utf-8', local);
+        return;
+      }
+    }
+    if (req.url && req.url.startsWith('/a/')) {
+      const file = req.url.slice(3);
+      const local = readAssetFile(file);
+      if (local) {
+        sendBytes(res, assetContentType(file), local);
         return;
       }
     }
@@ -125,7 +133,7 @@ export async function captureFrames(
 
   const shot = async (): Promise<string | null> => {
     try {
-      const png = await page.locator('#f').screenshot({ type: 'png' });
+      const png = await page.locator('#f').screenshot({ type: 'png', timeout: 20_000, animations: 'disabled' });
       if (png.byteLength > MAX_SHOT_BYTES) {
         notes.push(`shot dropped: ${Math.round(png.byteLength / 1024)} KB`);
         return null;

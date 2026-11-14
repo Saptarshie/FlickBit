@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import ts from 'typescript';
 import { SHIM_SOURCE } from '../../sdk/src/shim-source';
 import { injectShim } from './inject';
-import { injectRuntime, readRuntimeFile, sendBytes } from './runtime-inject';
+import { injectRuntime, readAssetFile, readRuntimeFile, sendBytes, assetContentType } from './runtime-inject';
 
 export type SmokeReport = {
   pass: boolean;
@@ -278,6 +278,17 @@ export async function runSmokeTest(html: string, opts: SmokeOptions = {}): Promi
   const sdk = transpileSdk();
 
   const server = createServer((req, res) => {
+    // Catalogue bytes from disk, same reason as engines: the gate is the only
+    // server in the room, and a 404 here means "the game is broken" to every
+    // assertion downstream.
+    if (req.url && req.url.startsWith('/a/')) {
+      const file = req.url.slice(3);
+      const bytes = readAssetFile(file);
+      if (bytes) {
+        sendBytes(res, assetContentType(file), bytes);
+        return;
+      }
+    }
     // Engine bytes from disk: the artifact references /r/<file> and the harness
     // is the only server in the room.
     if (req.url && req.url.startsWith('/r/')) {

@@ -25,6 +25,8 @@ import { Vector3, Vector2, Matrix, Quaternion } from '@babylonjs/core/Maths/math
 import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
+import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
+import { Tools } from '@babylonjs/core/Misc/tools';
 import { Scalar } from '@babylonjs/core/Maths/math.scalar';
 import { Space } from '@babylonjs/core/Maths/math.axis';
 
@@ -59,6 +61,8 @@ const BABYLON = {
   Color4,
   StandardMaterial,
   Texture,
+  DynamicTexture,
+  Tools,
   Scalar,
   Space,
 };

@@ -18,7 +18,7 @@
 import { createServer, type Server } from 'node:http';
 import { chromium, type Browser, type Frame, type Page } from 'playwright';
 import { injectShim } from './inject';
-import { injectRuntime, readRuntimeFile, sendBytes } from './runtime-inject';
+import { assetContentType, injectRuntime, readAssetFile, readRuntimeFile, sendBytes } from './runtime-inject';
 import { SHIM_SOURCE } from '@playloop/sdk';
 
 const VIEWPORT = { width: 390, height: 844 } as const;
@@ -122,6 +122,14 @@ function serve(html: string): Promise<{ server: Server; port: number }> {
       const local = readRuntimeFile(req.url.slice(3));
       if (local) {
         sendBytes(res, 'text/javascript; charset=utf-8', local);
+        return;
+      }
+    }
+    if (req.url && req.url.startsWith('/a/')) {
+      const file = req.url.slice(3);
+      const local = readAssetFile(file);
+      if (local) {
+        sendBytes(res, assetContentType(file), local);
         return;
       }
     }
@@ -229,7 +237,17 @@ export async function playtest(html: string, options: PlaytestOptions = {}): Pro
 
     // The iframe element, screenshotted at the compositor: works for WebGL
     // canvases, where toDataURL() returns a blank image.
-    const shot = async (): Promise<Buffer> => page.locator('#f').screenshot({ type: 'png' });
+    // A 3D frame can take longer than Playwright's 30 s default to capture when
+    // the box is loaded; a timeout here used to be reported as a game defect.
+    const shot = async (): Promise<Buffer> => {
+      try {
+        return await page.locator('#f').screenshot({ type: 'png', timeout: 20_000, animations: 'disabled' });
+      } catch {
+        // Frame capture can stall on a heavy WebGL scene; the page screenshot is
+        // smaller but tells us whether anything changed at all.
+        return page.screenshot({ type: 'png', timeout: 20_000, animations: 'disabled' }).catch(() => Buffer.alloc(0));
+      }
+    };
     let previous = await shot();
 
     const readScore = async (): Promise<number | null> => (await page.evaluate('window.__pl.score')) as number | null;

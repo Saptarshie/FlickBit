@@ -121,7 +121,7 @@ rail/✕/Esc release it.
 | Feed API | 27–40 ms (production, 16 games) | curl |
 | `/` first byte | 6–18 ms (production) | curl |
 | Boot animation | appears 300 ms, leaves 1.34 s, once per session | Playwright |
-| Test suite | 310 tests, ~9 min serial | `pnpm test` |
+| Test suite | 312 tests, ~9 min serial | `pnpm test` |
 | Generation | 5–12 min per game (LLM-bound) | E2E runs |
 
 ## 7. Decision log
@@ -144,6 +144,8 @@ rail/✕/Esc release it.
 | D14 | Babylon ships as a **curated esbuild bundle**, not the UMD build | shipping `babylon.max.js` (8.7 MB) | every 3D byte is paid by every 3D game; the export list is a reviewed surface |
 | D15 | 3D games declare HUD in **DOM**, not in the scene | drawing HUD on a plane | a DOM element can use `PlayLoop.safeArea`; a 3D text plane cannot |
 | D16 | Audio is content-addressed Opus, never base64 in the artifact | inline base64 WAV | +33 % bytes, and no cache sharing between games |
+| D17 | The runtime is **re-stamped after the final repair** | stamping once, right after generation | a QA repair that rewrites the manifest could otherwise ship an artifact that loads no engine |
+| D18 | A build that still fails the smoke gate is **not published** | shipping it with a warning | the studio shows an error and Retry instead of the feed showing a dead card |
 
 ## 8. Findings (bugs the gates caught, in order of how much they taught)
 
@@ -158,7 +160,14 @@ rail/✕/Esc release it.
 5. **Most generated games never reported their score during play**, so the host
    HUD and the playtest could not see progress. Templates now report at 2 Hz and
    the coder prompt requires it.
-6. **`canvas.toDataURL()` is blank on WebGL canvases** — the old interactivity
+6. **A QA repair could strip the stamped runtime.** The artifact then loads no
+   engine and paints nothing; the manifest said `babylon` while the page had no
+   `BABYLON`. Stamping is now the last write before metadata, and a build that
+   fails the smoke gate after all repairs throws instead of publishing.
+7. **The coder prompt forbade the thing we were asking for**: "no external images,
+   use Canvas 2D" sat above the asset catalogue. Fixed — `/a/` is the one allowed
+   network reference, and the rendering instruction defers to the RUNTIME block.
+8. **`canvas.toDataURL()` is blank on WebGL canvases** — the old interactivity
    check was a false pass for every engine game. Capture and playtest now use
    compositor screenshots.
 7. **The playtest harness 404'd the engine** when replaying a worker-served
@@ -236,6 +245,24 @@ per module (`@babylonjs/core/Engines/engine`, `.../scene`, ...), tree-shakes to
 over Phaser and buys a second dimension. A real Babylon ablation still needs a
 template + published runtime + the same game-driven benchmark; that is the next
 step, not something this table settles.
+
+## 9b. Verified end to end (2026-11-14)
+
+A real prompt — "a 3D low-poly runner: a glowing cube sprints down a neon highway,
+tap to jump the blocks, collect coins" — through the whole pipeline:
+
+| step | result |
+|---|---|
+| planner | `babylon` 9.36.0, reason: genuinely three-dimensional chase camera |
+| generation | 783 s, 1 repair (smoke gate caught a bad first build) |
+| smoke | pass |
+| playtest | 12/12 taps changed the world, score 0 → 75, no errors |
+| visual | coherent neon runner: road, dashed centre line, player cube, distance HUD, coin counter |
+| manifest | `runtime:"babylon"`, `assets:[coin, sfx_coin, sfx_jump, sfx_explode, sfx_click]` |
+| served | `/r/babylon@9.36.0-99b6faf96fee42ba.js` injected, `/a/df22c812ddd664fa.webp` drawn |
+
+That single game exercises every layer added in this pass: engine choice, engine
+pinning, sprite catalogue, sound catalogue, the four gates and the serve path.
 
 ## 10. Known gaps
 

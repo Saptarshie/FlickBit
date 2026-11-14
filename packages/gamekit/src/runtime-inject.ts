@@ -70,6 +70,41 @@ export function readRuntimeFile(file: string, runtimesDir?: string): Buffer | nu
   }
 }
 
+/** Locate `apps/play-worker/assets` the same way engines are located. */
+export function defaultAssetsDir(): string {
+  let dir = process.cwd();
+  for (let i = 0; i < 6; i += 1) {
+    const candidate = path.join(dir, 'apps', 'play-worker', 'assets');
+    if (existsSync(candidate)) return candidate;
+    const parent = path.resolve(dir, '..');
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return path.join(process.cwd(), 'apps', 'play-worker', 'assets');
+}
+
+const ASSET_FILE_RE = /^[0-9a-f]{16}\.(webp|png|ogg|mp3)$/;
+
+/** Asset bytes for a `/a/:file` request, straight from disk. */
+export function readAssetFile(file: string, assetsDir?: string): Buffer | null {
+  if (ASSET_FILE_RE.exec(file) === null) return null;
+  const dir = assetsDir ?? defaultAssetsDir();
+  const full = path.join(dir, file);
+  if (!existsSync(full)) return null;
+  try {
+    return readFileSync(full) as unknown as Buffer;
+  } catch {
+    return null;
+  }
+}
+
+export function assetContentType(file: string): string {
+  if (file.endsWith('.webp')) return 'image/webp';
+  if (file.endsWith('.png')) return 'image/png';
+  if (file.endsWith('.mp3')) return 'audio/mpeg';
+  return 'audio/ogg';
+}
+
 /**
  * Write raw bytes to an http response.
  *

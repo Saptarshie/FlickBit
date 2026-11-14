@@ -4,7 +4,7 @@ import { chromium, type Browser, type Frame, type Page } from 'playwright';
 // imported by relative path exactly like the runtime gate does.
 import { SHIM_SOURCE } from '../../sdk/src/shim-source';
 import { injectShim } from './inject';
-import { injectRuntime, readRuntimeFile, sendBytes } from './runtime-inject';
+import { injectRuntime, readAssetFile, readRuntimeFile, sendBytes, assetContentType } from './runtime-inject';
 
 /**
  * Does an artifact react to the input envelope the host actually sends?
@@ -32,6 +32,17 @@ const VIEWPORT = { width: 390, height: 844 };
 async function serve(html: string) {
   const source = injectShim(injectRuntime(html).html, SHIM_SOURCE);
   const server = createServer((req, res) => {
+    // Catalogue bytes from disk, same reason as engines: the gate is the only
+    // server in the room, and a 404 here means "the game is broken" to every
+    // assertion downstream.
+    if (req.url && req.url.startsWith('/a/')) {
+      const file = req.url.slice(3);
+      const bytes = readAssetFile(file);
+      if (bytes) {
+        sendBytes(res, assetContentType(file), bytes);
+        return;
+      }
+    }
     // Engine bytes from disk: the artifact references /r/<file> and the harness
     // is the only server in the room.
     if (req.url && req.url.startsWith('/r/')) {
