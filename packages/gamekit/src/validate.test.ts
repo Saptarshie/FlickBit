@@ -296,3 +296,21 @@ describe('syntaxErrorCheck — catch the parse error before the browser does', (
     expect(syntaxErrorCheck(html)).toEqual([]);
   });
 });
+
+describe('pl-manifest hint', () => {
+  it('keeps the hint, because it is what the first frame shows', () => {
+    const json = '{"title":"T","description":"D","controls":"mixed","orientation":"portrait","sdkVersion":1,"tags":["arcade"],"scoring":"higher","hint":"Swipe left/right to change lane, tap to jump"}';
+    expect(extractManifest(withManifest('var a = 1;', json))?.hint).toBe('Swipe left/right to change lane, tap to jump');
+  });
+
+  it('rejects a hint long enough to be a paragraph', () => {
+    const tooLong = 'x'.repeat(121);
+    const json = '{"title":"T","description":"D","controls":"tap","orientation":"portrait","sdkVersion":1,"tags":["arcade"],"scoring":"higher","hint":"' + tooLong + '"}';
+    expect(extractManifest(withManifest('var a = 1;', json))).toBeNull();
+  });
+
+  it('treats a blank hint as absent rather than failing the artifact', () => {
+    const json = '{"title":"T","description":"D","controls":"tap","orientation":"portrait","sdkVersion":1,"tags":["arcade"],"scoring":"higher","hint":"   "}';
+    expect(extractManifest(withManifest('var a = 1;', json))?.hint).toBeUndefined();
+  });
+});

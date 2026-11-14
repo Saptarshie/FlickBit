@@ -158,6 +158,8 @@ export async function fetchFeedPage(
       },
       artifactUrl,
       posterUrl,
+      ...(typeof manifest['controls'] === 'string' ? { controls: manifest['controls'] } : {}),
+      ...(typeof manifest['hint'] === 'string' ? { hint: manifest['hint'] } : {}),
       ...(typeof manifest['runtime'] === 'string' ? { runtime: manifest['runtime'] } : {}),
       ...(typeof manifest['runtimeVersion'] === 'string' ? { runtimeVersion: manifest['runtimeVersion'] } : {}),
       counts: {

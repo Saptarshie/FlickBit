@@ -76,7 +76,20 @@ Never call window.playloop, sendScore or sendGameOver — they do not exist. Gua
 "if (window.PlayLoop)" so the file also runs standalone.
 
 9. Embed the game manifest exactly as <script type="application/json" id="pl-manifest"> with STRICT schema:
-   {"title":"...","description":"...","controls":"tap|drag|swipe|tilt|keys","orientation":"portrait|landscape|any","sdkVersion":1,"tags":["..."],"scoring":"higher|lower|none"}
+   {"title":"...","description":"...","controls":"tap|drag|swipe|joystick|buttons|mixed|tilt|keys","orientation":"portrait|landscape|any","sdkVersion":1,"tags":["..."],"scoring":"higher|lower|none","hint":"..."}
+   hint is REQUIRED: one line, <=80 chars, saying what the input does (not what it
+   is). "Swipe left/right to change lane, tap to jump" — not "mixed". The first frame
+   shows it over the play area, so the player learns the controls without guessing.
+
+EVERY DECLARED INPUT MUST DO SOMETHING VISIBLE.
+- If the player can move left or right, a horizontal drag must move them left or
+  right. A runner on three lanes that only jumps is a demo, and the road makes that
+  obvious.
+- If controls says swipe/drag/joystick/buttons/mixed, the playtest sends a real
+  left-to-right drag and requires the picture to change. A declaration you do not
+  implement fails the build.
+- A gesture the game ignores is worse than a gesture it does not claim: the player
+  swipes, nothing happens, and they assume the card is broken.
 
 CONTROL SCHEMES — pick the one the brief deserves, then declare it in the manifest:
   tap      one finger anywhere. Good for one-button games, too thin for anything else.

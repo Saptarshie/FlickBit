@@ -1,5 +1,6 @@
 'use client';
 
+import { controlsLegend } from '../lib/controls-legend';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -555,6 +556,42 @@ export default function GameCardView({ card, live, isActive, onNext, onPrev }: P
         onWheel={onWheel}
         style={{ position: 'absolute', inset: 0, zIndex: 2, touchAction: 'none' }}
       />
+
+      {/* First-frame legend.
+          A card that only says "tap to play" leaves the player to discover that a
+          runner changes lane by swiping — and a swipe that the game ignores reads as
+          a broken card, not a missing control. The overlay is semi-transparent and
+          does not take pointer events, so the same tap that dismisses it is the tap
+          that starts the game. */}
+      {isActive && !engaged && !gameOver ? (
+        <div
+          aria-live="polite"
+          style={{
+            position: 'absolute',
+            left: 16,
+            right: 16,
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 116px)',
+            zIndex: 3,
+            pointerEvents: 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 8,
+            padding: '14px 18px',
+            borderRadius: 16,
+            background: 'rgba(10,10,14,0.62)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            textAlign: 'center',
+            transition: 'opacity 180ms ease',
+          }}
+        >
+          <div style={{ fontSize: 10, letterSpacing: 1.6, opacity: 0.55, fontWeight: 700 }}>HOW TO PLAY</div>
+          <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.35 }}>{card.hint ?? controlsLegend(card.controls)}</div>
+          <div style={{ fontSize: 11, opacity: 0.62 }}>Tap anywhere to start</div>
+        </div>
+      ) : null}
 
       {/* Play state chip: while browsing a game is loaded but paused, so it
           cannot burn a life before the viewer engages; in play mode it shows

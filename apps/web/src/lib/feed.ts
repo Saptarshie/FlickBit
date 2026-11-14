@@ -27,6 +27,9 @@ export type GameCard = {
   forkedFrom?: { id: string; title: string } | null;
   /** Primary tag, used by the client for ambient theming/analytics. */
   primaryTag?: string;
+  /** Declared input, so the first frame can explain itself. */
+  controls?: string;
+  hint?: string;
   /** Engine the game pins, so the feed can prefetch it before the card arrives. */
   runtime?: string;
   runtimeVersion?: string;

@@ -35,6 +35,14 @@ export type Manifest = {
    * /a/<file>; a manifest may name a file, never a URL.
    */
   assets?: Array<{ id: string; file: string }>;
+  /**
+   * One line the player needs, shown over the first frame before they touch
+   * anything — e.g. "Swipe left/right to change lane · tap to jump".
+   *
+   * `controls` names the input mechanism; this says what the input *does*. A card
+   * that only says "tap" leaves the player to discover the rest by stabbing at it.
+   */
+  hint?: string;
 };
 
 export type ValidationResult = {
@@ -232,6 +240,11 @@ function parseManifestRaw(raw: string): { manifest: Manifest | null; error: stri
   if (typeof rec['scoring'] !== 'string' || !SCORINGS.includes(rec['scoring'])) {
     problems.push('"scoring" must be one of higher|lower|none');
   }
+  // A blank hint is a hint the author did not get round to: treat it as absent
+  // rather than failing a game over whitespace.
+  const hint = typeof rec['hint'] === 'string' ? rec['hint'].trim() : '';
+  if (rec['hint'] !== undefined && typeof rec['hint'] !== 'string') problems.push('"hint" must be a string when present');
+  else if (hint.length > 120) problems.push('"hint" must be 120 characters or fewer');
   if (problems.length > 0) {
     return { manifest: null, error: `invalid pl-manifest: ${problems.join('; ')}` };
   }
@@ -244,6 +257,7 @@ function parseManifestRaw(raw: string): { manifest: Manifest | null; error: stri
       sdkVersion: 1,
       tags: tags as string[],
       scoring: rec['scoring'] as Scoring,
+      ...(hint.length > 0 ? { hint } : {}),
       ...(rec['runtime'] !== undefined ? { runtime: rec['runtime'] as string } : {}),
       ...(rec['runtimeVersion'] !== undefined ? { runtimeVersion: rec['runtimeVersion'] as string } : {}),
       ...(Array.isArray(rec['assets'])

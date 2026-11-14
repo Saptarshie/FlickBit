@@ -18,6 +18,7 @@
 import { createServer, type Server } from 'node:http';
 import { chromium, type Browser, type Frame, type Page } from 'playwright';
 import { injectShim } from './inject';
+import { extractManifest } from './validate';
 import { assetContentType, injectRuntime, readAssetFile, readRuntimeFile, sendBytes } from './runtime-inject';
 import { SHIM_SOURCE } from '@playloop/sdk';
 
@@ -45,6 +46,8 @@ export type PlaytestReport = {
   gameOverSeen: boolean;
   /** null when the game never ended, so restart could not be judged. */
   restartWorked: boolean | null;
+  /** Did a left-to-right drag change the picture? Null when it was not probed. */
+  swipeMoved?: boolean | null;
   errors: string[];
   defects: string[];
   /** Guest→host message types seen, in order — the first thing to look at on failure. */
@@ -100,6 +103,27 @@ const HARNESS = `<!doctype html><meta charset="utf-8">
     document.getElementById('f').contentWindow.postMessage(
       { v: 1, src: 'playloop', type: 'input', payload: { kind: 'tap', x: x, y: y, pointerId: 1 } }, '*');
   };
+
+  // Paced drag primitives. The host sends one envelope per pointer event, so a
+  // swipe is a sequence — posting down/move/up in one synchronous call proves
+  // nothing about whether the game responded *while* the finger moved, which is
+  // the only thing that distinguishes a swipe from a tap.
+  window.__dragBegin = function (x, y) {
+    document.getElementById('f').contentWindow.postMessage(
+      { v: 1, src: 'playloop', type: 'input',
+        payload: { kind: 'down', x: x, y: y, pointerId: 7, pointerType: 'touch' } }, '*');
+  };
+  window.__dragMove = function (x, y) {
+    document.getElementById('f').contentWindow.postMessage(
+      { v: 1, src: 'playloop', type: 'input',
+        payload: { kind: 'move', x: x, y: y, pointerId: 7, pointerType: 'touch' } }, '*');
+  };
+  window.__dragEnd = function (x, y) {
+    document.getElementById('f').contentWindow.postMessage(
+      { v: 1, src: 'playloop', type: 'input',
+        payload: { kind: 'up', x: x, y: y, pointerId: 7, pointerType: 'touch' } }, '*');
+  };
+
 </script>`;
 
 /**
@@ -188,6 +212,7 @@ export async function playtest(html: string, options: PlaytestOptions = {}): Pro
   const taps = options.taps ?? 20;
   const viewport = options.viewport ?? VIEWPORT;
   const scoring = options.scoring ?? 'higher';
+  const manifest = extractManifest(html);
   const { server, port } = await serve(html);
   // Software GL: a 3D game must be testable on a machine with no GPU, otherwise
     // the gate silently skips every Babylon artifact.
@@ -216,6 +241,7 @@ export async function playtest(html: string, options: PlaytestOptions = {}): Pro
   let scoreEnd: number | null = null;
   let gameOverSeen = false;
   let restartWorked: boolean | null = null;
+  let swipeMoved: boolean | null = null;
   let ready = false;
   let finalScore: number | null = null;
   let events: string[] = [];
@@ -252,6 +278,42 @@ export async function playtest(html: string, options: PlaytestOptions = {}): Pro
 
     const readScore = async (): Promise<number | null> => (await page.evaluate('window.__pl.score')) as number | null;
 
+    // 3b. Horizontal input.
+    //
+    // The tap loop above cannot tell a game that implements left/right from one that
+    // silently ignores it — every gesture in this gate was a tap, so swipe-only
+    // controls reached the feed untested. The drag is paced and sampled: the frame
+    // taken just after the down is the baseline, and any change *after* that while
+    // the finger is still moving is the game tracking the swipe.
+    // Fresh card: probe before the taps, because a runner can end its run mid-loop
+    // and a game-over screen swallows the gesture.
+    if (!gameOverSeen) {
+      const y = Math.round(viewport.height * 0.55);
+      const x1 = Math.round(viewport.width * 0.2);
+      const x2 = Math.round(viewport.width * 0.8);
+      await page.evaluate(`window.__dragBegin(${x1}, ${y})`).catch(() => undefined);
+      await page.waitForTimeout(120);
+      const afterDown = await shot();
+      const midDrag: Buffer[] = [];
+      for (let step = 1; step <= 4; step += 1) {
+        const x = Math.round(x1 + ((x2 - x1) * step) / 4);
+        await page.evaluate(`window.__dragMove(${x}, ${y})`).catch(() => undefined);
+        await page.waitForTimeout(110);
+        midDrag.push(await shot());
+      }
+      await page.evaluate(`window.__dragEnd(${x2}, ${y})`).catch(() => undefined);
+      await page.waitForTimeout(150);
+      swipeMoved = midDrag.some((frame) => !frame.equals(afterDown));
+
+      const declared = (manifest?.controls ?? 'tap').toLowerCase();
+      const wantsHorizontal = /swipe|drag|mixed|joystick|buttons/.test(declared);
+      if (wantsHorizontal && !swipeMoved) {
+        defects.push(
+          `controls declare "${declared}" but a left-to-right drag changed nothing — horizontal input is not wired`,
+        );
+      }
+    }
+
     // 2/3. tap across the play area and watch the picture and the score.
     for (let i = 0; i < taps; i += 1) {
       const x = Math.round(viewport.width * (0.25 + 0.5 * ((i % 4) / 3)));
@@ -274,6 +336,7 @@ export async function playtest(html: string, options: PlaytestOptions = {}): Pro
     finalScore = (await page.evaluate('window.__pl.finalScore')) as number | null;
 
     if (changes === 0) defects.push('the picture never changed after input — the game is frozen');
+
 
     // Progress is evidence, not a verdict (see `progress` above). Silence here
     // is reported in the result so a human can look, but it does not fail the
@@ -324,6 +387,7 @@ export async function playtest(html: string, options: PlaytestOptions = {}): Pro
       (scoreEnd ?? 0) !== (scoreStart ?? 0) || (finalScore ?? 0) > 0 || gameOverSeen,
     gameOverSeen,
     restartWorked,
+    swipeMoved,
     errors,
     httpErrors,
     defects,

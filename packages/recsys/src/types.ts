@@ -11,6 +11,10 @@ export type GameCard = {
   viewer: { liked: boolean; saved: boolean; followsCreator: boolean };
   forkedFrom?: { id: string; title: string } | null;
   /** Engine this game was built against; absent means the inlined micro shim. */
+  /** Declared input mechanism; the feed shows a first-frame legend from it. */
+  controls?: string;
+  /** One line saying what the input does, shown before the first touch. */
+  hint?: string;
   runtime?: string;
   runtimeVersion?: string;
 };
