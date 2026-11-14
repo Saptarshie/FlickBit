@@ -408,6 +408,12 @@ export async function runSmokeTest(html: string, opts: SmokeOptions = {}): Promi
       const [shot1, shot2] = await Promise.all([shot1Promise, shot2Promise]);
 
       const fps = Math.round((await fpsPromise) * 10) / 10;
+      // The gate runs headless on a software rasteriser (SwiftShader). A 3D scene
+      // there measures ~19 fps while the same scene holds 60 on hardware — our own
+      // ablation says so. Holding 3D to the 2D floor turns a good build into a repair
+      // loop that cannot converge, so the floor follows the renderer.
+      const is3d = /babylon|three\.module|WebGLRenderer|getContext\(\s*['"]webgl/i.test(gameHtml);
+      const fpsFloor = is3d ? 15 : 30;
 
       // --- analysis -------------------------------------------------------
       const events = (await page.evaluate(EVENTS_SRC)) as HarnessEvents | null;
@@ -473,7 +479,7 @@ export async function runSmokeTest(html: string, opts: SmokeOptions = {}): Promi
         !blankScreen &&
         interactive &&
         replayedInput &&
-        fps >= 30;
+        fps >= fpsFloor;
 
       return {
         pass,

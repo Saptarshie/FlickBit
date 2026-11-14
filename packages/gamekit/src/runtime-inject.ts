@@ -83,7 +83,9 @@ export function defaultAssetsDir(): string {
   return path.join(process.cwd(), 'apps', 'play-worker', 'assets');
 }
 
-const ASSET_FILE_RE = /^[0-9a-f]{16}\.(webp|png|ogg|mp3)$/;
+// Must stay in step with the worker's ASSET_FILE_RE: a gate that cannot serve a
+// format the platform publishes reports a 404 as "the game is broken".
+const ASSET_FILE_RE = /^[0-9a-f]{16}\.(webp|png|ogg|mp3|glb)$/;
 
 /** Asset bytes for a `/a/:file` request, straight from disk. */
 export function readAssetFile(file: string, assetsDir?: string): Buffer | null {
@@ -102,6 +104,7 @@ export function assetContentType(file: string): string {
   if (file.endsWith('.webp')) return 'image/webp';
   if (file.endsWith('.png')) return 'image/png';
   if (file.endsWith('.mp3')) return 'audio/mpeg';
+  if (file.endsWith('.glb')) return 'model/gltf-binary';
   return 'audio/ogg';
 }
 
@@ -115,6 +118,10 @@ export function assetContentType(file: string): string {
  */
 export function sendBytes(res: { setHeader(name: string, value: string): void; end(chunk: unknown): void }, type: string, bytes: Buffer): void {
   res.setHeader('content-type', type);
+  // The harness frame is sandboxed (opaque origin), so its own asset requests are
+  // cross-origin. Without this the playtest gate reports CORS errors for sprites and
+  // glTF that work fine in a normal page.
+  res.setHeader('access-control-allow-origin', '*');
   res.end(bytes);
 }
 

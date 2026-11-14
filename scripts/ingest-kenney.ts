@@ -91,6 +91,7 @@ async function main(): Promise<void> {
     entries.push({
       id: n === 1 ? id : `${id}_${n}`,
       category,
+      sourceDir: path.dirname(file),
       name: `${rule.tags[0]} ${base}`,
       kind: rule.kind,
       tags: [...rule.tags, 'kenney', pack],

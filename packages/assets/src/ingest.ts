@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { classify } from './browse';
+import { inlineGltfAssets } from './gltf';
 import type { AssetCategory } from './registry';
 /**
  * Ingest: raw file -> optimised, content-addressed, licence-tagged asset.
@@ -28,6 +29,8 @@ export type IngestEntry = {
   sourceUrl?: string;
   /** Browse category. Defaults to one inferred from id/kind/tags. */
   category?: AssetCategory;
+  /** Directory the source file came from, for resolving a model's external uris. */
+  sourceDir?: string;
 };
 
 export type IngestResult = {
@@ -62,7 +65,7 @@ export async function ingest(
   let skipped = 0;
   const audioOk = entries.some((e) => e.kind === 'sfx' || e.kind === 'music') ? await hasFfmpeg() : false;
 
-  for (const entry of entries) {
+  for (let entry of entries) {
     const category =
       entry.category ??
       classify(
@@ -107,6 +110,18 @@ export async function ingest(
     // Publish it byte-for-byte under its content hash, exactly like a texture.
     const head = Buffer.from(entry.buffer.subarray(0, 4)).toString('latin1');
     if (entry.kind === 'model' || head === 'glTF') {
+      // Kenney kits reference a shared colormap texture; inline it so the model is
+      // one file that loads from /a/ alone.
+      const inlinedModel = await inlineGltfAssets(entry.buffer, entry.sourceDir ?? outDir);
+      if (inlinedModel.inlined.length > 0) {
+        console.log(`[assets] ${entry.id}: inlined ${inlinedModel.inlined.length} texture(s)`);
+      }
+      if (inlinedModel.missing.length > 0) {
+        console.log(`[assets] ${entry.id}: still references ${inlinedModel.missing.join(', ')} — skipping`);
+        skipped += 1;
+        continue;
+      }
+      entry = { ...entry, buffer: inlinedModel.data };
       const sha = createHash('sha256').update(entry.buffer).digest('hex');
       const file = `${sha.slice(0, 16)}.glb`;
       const modelTarget = path.join(outDir, file);

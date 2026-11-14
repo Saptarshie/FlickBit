@@ -337,6 +337,11 @@ export function createApp(opts: { artifactsDir: string; runtimesDir?: string; as
       res.setHeader('Content-Type', `${type}; charset=utf-8`.replace('; charset=utf-8', ext === 'webp' || ext === 'png' || ext === 'glb' ? '' : '; charset=utf-8'));
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       res.setHeader('X-Content-Type-Options', 'nosniff');
+      // A frame with sandbox="allow-scripts" has an opaque origin ("null"), so even a
+      // same-URL request is cross-origin: <img> renders, but glTF loaders (XHR) and
+      // any canvas pixel read are blocked without this. The bytes are public and
+      // content-addressed, so a wildcard costs nothing.
+      res.setHeader('Access-Control-Allow-Origin', '*');
       res.send(bytes);
     } catch {
       sendError(res, 404, 'not_found');
@@ -361,6 +366,7 @@ export function createApp(opts: { artifactsDir: string; runtimesDir?: string; as
       res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Access-Control-Allow-Origin', '*');
       if (known) res.setHeader('X-Integrity', known.integrity);
       res.send(bytes);
     } catch {

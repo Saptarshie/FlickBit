@@ -6,3 +6,4 @@ export * from './ingest';
 export * from './starter';
 export * from './browse';
 export * from './sheet';
+export * from './gltf';

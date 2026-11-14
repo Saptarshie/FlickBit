@@ -23,7 +23,13 @@ function runtimeBlock(runtime?: string): string {
   if (runtime === 'babylon') {
     return [
       'RUNTIME: Babylon.js 9.36 is already loaded as window.BABYLON. Do NOT include the engine in your file.',
-      'Available on window.BABYLON: Engine, Scene, FreeCamera, ArcRotateCamera, UniversalCamera, HemisphericLight, DirectionalLight, PointLight, MeshBuilder, Mesh, TransformNode, Vector3, Vector2, Color3, Color4, Matrix, Quaternion, StandardMaterial, Texture, Scalar, Space.',
+      'Available on window.BABYLON — this is the WHOLE list; anything else is undefined at runtime:',
+      '  Engine, Scene, FreeCamera, ArcRotateCamera, UniversalCamera, HemisphericLight, DirectionalLight,',
+      '  PointLight, MeshBuilder, Mesh, TransformNode, Vector3, Vector2, Color3, Color4, Matrix, Quaternion,',
+      '  StandardMaterial, Texture, DynamicTexture, Scalar, Space, SceneLoader, Tools.',
+      'Do not reach for ParticleSystem, SolidParticleSystem, GlowLayer, DefaultRenderingPipeline, Animation,',
+      'PhysicsImpostor, GUI or NodeMaterial: they are not in the build. Faking particles with thin instances,',
+      'MeshBuilder planes or a DynamicTexture sprite is expected.',
       'Required shape:',
       '  var engine = new BABYLON.Engine(canvas, true);',
       '  engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio || 1, 2));',

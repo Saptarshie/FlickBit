@@ -76,7 +76,11 @@ function rankCatalogue<T extends { id: string; kind: string; tags: string[]; byt
   // A 3D brief that only ever sees sprites will draw boxes. Models reach the
   // shortlist by kind, not by matching words the author never wrote.
   if (spec.runtime === 'babylon') {
-    const models = catalogue.filter((a) => a.kind === 'model' && !ranked.includes(a)).slice(0, Math.min(8, limit));
+    // Only offer models that are one file: a .glb whose textures live beside it 404s
+    // inside the frame, and the repair loop cannot fix a missing binary.
+    const models = catalogue
+      .filter((a) => a.kind === 'model' && !ranked.includes(a) && (a as { selfContained?: boolean }).selfContained !== false)
+      .slice(0, Math.min(8, limit));
     if (models.length > 0) return [...models, ...ranked].slice(0, limit);
   }
 
@@ -90,7 +94,7 @@ function rankCatalogue<T extends { id: string; kind: string; tags: string[]; byt
 }
 
 async function loadAssetCatalogue(): Promise<
-  Array<{ id: string; kind: string; width?: number; height?: number; file: string; tags: string[]; category?: string }>
+  Array<{ id: string; kind: string; width?: number; height?: number; file: string; tags: string[]; category?: string; selfContained?: boolean }>
 > {
   // The Next server runs with its own cwd (apps/web), the worker with another,
   // and tests with a third. Walk up from wherever we are instead of guessing.
@@ -113,6 +117,7 @@ async function loadAssetCatalogue(): Promise<
           id: String(a['id']),
           kind: String(a['kind'] ?? 'sprite'),
           category: typeof a['category'] === 'string' ? a['category'] : undefined,
+          selfContained: a['selfContained'] === true ? true : a['selfContained'] === false ? false : undefined,
           ...(typeof a['width'] === 'number' ? { width: a['width'] } : {}),
           ...(typeof a['height'] === 'number' ? { height: a['height'] } : {}),
           file: String(a['file']),
@@ -343,7 +348,7 @@ export async function runGenerationPipeline(
   // A 3D card that ships without a model is boxes. If the catalogue has models and
   // the game targets babylon, one .glb must actually be loaded.
   if (spec.runtime === 'babylon') {
-    const models = catalogue.filter((a) => a.kind === 'model');
+    const models = catalogue.filter((a) => a.kind === 'model' && (a as { selfContained?: boolean }).selfContained !== false);
     const bodyCode = code.replace(/<script[^>]*id=["']pl-manifest["'][^>]*>[\s\S]*?<\/script>/i, '');
     const usesModel = /\.glb/.test(bodyCode) && /(loadModel|SceneLoader|ImportMesh|loadAssetContainer)/i.test(bodyCode);
     if (models.length > 0 && !usesModel && repairsCount < MAX_TOTAL_REPAIRS) {
