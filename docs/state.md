@@ -121,7 +121,7 @@ rail/✕/Esc release it.
 | Feed API | 27–40 ms (production, 16 games) | curl |
 | `/` first byte | 6–18 ms (production) | curl |
 | Boot animation | appears 300 ms, leaves 1.34 s, once per session | Playwright |
-| Test suite | 312 tests, ~9 min serial | `pnpm test` |
+| Test suite | 319 tests, ~9 min serial | `pnpm test` |
 | Generation | 5–12 min per game (LLM-bound) | E2E runs |
 
 ## 7. Decision log
