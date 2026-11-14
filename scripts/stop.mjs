@@ -81,6 +81,45 @@ if (pids.length === 0) {
   }
 }
 
+// A second sweep, by port.
+//
+// Next renames its process title to `next-server (v15.x)`, which drops the repo
+// path out of the command line the first sweep matches on — so a killed `pnpm start`
+// can leave a server still holding :3000. That orphan is exactly what makes the next
+// start fail with EADDRINUSE while `curl` keeps answering 200 *from the old build*.
+function pidsOnPorts() {
+  if (!isWindows) return [];
+  const script = `
+    Get-NetTCPConnection -LocalPort ${PORTS.join(',')} -State Listen -ErrorAction SilentlyContinue |
+      Select-Object -ExpandProperty OwningProcess |
+      Sort-Object -Unique
+  `;
+  try {
+    const out = execFileSync('powershell', ['-NoProfile', '-Command', script], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    return out
+      .split('\n')
+      .map((line) => Number.parseInt(line.trim(), 10))
+      .filter((pid) => Number.isFinite(pid) && pid !== process.pid);
+  } catch {
+    return [];
+  }
+}
+
+const portOwners = pidsOnPorts().filter((pid) => !pids.includes(pid));
+for (const pid of portOwners) {
+  try {
+    execFileSync(isWindows ? 'taskkill' : 'kill', isWindows ? ['/PID', String(pid), '/F'] : ['-9', String(pid)], {
+      stdio: 'ignore',
+    });
+    console.log(`[stop] stopped ${pid} (held a port)`);
+  } catch {
+    // Already gone.
+  }
+}
+
 // A killed process releases its ports before it releases its file handles, and
 // `next build` rewrites the directory a dying server still had open. Wait for
 // the processes themselves to disappear first, then for the ports.
