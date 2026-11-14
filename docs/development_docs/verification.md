@@ -234,3 +234,29 @@ finding. The dominant defect was the HUD under the app chrome (10 games) — a
 platform bug, not fifteen game bugs — plus "screen contradicts description"
 (Neon Dead Highway's missing zombies) and "dead space" (Tap Runner's action
 confined to the bottom fifth).
+
+
+## 8. Serving the engine and the catalogue to the gates
+
+Every gate opens an artifact from its own local http server, not from the worker.
+The worker injects the pinned engine and resolves `/a/…`; the gates did not, so a
+Phaser or Babylon template was tested with a 404 where its engine should be, and a
+generated game that used a sprite 404'd inside the smoke gate.
+
+`packages/gamekit/src/runtime-inject.ts` closes that gap for all four harnesses:
+
+| helper | job |
+|---|---|
+| `injectRuntime(html)` | reads the manifest's `runtime`, finds the newest published file for it, inserts `<script src="/r/…">` after `<head>` (no-op for `micro`, no double injection) |
+| `readRuntimeFile(file)` | `/r/:file` from disk, validated against the `id@version-hash.js` shape |
+| `readAssetFile(file)` | `/a/:file` from disk, validated against `<sha16>.(webp|png|ogg|mp3)` |
+| `defaultRuntimesDir()` / `defaultAssetsDir()` | walk up from cwd — tests run in `packages/gamekit`, the worker in `apps/play-worker`, the CLI at the root |
+
+Two related rules learned the hard way:
+
+- **Bytes, not text.** Proxying an asset with `await upstream.text()` corrupts a
+  WebP and the frame reports "image failed" with no hint that the proxy was the
+  fault. `sendBytes()` writes the buffer verbatim.
+- **WebGL needs screenshots.** `canvas.toDataURL()` is blank unless the game asked
+  for `preserveDrawingBuffer`, so the input probe screenshots WebGL canvases
+  through the compositor instead (with an iframe fallback and explicit timeout).
