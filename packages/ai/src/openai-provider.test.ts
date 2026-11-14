@@ -30,13 +30,17 @@ describe('OpenAiCompatProvider', () => {
     expect(f.count).toBe(1);
   });
 
-  it('retries with a bigger budget when the model returns null content', async () => {
+  it('gives a reasoning model enough output budget and retries when content is null', async () => {
     const f = fakeFetch([{ content: null }, { content: 'second try' }]);
     const p = new OpenAiCompatProvider({ ...base, fetchImpl: f.impl });
     await expect(p.generateText('hi')).resolves.toBe('second try');
     expect(f.count).toBe(2);
+    // deepseek-v4.1-flash accepts 384k; the default must not starve it (the old
+    // 24k budget truncated a 60 KB game mid-file).
+    const first = f.calls[0] as { max_tokens: number };
     const second = f.calls[1] as { max_tokens: number };
-    expect(second.max_tokens).toBeGreaterThan((f.calls[0] as { max_tokens: number }).max_tokens);
+    expect(first.max_tokens).toBeGreaterThanOrEqual(64_000);
+    expect(second.max_tokens).toBeGreaterThanOrEqual(first.max_tokens);
   });
 
   it('assembles a streamed (SSE) completion', async () => {

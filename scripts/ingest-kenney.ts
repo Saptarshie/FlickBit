@@ -21,6 +21,9 @@ type Rule = { match: RegExp; kind: AssetKind; tags: string[]; prefix: string };
 
 /** Folder → what it is. Order matters: the first match wins. */
 const RULES: Rule[] = [
+  // Extension first: "Chisper UI Sounds/OGG/click.ogg" would otherwise match the
+  // ui rule and be handed to the image optimiser.
+  { match: /\.(wav|ogg|mp3)$/i, kind: 'sfx', tags: ['sfx', 'ui', 'click'], prefix: 'kp_sfx' },
   { match: /characters?/i, kind: 'sprite', tags: ['character', 'player', 'enemy', 'platformer', 'pixel'], prefix: 'kp_char' },
   { match: /backgrounds?/i, kind: 'background', tags: ['background', 'sky', 'scenery', 'pixel'], prefix: 'kp_bg' },
   { match: /tiles|tilemap/i, kind: 'tileset', tags: ['tile', 'level', 'platform', 'platformer', 'pixel'], prefix: 'kp_tile' },
@@ -33,7 +36,7 @@ async function walk(dir: string, out: string[] = []): Promise<string[]> {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) await walk(full, out);
-    else if (/\.(png|glb)$/i.test(entry.name)) out.push(full);
+    else if (/\.(png|glb|wav|ogg|mp3)$/i.test(entry.name)) out.push(full);
   }
   return out;
 }
@@ -60,7 +63,16 @@ async function main(): Promise<void> {
     return;
   }
 
-  const files = (await walk(packDir)).filter((f) => !/preview|sample/i.test(path.basename(f)));
+  const all = (await walk(packDir)).filter((f) => !/preview|sample|thumbnail/i.test(path.basename(f)));
+  const modelPack = all.some((f) => /\.glb$/i.test(f));
+  const audioPack = !modelPack && all.some((f) => /\.(wav|ogg|mp3)$/i.test(f));
+  // A model pack's PNGs are textures and preview renders, not sprites: importing
+  // them would fill the catalogue with 300 unusable images.
+  const files = modelPack
+    ? all.filter((f) => /\.glb$/i.test(f))
+    : audioPack
+      ? all.filter((f) => /\.(wav|ogg|mp3)$/i.test(f))
+      : all;
   const entries: IngestEntry[] = [];
   const seen = new Map<string, number>();
 
@@ -69,7 +81,7 @@ async function main(): Promise<void> {
     const rule = RULES.find((r) => r.match.test(rel)) ?? DEFAULT_RULE;
     const info = await stat(file);
     if (info.size === 0) continue;
-    const base = path.basename(file).replace(/\.(png|glb)$/i, '');
+    const base = path.basename(file).replace(/\.(png|glb|wav|ogg|mp3)$/i, '');
     const stem = base.replace(/[^a-z0-9]+/gi, '_').toLowerCase();
     const id = `${rule.prefix}_${stem}`;
     const n = (seen.get(id) ?? 0) + 1;

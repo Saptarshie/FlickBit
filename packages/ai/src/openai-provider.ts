@@ -57,7 +57,11 @@ export class OpenAiCompatProvider implements AiProvider {
     this.baseUrl = opts.baseUrl.replace(/\/+$/, '');
     this.apiKey = opts.apiKey;
     this.model = opts.model;
-    this.maxTokens = opts.maxTokens ?? 24_000;
+    // deepseek-v4.1-flash accepts up to 384k output tokens; a full game plus six
+    // repairs needs far more than the old 24k, and truncation mid-file loses the
+    // whole build. 128k leaves headroom without inviting a 10-minute completion on
+    // every small repair (repairs pass their own, smaller budget).
+    this.maxTokens = opts.maxTokens ?? 128_000;
     // Idle timeout between streamed chunks. Long games stream for minutes, so
     // this must be generous; a dead socket still aborts promptly.
     this.timeoutMs = opts.timeoutMs ?? 120_000;
@@ -88,7 +92,7 @@ export class OpenAiCompatProvider implements AiProvider {
     let result = await this.complete(messages, options.temperature, this.maxTokens);
     if (result.content.trim().length === 0) {
       // Reasoning models can spend the whole budget thinking. Retry once bigger.
-      result = await this.complete(messages, options.temperature, 64_000);
+      result = await this.complete(messages, options.temperature, this.maxTokens);
     }
     if (result.content.trim().length === 0) {
       throw new Error(

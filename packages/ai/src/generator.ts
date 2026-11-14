@@ -1,4 +1,5 @@
 import { templates } from '@playloop/gamekit';
+import { compactHistory, compactPrompt } from './context';
 import { CODER_SYSTEM_PROMPT } from './prompts';
 import { PERFORMANCE_RULES } from './playbook';
 import type { AiProvider, GameDesign, GameSpec } from './types';
@@ -167,11 +168,16 @@ export async function generateCode(
         ].join(NL)
       : '';
 
+  // History is the only unbounded part of the prompt: compact it before it can
+  // crowd out the code. The newest turns are the ones still in play.
+  const history = compactHistory(options.history ?? [], 8);
   const historyBlock =
-    options.history && options.history.length > 0
+    history.kept.length > 0
       ? [
-          'Earlier requests in this session (oldest first, all must stay satisfied):',
-          ...options.history.map((entry, index) => `${index + 1}. ${entry}`),
+          history.omitted > 0
+            ? `Earlier requests in this session (${history.omitted} older turn(s) omitted; the newest ${history.kept.length} follow and all must stay satisfied):`
+            : 'Earlier requests in this session (oldest first, all must stay satisfied):',
+          ...history.kept.map((entry, index) => `${index + 1}. ${entry}`),
         ].join(NL)
       : '';
   const feedbackBlock =
@@ -186,7 +192,7 @@ export async function generateCode(
     const intent = options.isRemix
       ? 'Remix this game: keep the core idea and controls, but change the theme, feel and content as described.'
       : 'This is a follow-up change to the game below. Apply ONLY the requested change. Keep every mechanic, screen and control that already works; do not rewrite the file from scratch. Return the COMPLETE updated document.';
-    const editPrompt = [
+    const editParts = [
       intent,
       `Requested change: ${userPrompt}`,
       historyBlock,
@@ -195,11 +201,22 @@ export async function generateCode(
       designBlock(options.design),
       runtimeBlock(spec.runtime),
       HARD_RULES,
-      'Current game source:',
-      options.baseCode,
-    ]
-      .filter(Boolean)
-      .join(NL + NL);
+    ].filter(Boolean);
+
+    // Single stateless call, but the brief + history + a 60 KB file can still add
+    // up: compact rather than let the provider reject the request.
+    const budget = Number(process.env.CONTEXT_BUDGET_TOKENS ?? 300_000);
+    const parts = editParts.map((part) =>
+      typeof part === 'string'
+        ? { label: 'brief', text: part, priority: 40 }
+        : (part as unknown as { label: string; text: string; priority: number }),
+    );
+    parts.push({ label: 'source', text: 'Current game source:' + NL + options.baseCode, priority: 100 });
+    const compacted = compactPrompt(parts, budget);
+    const editPrompt = compacted.text;
+    if (compacted.dropped.length > 0) {
+      console.warn(`[ai] context compacted: dropped ${compacted.dropped.join(', ')} (${compacted.tokens} tokens)`);
+    }
 
     const response = await provider.generateText(editPrompt, {
       systemPrompt: CODER_SYSTEM_PROMPT,

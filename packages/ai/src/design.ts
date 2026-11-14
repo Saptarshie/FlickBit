@@ -23,7 +23,24 @@ Respond ONLY with JSON:
   "failureModes": ["what must never happen: NaN radius, input blocked >150ms, unfair first second"]
 }
 
-Rules: every asset is drawn procedurally with Canvas 2D (no images, no fonts, no network). Colours must be valid hex. Be specific with numbers — px, ms, speed multipliers, particle counts.`;
+ART DIRECTION IS NOT A DEFAULT
+The platform's feed already contains many dark, glowing, neon/synthwave cards. Do not
+add another one unless the concept asks for it. Choose a specific visual identity that
+comes from the CONCEPT — e.g. sun-baked paper cut-outs, clay/plasticine, 1970s print,
+pastel sticker book, hospital-clean minimal, art-deco, chunky 8-bit, watercolour,
+industrial hazard signage, toy-box primary. Name the style in visualIdentity, and give
+the palette that style actually uses. Never title a game "Neon …" unless the brief says
+neon: the model's own prior is not a design decision.
+
+ASSETS
+The platform serves a real catalogue on the frame's origin: sprites and tiles at /a/,
+and 3D models (.glb) for 3D games. If an ASSET SHORTLIST is provided, build the
+visual plan around it: say which sprite is the player, which is the enemy, and what
+still has to be drawn procedurally. Never invent a file name.
+
+Rules: anything not served by the catalogue is drawn procedurally with Canvas 2D (no
+fonts, no network, no external images). Colours must be valid hex. Be specific with
+numbers — px, ms, speed multipliers, particle counts.`;
 
 /**
  * Art-director stage. Turns a spec into a buildable design brief.
@@ -36,9 +53,21 @@ export async function designGame(
   spec: GameSpec,
   provider: AiProvider,
   imageDataUrl?: string,
+  assetCatalogue?: Array<{ id: string; kind: string; file: string; category?: string }>,
 ): Promise<GameDesign> {
+  // The art director is the only stage that can say "use the knight model for the
+  // player and the castle wall for the ground" before the coder writes a line.
+  const assetBlock =
+    assetCatalogue && assetCatalogue.length > 0
+      ? [
+          'ASSET SHORTLIST (real files, served at /a/):',
+          ...assetCatalogue
+            .slice(0, 16)
+            .map((a) => `- ${a.id} [${a.category ?? a.kind}] /a/${a.file}`),
+        ].join('\n')
+      : 'ASSET SHORTLIST: none for this brief — everything is drawn procedurally.';
   const fallback: GameDesign = {
-    visualIdentity: `${spec.concept}. Clean geometric shapes on a dark field, one accent colour for the player.`,
+    visualIdentity: `${spec.concept}. A named style chosen from the concept, not the default glow: flat shapes, one accent colour carrying the player.`,
     palette: spec.palette.length >= 3 ? spec.palette.slice(0, 5) : ['#0b1020', '#7b5cff', '#ff3b8d', '#38bdf8', '#fbbf24'],
     hud: ['score top-centre', 'best score smaller under it'],
     assetPlan: ['player: layered shapes with a glow', 'hazards: simple polygons, 3 sizes', 'background: two parallax layers'],
@@ -63,6 +92,7 @@ export async function designGame(
       spec.audioNotes ? `Audio direction: ${spec.audioNotes}` : '',
       `Player's own words: "${prompt}"`,
       imageDataUrl ? 'A concept image is attached: match its palette, mood and subject.' : '',
+      assetBlock,
     ]
       .filter(Boolean)
       .join('\n');

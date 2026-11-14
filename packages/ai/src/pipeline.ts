@@ -157,6 +157,9 @@ export async function runGenerationPipeline(
     spec = await planGame(prompt, provider, templateId);
   }
 
+  // The catalogue is read once per build: design brief and coder prompt share it.
+  const catalogue = await loadAssetCatalogue();
+
   // Stage 2: art direction. Skipped for follow-up edits: the design exists.
   let design: GeneratedGame['design'];
   // A remix gets a fresh visual identity even though it starts from a build;
@@ -167,7 +170,9 @@ export async function runGenerationPipeline(
       message: 'Art director is writing the visual and juice brief...',
       progressPercent: 18,
     });
-    design = await designGame(prompt, spec, provider, imageDataUrl);
+    // The art director gets the same ranked shortlist the coder will, so its brief
+    // can name a sprite instead of describing a shape to draw.
+    design = await designGame(prompt, spec, provider, imageDataUrl, catalogue.length > 0 ? rankCatalogue(catalogue, spec, 16) : undefined);
   }
 
   // Stage 3: code
@@ -177,9 +182,6 @@ export async function runGenerationPipeline(
     progressPercent: 30,
   });
 
-  // The catalogue is read once per build: the coder needs a fixed vocabulary it
-  // can hold in its head, not a catalogue of 50,000 files.
-  const catalogue = await loadAssetCatalogue();
   const codeOptions: GenerateOptions = {
     baseCode,
     isRemix,
@@ -265,20 +267,42 @@ export async function runGenerationPipeline(
 
   // Stage 5b: the catalogue exists to be used. A model that ignores it ships the
   // same dark-green dot we were trying to get rid of, so ask once, narrowly.
-  if (catalogue.length > 0 && !/\/a\/[0-9a-f]{16}\.(?:webp|png|ogg)/.test(code)) {
-    reportProgress({ stage: 'repairing', message: 'Adding sprites from the catalogue...', progressPercent: 80 });
-    const pick = catalogue.slice(0, 6).map((a) => `${a.id} (${a.kind}, /a/${a.file})`).join(', ');
-    code = await repairCode(
-      code,
-      { ok: false, errors: [`[assets] the game draws no catalogue asset; use at least one of: ${pick}`], warnings: [] } as unknown as ValidationResult,
-      provider,
-      [`Use at least one catalogue sprite as the player or a gameplay object. Candidates: ${pick}.`,
-       'Load it with const img = new Image(); img.src = "/a/<file>"; draw only after onload, and declare it in the manifest assets array.'],
-      planCtx(),
-    );
-    note('assets', 'the game drew no catalogue asset');
-  }
+  // The catalogue exists to be used. Checking the whole document was not enough:
+  // a model that merely *declares* four assets in pl-manifest satisfies a regex over
+  // the raw file while drawing nothing but shapes. Look for a reference outside the
+  // manifest, and prefer one that appears in a load/draw call.
+  if (catalogue.length > 0) {
+    const manifestBlock = /<script[^>]*id=["']pl-manifest["'][^>]*>[\s\S]*?<\/script>/i.exec(code)?.[0] ?? '';
+    const bodyCode = code.replace(manifestBlock, '');
+    const referenced = (bodyCode.match(/\/a\/[0-9a-f]{16}\.(?:webp|png|ogg|mp3|glb)/g) ?? []).length;
+    const loaded = /(new\s+Image\s*\(|\.load\.(image|spritesheet|audio|atlas|glb)\s*\(|PlayLoop\.(loadImage|loadModel|playSfx)\s*\()/i.test(bodyCode);
 
+    if (referenced === 0 || !loaded) {
+      const pick = catalogue.slice(0, 6).map((a) => `${a.id} (${a.kind}, /a/${a.file})`).join(', ');
+      reportProgress({ stage: 'repairing', message: 'Making the game actually use its sprites...', progressPercent: 80 });
+      code = await repairCode(
+        code,
+        {
+          ok: false,
+          errors: [
+            referenced === 0
+              ? `[assets] the manifest declares assets but the game never references one outside pl-manifest (found ${referenced} /a/ paths in the code)`
+              : '[assets] the game references catalogue files but never loads them through an image/texture/sound call',
+          ],
+          warnings: [],
+        } as unknown as ValidationResult,
+        provider,
+        [
+          `Draw at least one catalogue asset in the scene. Candidates: ${pick}.`,
+          'Load it (new Image() + img.src = "/a/<file>", or this.load.image / PlayLoop.loadImage / PlayLoop.loadModel) and draw it every frame where the player or a hazard belongs.',
+          'A manifest entry with no draw call is a broken promise: the reviewer counts it as an unused asset.',
+        ],
+        planCtx(),
+      );
+      note('assets', 'assets declared but not drawn');
+      validateReport = validateGame(code);
+    }
+  }
 
   // Stage 5b: playtest — the difference between "a game" and "a video of a game".
   // The smoke gate proves it renders and reacts; this proves a player can get
