@@ -316,6 +316,39 @@ export function shannonEntropy(s: string): number {
 // validateGame
 // ---------------------------------------------------------------------------
 
+/**
+ * Parse every inline script and report a syntax error as a *static* defect.
+ *
+ * A missing bracket used to survive validation, fail the smoke gate 90 seconds
+ * later, and then burn a full repair pass on "Script error." — a message that tells
+ * the model nothing. `new Function` parses without executing, so this costs
+ * microseconds and says exactly which line broke.
+ */
+export function syntaxErrorCheck(code: string): string[] {
+  const problems: string[] = [];
+  const re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+  let m: RegExpExecArray | null;
+  let index = 0;
+  while ((m = re.exec(code)) !== null) {
+    index += 1;
+    const attrs = (m[1] ?? '').toLowerCase();
+    const body = m[2] ?? '';
+    if (/src=/.test(attrs)) continue;
+    if (/type=["']?(application\/json|module)["']?/.test(attrs)) continue;
+    if (body.trim().length === 0) continue;
+    // Top-level import/export is not expressible in Function(); skip rather than lie.
+    if (/^\s*(import|export)/m.test(body)) continue;
+    try {
+      // eslint-disable-next-line no-new-func
+      new Function(body);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      problems.push(`script #${index} has a syntax error: ${message}`);
+    }
+  }
+  return problems;
+}
+
 export function validateGame(code: string): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -328,6 +361,10 @@ export function validateGame(code: string): ValidationResult {
   if (bytes > WARN_LIMIT_BYTES) {
     warnings.push(`artifact is large: ${bytes} bytes (soft limit ${WARN_LIMIT_BYTES} bytes / 300KB)`);
   }
+
+  // Static syntax first: it is the cheapest defect to find and the most expensive
+  // one to discover at runtime.
+  errors.push(...syntaxErrorCheck(code));
 
   // Forbidden literal substrings (case-insensitive over raw code).
   const lower = code.toLowerCase();

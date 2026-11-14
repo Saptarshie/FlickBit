@@ -5,6 +5,7 @@ import {
   shannonEntropy,
   stripHtmlComments,
   stripJsComments,
+  syntaxErrorCheck,
   validateGame,
 } from './validate';
 
@@ -275,5 +276,23 @@ describe('engine templates', () => {
     // already contains Phaser would defeat the whole shared-runtime design.
     expect(html).not.toContain('Phaser.Game = ');
     expect(html.length).toBeLessThan(40_000);
+  });
+});
+
+describe('syntaxErrorCheck — catch the parse error before the browser does', () => {
+  it('reports an unbalanced bracket as a static defect', () => {
+    const html = '<html><body><script>function f(){ return 1 ) }</script></body></html>';
+    const problems = syntaxErrorCheck(html);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('script #1 has a syntax error');
+  });
+
+  it('is quiet on valid code and ignores JSON and external scripts', () => {
+    const html = [
+      '<script type="application/json" id="pl-manifest">{ "title": "x" }</script>',
+      '<script src="/r/eng.js"></script>',
+      '<script>const a = () => 1; console.log(a());</script>',
+    ].join('');
+    expect(syntaxErrorCheck(html)).toEqual([]);
   });
 });
