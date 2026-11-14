@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { SHIM_SOURCE } from './shim-source';
+import { SHIM_VERSION } from './protocol';
 
 describe('SHIM_SOURCE', () => {
   it('parses as a function body', () => {
@@ -156,7 +157,7 @@ describe('SHIM_SOURCE execution smoke', () => {
     expect(posted.length).toBe(0);
     for (const fn of listeners['load'] ?? []) fn({});
     expect(posted).toContainEqual({
-      data: { v: 1, src: 'playloop', type: 'ready', payload: { shim: '1.2.0' } },
+      data: { v: 1, src: 'playloop', type: 'ready', payload: { shim: SHIM_VERSION } },
       origin: '*',
     });
   });

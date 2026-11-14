@@ -41,6 +41,7 @@ const DEFAULTS: Record<AssetKind, { maxSide: number; quality: number }> = {
   icon: { maxSide: 256, quality: 90 },
   sfx: { maxSide: 0, quality: 0 },
   music: { maxSide: 0, quality: 0 },
+  model: { maxSide: 0, quality: 0 },
 };
 
 /**

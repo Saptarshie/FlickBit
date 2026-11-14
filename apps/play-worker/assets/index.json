@@ -3009,6 +3009,3170 @@
       "sourceUrl": "https://kenney.nl/assets/ui-pack"
     },
     {
+      "id": "kp_colormap",
+      "name": "sprite colormap",
+      "kind": "sprite",
+      "tags": [
+        "sprite",
+        "kenney",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "c36acb607e69c11e95e024c555d4aa1f3e927b8f13d0581404aa41bd90f97bfc",
+      "file": "c36acb607e69c11e.webp",
+      "bytes": 3208,
+      "width": 512,
+      "height": 512,
+      "pixelArt": false,
+      "runtime": [
+        "micro",
+        "phaser4",
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit",
+      "sourceUrl": "https://kenney.nl/assets/kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_bench",
+      "name": "model bench",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "e37ffcbb074679098d16db68aa50ce34a3ca2f1900a20110da9509d312039554",
+      "file": "e37ffcbb07467909.glb",
+      "bytes": 15956,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_bench_short",
+      "name": "model bench-short",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "b08d4e8863532f2867f5a41221e20639cb30ed517b764560617b0b7186c3ee3d",
+      "file": "b08d4e8863532f28.glb",
+      "bytes": 15972,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_bridge_draw",
+      "name": "model bridge-draw",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "9fbf9a309fed2063be177ef9518dd707787f8fa2b48d2eda8a52e59bb8829265",
+      "file": "9fbf9a309fed2063.glb",
+      "bytes": 5140,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_bridge_straight",
+      "name": "model bridge-straight",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "ef15989c3d5c7392563888bbedda86de3c1ec4b3013c71c61e25b5257a6f9180",
+      "file": "ef15989c3d5c7392.glb",
+      "bytes": 16832,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_bridge_straight_pillar",
+      "name": "model bridge-straight-pillar",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "c85521e13dcf55ba8d015a04bbdbd0f063c31d01befb69a7c9fb097d128f195b",
+      "file": "c85521e13dcf55ba.glb",
+      "bytes": 14344,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_corner",
+      "name": "model cabin-corner",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "9e85a7701066df753f412da5d052136a89a2fd2b39147abc826588888421546e",
+      "file": "9e85a7701066df75.glb",
+      "bytes": 2664,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_corner_bottom",
+      "name": "model cabin-corner-bottom",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "2702a769c258d3ce68d56b34c0ac6c9458e390dfe301379e4a58e02d9408b6aa",
+      "file": "2702a769c258d3ce.glb",
+      "bytes": 5124,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_corner_logs",
+      "name": "model cabin-corner-logs",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "eb324dc26cba18de645323d76539417c5c3c132179d2a8fb3429d4474ef2424f",
+      "file": "eb324dc26cba18de.glb",
+      "bytes": 15568,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_door_rotate",
+      "name": "model cabin-door-rotate",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "46937dab90f4e1475627211b5891ac27ffc0bd52e576aecd34ef8a4e57c2258e",
+      "file": "46937dab90f4e147.glb",
+      "bytes": 27264,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_doorway",
+      "name": "model cabin-doorway",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "613fe82e80dcc6302fc49aff1bbacfbd2adeba34f091b8fffb00f0d65bf4b13c",
+      "file": "613fe82e80dcc630.glb",
+      "bytes": 18124,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_doorway_center",
+      "name": "model cabin-doorway-center",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "afdc6cfaeee2af0ea15e75fffaa2bf8a512bfe1fccc97032f313a4c27edccbf5",
+      "file": "afdc6cfaeee2af0e.glb",
+      "bytes": 4096,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_doorway_left",
+      "name": "model cabin-doorway-left",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "ea92ccd429dd940cf8a1df709f72af0c1d4bfbd72eec60381b546bede90de952",
+      "file": "ea92ccd429dd940c.glb",
+      "bytes": 10824,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_doorway_right",
+      "name": "model cabin-doorway-right",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "5581b5e4054d9844511d44ae2e5914882bf2bdc590eeea3e94a6eca0b449249e",
+      "file": "5581b5e4054d9844.glb",
+      "bytes": 10824,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_fence",
+      "name": "model cabin-fence",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "18f99ef86a3703cc3bd4109d3141e26f481b566ebf29f2efbb472c13d5511152",
+      "file": "18f99ef86a3703cc.glb",
+      "bytes": 7280,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_overhang_door_rotate",
+      "name": "model cabin-overhang-door-rotate",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "3975b1b858f7632cb90052b1f54a19fb3215d118d981d2c27d8c822606691972",
+      "file": "3975b1b858f7632c.glb",
+      "bytes": 32448,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_overhang_doorway",
+      "name": "model cabin-overhang-doorway",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "93a667533de980085f384e5db9b8cc2022b6fec0023b02bc6ceb776bb3c0e894",
+      "file": "93a667533de98008.glb",
+      "bytes": 20000,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_roof",
+      "name": "model cabin-roof",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "25dd53124dd1805ad9985fc99b22ae331e4890079d6f2c090bdce01f2fe4ef00",
+      "file": "25dd53124dd1805a.glb",
+      "bytes": 5248,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_roof_chimney",
+      "name": "model cabin-roof-chimney",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "fdee44be5069104ff9e8bd0b57a35411948b1fbc8a390d6907902c652eaed562",
+      "file": "fdee44be5069104f.glb",
+      "bytes": 11068,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_roof_corner",
+      "name": "model cabin-roof-corner",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "931e03deb7539b59e893175f07fefa3b4341aa9d838c161985f695a4962d4ab2",
+      "file": "931e03deb7539b59.glb",
+      "bytes": 11692,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_roof_dormer",
+      "name": "model cabin-roof-dormer",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "45755bb1778af0e7d4d1ff6184d1e6d6d47b75578c30b860699f0b6e90353e8d",
+      "file": "45755bb1778af0e7.glb",
+      "bytes": 12048,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_roof_point",
+      "name": "model cabin-roof-point",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "3c1f032f5c366f7a224ded60357866317623c5fac62a32ea68f85578e30fe835",
+      "file": "3c1f032f5c366f7a.glb",
+      "bytes": 6952,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_roof_snow",
+      "name": "model cabin-roof-snow",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "d36d7a0eb8397b3e6eaad49b115639a3448eb82e8a79cdc7b5b97915152b35d3",
+      "file": "d36d7a0eb8397b3e.glb",
+      "bytes": 12436,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_roof_snow_chimney",
+      "name": "model cabin-roof-snow-chimney",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "e86f6169f36ef852b7b9dac087589b2fede552a822f33fecceae9cf3bb27e3f2",
+      "file": "e86f6169f36ef852.glb",
+      "bytes": 18780,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_roof_snow_corner",
+      "name": "model cabin-roof-snow-corner",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "f0057024cd44af7a791f84c9c31a5f85c1d0d9b4f55b5fb1deecbc3214b8ae16",
+      "file": "f0057024cd44af7a.glb",
+      "bytes": 20652,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_roof_snow_dormer",
+      "name": "model cabin-roof-snow-dormer",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "a88781746485cd9c2e366a941adfdc8c416aced3d3b3edf7d49cc76055ffafe1",
+      "file": "a88781746485cd9c.glb",
+      "bytes": 15932,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_roof_snow_point",
+      "name": "model cabin-roof-snow-point",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "8532387d6061a68e83723f0c0a301c601d0cfc6b0a78d2adaa7e18f9b4ee905d",
+      "file": "8532387d6061a68e.glb",
+      "bytes": 18004,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_roof_top",
+      "name": "model cabin-roof-top",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "221c4290ae68408f9468a0c4bde5e24b0f6dd1342c7732feac7528ae28577092",
+      "file": "221c4290ae68408f.glb",
+      "bytes": 2940,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_wall",
+      "name": "model cabin-wall",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "945e2f605209933626e7379c62e7bff1777866646255a09e0e9b96fa98b774ce",
+      "file": "945e2f6052099336.glb",
+      "bytes": 8300,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_wall_low",
+      "name": "model cabin-wall-low",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "60bbc8dd385a493d81cd324db3f9634d69b3884baf779b410d2401abcea72afe",
+      "file": "60bbc8dd385a493d.glb",
+      "bytes": 4716,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_wall_roof",
+      "name": "model cabin-wall-roof",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "a4207827898e393a80858303bc4f712ac5aa900c135e421b4dab2b5d16145648",
+      "file": "a4207827898e393a.glb",
+      "bytes": 8344,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_wall_roof_center",
+      "name": "model cabin-wall-roof-center",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "89a6f35780c57da3bad32c0d7f2fc2f32f0e1d3861e1f7b6d7de410c82ae184c",
+      "file": "89a6f35780c57da3.glb",
+      "bytes": 8116,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_wall_wreath",
+      "name": "model cabin-wall-wreath",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "ca83e1d7b9fd3ccb7c66830c78c42da5d4bc44bbb9cd268b1bcee823e9d42cb6",
+      "file": "ca83e1d7b9fd3ccb.glb",
+      "bytes": 36420,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_window_a",
+      "name": "model cabin-window-a",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "70feaa3b92ecade532f93af5afc695d43be2d51b2399651b2e18b4a050cd4cb4",
+      "file": "70feaa3b92ecade5.glb",
+      "bytes": 21872,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_window_b",
+      "name": "model cabin-window-b",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "9128031e00de4a701ea4353621ecccfaec4f22e3df806fe04b9b345ace90099c",
+      "file": "9128031e00de4a70.glb",
+      "bytes": 19784,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_window_c",
+      "name": "model cabin-window-c",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "ecfeea6fd9e6e3c4e0151bfa27b75dc39e4fbd818a3151e8804a208e5cdacbec",
+      "file": "ecfeea6fd9e6e3c4.glb",
+      "bytes": 26024,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_cabin_window_large",
+      "name": "model cabin-window-large",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "0678ee0347c3553a7afb2cacb5cf905659bd16c8b68d7c3dbaa29c1cd2c9b517",
+      "file": "0678ee0347c3553a.glb",
+      "bytes": 18168,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_candy_cane_green",
+      "name": "model candy-cane-green",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "fce9b61f00a92ccef1e4d4cf4108a94cef3df8727f68b47506e13fc55db20d1d",
+      "file": "fce9b61f00a92cce.glb",
+      "bytes": 7996,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_candy_cane_red",
+      "name": "model candy-cane-red",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "0e35de46b50067eef688dbdf88cd7449d5e3b7058233e88bf314658dea0ab372",
+      "file": "0e35de46b50067ee.glb",
+      "bytes": 7956,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_colormap",
+      "name": "model colormap",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "66fd49be148f32e88f6c8cace67120250d1943a7856601158ad0ff24651db0b0",
+      "file": "66fd49be148f32e8.glb",
+      "bytes": 7529,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_door",
+      "name": "model door",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "d9bc817e776e34fc24ad5b448b8cfc2c02603e79f6d90597de8936dc65a07359",
+      "file": "d9bc817e776e34fc.glb",
+      "bytes": 16968,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_festivus_pole",
+      "name": "model festivus-pole",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "23cf274b464fa68652b823e2bf45e06a10ebcc79a44d7ab673b13ef6a96796fe",
+      "file": "23cf274b464fa686.glb",
+      "bytes": 7284,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_flag",
+      "name": "model flag",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "263fc3c7bedcfcd2b30f1aca6feb76c8f249f8f79dc9a694f47ec63b77b180d6",
+      "file": "263fc3c7bedcfcd2.glb",
+      "bytes": 15192,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_flag_banner_long",
+      "name": "model flag-banner-long",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "e6a4433f5770b9fc31bf67d72424a877d5c010486d5b7373ce7af900566827e4",
+      "file": "e6a4433f5770b9fc.glb",
+      "bytes": 6660,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_flag_banner_short",
+      "name": "model flag-banner-short",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "9561b6afd1d551199d02f520d31eab46dbff137eef4f9aa13f12e311b588fbd7",
+      "file": "9561b6afd1d55119.glb",
+      "bytes": 6664,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_flag_pennant",
+      "name": "model flag-pennant",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "741368448bd21991700a488dfc5125330594c4dccd9395feecaa6bbfa682b65d",
+      "file": "741368448bd21991.glb",
+      "bytes": 13652,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_flag_wide",
+      "name": "model flag-wide",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "74e94f48dffb40aca288676191265523c3e752aef40b868bfa3a51394083519b",
+      "file": "74e94f48dffb40ac.glb",
+      "bytes": 25460,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_floor_stone",
+      "name": "model floor-stone",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "ea4cb3ff2999afc8eb1f5f35f3e6816b08ed7dc19d89a2495f03f1ffe7464ff7",
+      "file": "ea4cb3ff2999afc8.glb",
+      "bytes": 6240,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_floor_wood",
+      "name": "model floor-wood",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "937335f237c65a015cca8dcffb19e61ffb9bed0daaf90c46fcf6b0d666f8cb7c",
+      "file": "937335f237c65a01.glb",
+      "bytes": 10656,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_floor_wood_snow",
+      "name": "model floor-wood-snow",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_holiday-kit"
+      ],
+      "sha256": "b6031010c49ce6fc243b85a23776b9584f665bd346a0af554fec191b8e9b43c6",
+      "file": "b6031010c49ce6fc.glb",
+      "bytes": 10668,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_holiday-kit"
+    },
+    {
+      "id": "kp_mdl_gate",
+      "name": "model gate",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "fdc3d5b07f619dcacbf2af36024dc9a356696e541f6ce409a5305be782665ec9",
+      "file": "fdc3d5b07f619dca.glb",
+      "bytes": 13880,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_ground",
+      "name": "model ground",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "470e9637694bba581e7a67a07399920c9785d8fa9a01a688c80dfc6a0c06ff77",
+      "file": "470e9637694bba58.glb",
+      "bytes": 1788,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_ground_hills",
+      "name": "model ground-hills",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "2593ba3265f3ecdf2ee0a73580986ae6d9b76a536497356cdf093bb2735ecd6e",
+      "file": "2593ba3265f3ecdf.glb",
+      "bytes": 12732,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_metal_gate",
+      "name": "model metal-gate",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "7d41f469c9ed3000370bd7995b2fca5ac77ebe0ae1d1f321bb7a9d6f4b86f677",
+      "file": "7d41f469c9ed3000.glb",
+      "bytes": 23240,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_rocks_large",
+      "name": "model rocks-large",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "7ea1ee769eb063b192c3c3744cd32a11616320f7ca491fbe23289552f6655595",
+      "file": "7ea1ee769eb063b1.glb",
+      "bytes": 16204,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_rocks_small",
+      "name": "model rocks-small",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "d860d3a053e1fc7b5825a39f6df68f14c49bab7443c1703e1f5b28444bd60e0d",
+      "file": "d860d3a053e1fc7b.glb",
+      "bytes": 15192,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_siege_ballista",
+      "name": "model siege-ballista",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "8b2317b6820dd9782c7c2b5da9b7cf77cc3704f3b4d27a4c32e50069852a6b0d",
+      "file": "8b2317b6820dd978.glb",
+      "bytes": 64608,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_siege_ballista_demolished",
+      "name": "model siege-ballista-demolished",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "a19ed023a15af7e148fcd0186cb73d0d26983e24de54e858655fa2d77799be46",
+      "file": "a19ed023a15af7e1.glb",
+      "bytes": 54576,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_siege_catapult",
+      "name": "model siege-catapult",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "35a7484ff74630228e474fae885bdc9176c30e0af0d94def80307bdbc87b7583",
+      "file": "35a7484ff7463022.glb",
+      "bytes": 86164,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_siege_catapult_demolished",
+      "name": "model siege-catapult-demolished",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "e0663eb42a97c5d992b1864ba3459e8246de11cf29fd72f10ef5ffd271f3029a",
+      "file": "e0663eb42a97c5d9.glb",
+      "bytes": 71252,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_siege_ram",
+      "name": "model siege-ram",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "6473c77747b1d0a2c273d5a013454a0c85e5fc33b831150dced46d89b8ff9a5e",
+      "file": "6473c77747b1d0a2.glb",
+      "bytes": 103620,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_siege_ram_demolished",
+      "name": "model siege-ram-demolished",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "f895ff0152fb004c72310f6e7b51645babc8f8d22864c468b960f86252d2d8fc",
+      "file": "f895ff0152fb004c.glb",
+      "bytes": 68036,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_siege_tower",
+      "name": "model siege-tower",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "81909d6c33b181a9935fc7f800e8ee309454bbf99ff3b6b0ab2ecf16c3bf5e9b",
+      "file": "81909d6c33b181a9.glb",
+      "bytes": 144200,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_siege_tower_demolished",
+      "name": "model siege-tower-demolished",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "6504a432e6e72a51c75f862ea08e144058727add6eb0f76dc7d9f7352e8a23d0",
+      "file": "6504a432e6e72a51.glb",
+      "bytes": 119700,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_siege_trebuchet",
+      "name": "model siege-trebuchet",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "123711fd475e35d061738f648d9bf46c7f463d57681325c369977cee8954679a",
+      "file": "123711fd475e35d0.glb",
+      "bytes": 139848,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_siege_trebuchet_demolished",
+      "name": "model siege-trebuchet-demolished",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "6706dee3ec118323ea93ac58545cfcfd46e36c1ffffd750abbea54258aeda495",
+      "file": "6706dee3ec118323.glb",
+      "bytes": 66012,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_stairs_stone",
+      "name": "model stairs-stone",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "ec21b1d65c04ba6384734c31ac542bb4015541e652c411796fd7bcf292e6413c",
+      "file": "ec21b1d65c04ba63.glb",
+      "bytes": 9836,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_stairs_stone_square",
+      "name": "model stairs-stone-square",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "22b52789ae3b0b208bcf5e9d5e8a70c6e307d51672217a122eaa58c42f2d7b36",
+      "file": "22b52789ae3b0b20.glb",
+      "bytes": 9556,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_base",
+      "name": "model tower-base",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "575e6463b9bc58b8294690b2c1a15409b0624e0253af1a215bf67ea5e9cbaaba",
+      "file": "575e6463b9bc58b8.glb",
+      "bytes": 41724,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_hexagon_base",
+      "name": "model tower-hexagon-base",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "1185110eb885e70652558465bfabd07b80bb09afaa7b4be0a2e309fd685982b9",
+      "file": "1185110eb885e706.glb",
+      "bytes": 8336,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_hexagon_mid",
+      "name": "model tower-hexagon-mid",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "131045c750296bc84e8f6192918270a4424217484b03627a73e9f584ac4f4888",
+      "file": "131045c750296bc8.glb",
+      "bytes": 33568,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_hexagon_roof",
+      "name": "model tower-hexagon-roof",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "6bd3fb7fd8069419787e806990c9cf3869396e766a1b8cd16c2b3a1414961a0a",
+      "file": "6bd3fb7fd8069419.glb",
+      "bytes": 8400,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_hexagon_roof_secondary",
+      "name": "model tower-hexagon-roof-secondary",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "c2c0c2fe60bac1b0b27c65cfc118e98b2bcbaeeb9f32cdbe5b34b96a2c168132",
+      "file": "c2c0c2fe60bac1b0.glb",
+      "bytes": 12540,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_hexagon_top",
+      "name": "model tower-hexagon-top",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "22a043cde795ebc6e5720daee4944f468de5f0ef62296495d0374d4b169ec892",
+      "file": "22a043cde795ebc6.glb",
+      "bytes": 13848,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_hexagon_top_wood",
+      "name": "model tower-hexagon-top-wood",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "66c7697375b61acdc42cf90c16aaf1340a285a93402426098bc2ab9175bb7bbd",
+      "file": "66c7697375b61acd.glb",
+      "bytes": 13852,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_slant_roof",
+      "name": "model tower-slant-roof",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "f2dd82eca828d2b43c523927e6825539f5a648a18e7fcb68b7a4698f7d6d3d10",
+      "file": "f2dd82eca828d2b4.glb",
+      "bytes": 47488,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square",
+      "name": "model tower-square",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "ae2e4f11247fef4e8e550011c20bc1862839cd4cfd21590aec9781ae0fbbbc7f",
+      "file": "ae2e4f11247fef4e.glb",
+      "bytes": 16564,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square_arch",
+      "name": "model tower-square-arch",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "90ccb41a792ea3c5b8c98a3f18b710b52ebfdcd1e389024168c5ac6e591dd564",
+      "file": "90ccb41a792ea3c5.glb",
+      "bytes": 29724,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square_base",
+      "name": "model tower-square-base",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "996887e98957eeea2ba7b5d14f0d17877c91e4e99e1c5b8ee57d87b7f7c9d5e8",
+      "file": "996887e98957eeea.glb",
+      "bytes": 4456,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square_base_border",
+      "name": "model tower-square-base-border",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "7c48a3a8f8af838c0d7e114115c5abb7a557023b89e08aa421f14bd6add924e3",
+      "file": "7c48a3a8f8af838c.glb",
+      "bytes": 3684,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square_base_color",
+      "name": "model tower-square-base-color",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "0d9b180fba2229bf62deaaac381e16e912a0f5f2c48a8152e38fec2792e990b5",
+      "file": "0d9b180fba2229bf.glb",
+      "bytes": 6908,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square_mid",
+      "name": "model tower-square-mid",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "34a43b162b0984df0c691cb12fcd169ff374412deca0de5fdfdd702a9fa0c98f",
+      "file": "34a43b162b0984df.glb",
+      "bytes": 7744,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square_mid_color",
+      "name": "model tower-square-mid-color",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "a12235eb6e86d1e1b46a13e9ea3757ecb0e2fa8e5d82a9a0ae2017e78cf3baf6",
+      "file": "a12235eb6e86d1e1.glb",
+      "bytes": 5380,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square_mid_door",
+      "name": "model tower-square-mid-door",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "1a7d065cb548b73adcdd497cac10397247bd70377cb2f6b9d36b78b61087b35d",
+      "file": "1a7d065cb548b73a.glb",
+      "bytes": 28996,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square_mid_open",
+      "name": "model tower-square-mid-open",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "dd5d242d41654cf4f60b1bbb05ab7263bc8dd9adc671feee08911bba7a46d569",
+      "file": "dd5d242d41654cf4.glb",
+      "bytes": 23568,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square_mid_open_simple",
+      "name": "model tower-square-mid-open-simple",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "aa95f69fd90b20c299628830a9abd635a48f440f25dbbe131fe3fdd003742c20",
+      "file": "aa95f69fd90b20c2.glb",
+      "bytes": 19752,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square_mid_windows",
+      "name": "model tower-square-mid-windows",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "68c186f978135ba77969cdbee502a1c0d9d8f40bd01e8aa33b7cc6859a2ba766",
+      "file": "68c186f978135ba7.glb",
+      "bytes": 30852,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square_roof",
+      "name": "model tower-square-roof",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "94215209b27f5274188d70906d2a4df357529abd878b6b916bfb61ac5e64d1c8",
+      "file": "94215209b27f5274.glb",
+      "bytes": 14036,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square_top",
+      "name": "model tower-square-top",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "5e98cdf2bf4d885edc3fa514719f80d63872e11c54ee629c11859223dad8489c",
+      "file": "5e98cdf2bf4d885e.glb",
+      "bytes": 13276,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square_top_color",
+      "name": "model tower-square-top-color",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "56b5677ad749ab114818638bf8a3fd8fcfb64ef25f627fd6d5aefe5203366698",
+      "file": "56b5677ad749ab11.glb",
+      "bytes": 14088,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square_top_roof",
+      "name": "model tower-square-top-roof",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "5516fb45c3158e03773e15e83f5fc8b9bafbbcb3f35fc8e1e06e823cdb01e3bb",
+      "file": "5516fb45c3158e03.glb",
+      "bytes": 11256,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square_top_roof_high",
+      "name": "model tower-square-top-roof-high",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "b9345255366bc88744eea5469dddb4dedf2c70f33075b0fde53144ca251e25ea",
+      "file": "b9345255366bc887.glb",
+      "bytes": 11288,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square_top_roof_high_windows",
+      "name": "model tower-square-top-roof-high-windows",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "8e673350705e369a25afd6e8706946f0e41abeaf01b94abfe06c358e2e31876b",
+      "file": "8e673350705e369a.glb",
+      "bytes": 22788,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_square_top_roof_rounded",
+      "name": "model tower-square-top-roof-rounded",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "2127ee2431efa89c4f40932093b43b9b724073a32fc7010547bd46bb58e4b04d",
+      "file": "2127ee2431efa89c.glb",
+      "bytes": 11296,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tower_top",
+      "name": "model tower-top",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "222537f0daa9167788a468b4ee71918d1066b7c142e7e251c449c50be3438068",
+      "file": "222537f0daa91677.glb",
+      "bytes": 27408,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tree_large",
+      "name": "model tree-large",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "a72a7c237857a9fb04d51b05e3513e97a4d5d5572a709b3251f96b5bffd0a5ab",
+      "file": "a72a7c237857a9fb.glb",
+      "bytes": 21248,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tree_log",
+      "name": "model tree-log",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "50b4d452ee818afa9b37f325a594bdd4ffc1cef0f3c87ff3908251350c9960bf",
+      "file": "50b4d452ee818afa.glb",
+      "bytes": 7952,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tree_small",
+      "name": "model tree-small",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "ad5b2d7225241eb0599dbc7f1a9f9c39915be56ccccf88ad091bc9c1b4334034",
+      "file": "ad5b2d7225241eb0.glb",
+      "bytes": 15816,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_tree_trunk",
+      "name": "model tree-trunk",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "f07a2ed87d6a636aba46a0ec1e9ffae27b17b4c6ae019e77924bdb9b8f6fe28f",
+      "file": "f07a2ed87d6a636a.glb",
+      "bytes": 5684,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_wall_corner",
+      "name": "model wall-corner",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "82d27b869162b6a9ee19b0d7480913f56928b6620708f3b3899131495803cc9a",
+      "file": "82d27b869162b6a9.glb",
+      "bytes": 15264,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_wall_corner_half",
+      "name": "model wall-corner-half",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "2a64baa9c8adf4581c3ef28b7c4fc424890c9ed2da2d958bcbf38e239bb49f83",
+      "file": "2a64baa9c8adf458.glb",
+      "bytes": 12976,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_wall_corner_half_tower",
+      "name": "model wall-corner-half-tower",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "95a7e63c7716d31a47ffe1fe423c4ed65a610bd802b1d4286d743c1248255ffe",
+      "file": "95a7e63c7716d31a.glb",
+      "bytes": 80020,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_wall_corner_slant",
+      "name": "model wall-corner-slant",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "fd687db9c9fe6e3e446bd23ba2db23e993cf1119dd3fbcfbf543d23345c98d40",
+      "file": "fd687db9c9fe6e3e.glb",
+      "bytes": 16028,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_wall_doorway",
+      "name": "model wall-doorway",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "8daf5cccceace888d51d74b0e0254e192004faf926e07f1b28e94191879af3a6",
+      "file": "8daf5cccceace888.glb",
+      "bytes": 37560,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_wall_half",
+      "name": "model wall-half",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "4f0baca90eb52d96717aaabf36db98f1f2b554876f44da533b57dd92b6f67965",
+      "file": "4f0baca90eb52d96.glb",
+      "bytes": 12132,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_wall_half_modular",
+      "name": "model wall-half-modular",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "2241397b813c069858987750eaf7dce4a549fca239ae2e40b30fc7e58ff82b0e",
+      "file": "2241397b813c0698.glb",
+      "bytes": 8016,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_wall_narrow_corner",
+      "name": "model wall-narrow-corner",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "3e0a2fb0c7d6b4d8bb52ee30c1a3f5bac01ad558dc382b15a5c5a2d52131aa8a",
+      "file": "3e0a2fb0c7d6b4d8.glb",
+      "bytes": 9384,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_wall_narrow_gate",
+      "name": "model wall-narrow-gate",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "f01e3005f2cfe7451a0376a4fdba2408594cb60664e24e53e736e52d5b3ec934",
+      "file": "f01e3005f2cfe745.glb",
+      "bytes": 17092,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
+      "id": "kp_mdl_wall_narrow_stairs_rail",
+      "name": "model wall-narrow-stairs-rail",
+      "kind": "model",
+      "tags": [
+        "model",
+        "3d",
+        "prop",
+        "lowpoly",
+        "kenney",
+        "kenney_castle-kit"
+      ],
+      "sha256": "d1791d278f01ad436c7062f9807e6280f11070c47cbb40567ea280c859fe3a72",
+      "file": "d1791d278f01ad43.glb",
+      "bytes": 40896,
+      "pixelArt": false,
+      "runtime": [
+        "babylon"
+      ],
+      "licence": {
+        "id": "CC0-1.0",
+        "commercialUse": true,
+        "modification": true,
+        "redistribution": true,
+        "attribution": "Kenney (www.kenney.nl) — CC0, attribution appreciated",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "source": "Kenney · kenney_castle-kit"
+    },
+    {
       "id": "kp_tile_tile_0000",
       "name": "tile tile_0000",
       "kind": "tileset",

@@ -1,3 +1,4 @@
+import { SHIM_VERSION } from './protocol';
 /**
  * Self-contained guest shim, injected inline at the top of <head> by the play
  * Worker. Plain ES2017 IIFE, no imports. The body is a String.raw literal so it
@@ -348,7 +349,7 @@ export const SHIM_SOURCE = String.raw`
   // Debug surface for support: readable from the host with Playwright/CDP even
   // though the frame is sandboxed. window.__plDebug answers "did the game get
   // the tap?" and "is its loop running?" without a build.
-  var SHIM_VERSION = '1.2.0';
+  var SHIM_VERSION = '${SHIM_VERSION}';
   var dbg = { version: SHIM_VERSION, paused: false, pendingPause: false, hasPainted: false, rafs: 0, inputs: 0, messages: 0, resumes: 0, pauses: 0 };
   w.__plDebug = dbg;
 
@@ -512,6 +513,36 @@ export const SHIM_SOURCE = String.raw`
         img.onload = function () { if (done) { return; } done = true; realClearTimeout(timer); resolve(img); };
         img.onerror = function () { if (done) { return; } done = true; realClearTimeout(timer); reject(new Error('image failed: ' + file)); };
         img.src = String(file).charAt(0) === '/' ? String(file) : '/a/' + String(file);
+      });
+    },
+    /**
+     * Load a 3D model (.glb) from the catalogue into a Babylon scene.
+     *
+     * Babylon's own loader expects a URL root plus a filename, so this splits the
+     * path for you and returns the meshes parented to a fresh TransformNode — the
+     * caller positions one node instead of walking a mesh list. Models are shared
+     * by every card, so the browser cache does the dedupe.
+     */
+    loadModel: function (scene, file, rootName) {
+      return new Promise(function (resolve, reject) {
+        var B = typeof BABYLON !== 'undefined' ? BABYLON : (typeof window !== 'undefined' ? window.BABYLON : undefined);
+        if (!B || !B.SceneLoader) {
+          reject(new Error('loadModel needs the babylon runtime'));
+          return;
+        }
+        var path = String(file).charAt(0) === '/' ? String(file) : '/a/' + String(file);
+        var cut = path.lastIndexOf('/');
+        var root = path.slice(0, cut + 1);
+        var name = path.slice(cut + 1);
+        try {
+          B.SceneLoader.ImportMeshAsync('', root, name, scene).then(function (result) {
+            var parent = new B.TransformNode(rootName || ('model_' + name.replace(/\W/g, '_')), scene);
+            result.meshes.forEach(function (mesh) {
+              if (!mesh.parent) { mesh.parent = parent; }
+            });
+            resolve({ root: parent, meshes: result.meshes, animationGroups: result.animationGroups || [] });
+          }).catch(reject);
+        } catch (e) { reject(e); }
       });
     },
     /**

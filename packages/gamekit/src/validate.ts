@@ -210,7 +210,7 @@ function parseManifestRaw(raw: string): { manifest: Manifest | null; error: stri
     } else {
       for (const asset of rec['assets']) {
         const file = (asset as { file?: unknown })?.file;
-        if (typeof file !== 'string' || !/^[0-9a-f]{16}\.(webp|png|ogg|mp3)$/.test(file)) {
+        if (typeof file !== 'string' || !/^[0-9a-f]{16}\.(webp|png|ogg|mp3|glb)$/.test(file)) {
           // A URL here would be an unchecked network dependency inside a frame
           // with connect-src 'none'; only our own content-addressed names pass.
           problems.push('each asset needs { id, file } where file matches <sha16>.(webp|png|ogg|mp3)');

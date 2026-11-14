@@ -29,6 +29,7 @@ import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTextur
 import { Tools } from '@babylonjs/core/Misc/tools';
 import { Scalar } from '@babylonjs/core/Maths/math.scalar';
 import { Space } from '@babylonjs/core/Maths/math.axis';
+import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader';
 
 // Side-effect imports: scene components the mesh/material API expects to exist.
 import '@babylonjs/core/Materials/standardMaterial';
@@ -40,6 +41,10 @@ import '@babylonjs/core/Meshes/Builders/planeBuilder';
 import '@babylonjs/core/Meshes/Builders/groundBuilder';
 import '@babylonjs/core/Meshes/Builders/torusBuilder';
 import '@babylonjs/core/Meshes/Builders/discBuilder';
+// Loading a .glb needs the glTF loader registered as a side effect. It is the
+// heaviest single import here (~180 KB gzip) but without it the catalogue's
+// 110 models are unreachable from a 3D card.
+import '@babylonjs/loaders/glTF/2.0';
 
 const BABYLON = {
   Engine,
@@ -65,6 +70,7 @@ const BABYLON = {
   Tools,
   Scalar,
   Space,
+  SceneLoader,
 };
 
 if (typeof window !== 'undefined') {

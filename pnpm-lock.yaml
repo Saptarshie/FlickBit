@@ -15,6 +15,9 @@ importers:
       '@babylonjs/core':
         specifier: ^9.36.0
         version: 9.36.0
+      '@babylonjs/loaders':
+        specifier: 9.36.0
+        version: 9.36.0(@babylonjs/core@9.36.0)(babylonjs-gltf2interface@9.36.0)
       '@electric-sql/pglite-socket':
         specifier: ^0.2.18
         version: 0.2.18(@electric-sql/pglite-age@0.0.16(@electric-sql/pglite@0.5.15))(@electric-sql/pglite-pg_hashids@0.0.16(@electric-sql/pglite@0.5.15))(@electric-sql/pglite-pg_ivm@0.0.16(@electric-sql/pglite@0.5.15))(@electric-sql/pglite-pg_textsearch@0.0.17(@electric-sql/pglite@0.5.15))(@electric-sql/pglite-pg_uuidv7@0.0.16(@electric-sql/pglite@0.5.15))(@electric-sql/pglite-pgtap@0.0.16(@electric-sql/pglite@0.5.15))(@electric-sql/pglite-pgvector@0.0.16(@electric-sql/pglite@0.5.15))(@electric-sql/pglite@0.5.15)
@@ -332,6 +335,12 @@ packages:
 
   '@babylonjs/core@9.36.0':
     resolution: {integrity: sha512-PCrCshQ6hhvyxsp/FAq7GMPrmX8asloy+fXs1+mF2SCREx0hqCb4xtfbIoyID43rqX8+1UTw5RtodixXowRp7w==}
+
+  '@babylonjs/loaders@9.36.0':
+    resolution: {integrity: sha512-jjTbfUztgiuBQ4I2lX4JJHJmZ8oB9yLVq8NLn9HVq8VGzn5HdpKQmK0knw4wCX+Nq+QYAT/WXmHbopyOAHk2CA==}
+    peerDependencies:
+      '@babylonjs/core': ^9.0.0
+      babylonjs-gltf2interface: ^9.0.0
 
   '@bramus/specificity@2.4.3':
     resolution: {integrity: sha512-0GEz8qJWokkUVYQYRukmkSHIFNoBH8QTreeHrAFbvz1XFYc3Y+puhMs8PQ5x8GNugiC2l5jvDBXKLbBIByeSBw==}
@@ -1531,6 +1540,9 @@ packages:
   asynckit@0.4.0:
     resolution: {integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==}
 
+  babylonjs-gltf2interface@9.36.0:
+    resolution: {integrity: sha512-FFt9u17MasOdMNlevIJFkqKiIlRayT4zf+XMD0cTAyrhxCkjORPfRfZMEEtpUSveJiovcE7f2gg7tCfuyQtZEg==}
+
   bidi-js@1.1.0:
     resolution: {integrity: sha512-fX1Onk0tdVPC7obPWB5EbJ1z7NVhLq4m2xZLq2YXBkxzMXIGRpNMU88n0EPgWseKl12J7zXs7qrDxPK4sRs2fg==}
 
@@ -2633,6 +2645,11 @@ snapshots:
 
   '@babylonjs/core@9.36.0': {}
 
+  '@babylonjs/loaders@9.36.0(@babylonjs/core@9.36.0)(babylonjs-gltf2interface@9.36.0)':
+    dependencies:
+      '@babylonjs/core': 9.36.0
+      babylonjs-gltf2interface: 9.36.0
+
   '@bramus/specificity@2.4.3':
     dependencies:
       css-tree: 3.2.1
@@ -3421,6 +3438,8 @@ snapshots:
   assertion-error@2.0.1: {}
 
   asynckit@0.4.0: {}
+
+  babylonjs-gltf2interface@9.36.0: {}
 
   bidi-js@1.1.0:
     dependencies:

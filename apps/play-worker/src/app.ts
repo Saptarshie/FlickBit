@@ -67,7 +67,7 @@ const ARTIFACT_FILE_RE = /^([0-9a-f]{64})\.html$/;
  */
 const RUNTIME_FILE_RE = /^([a-z0-9-]+)@(\d+\.\d+\.\d+)-([0-9a-f]{16})\.js$/;
 /** Content-addressed assets: <sha256[0:16]>.<ext>. */
-const ASSET_FILE_RE = /^([0-9a-f]{16})\.(webp|png|ogg|mp3|json)$/;
+const ASSET_FILE_RE = /^([0-9a-f]{16})\.(webp|png|ogg|mp3|glb|json)$/;
 
 export type ServedRuntime = {
   file: string;
@@ -320,10 +320,19 @@ export function createApp(opts: { artifactsDir: string; runtimesDir?: string; as
       return;
     }
     const ext = name.split('.').pop();
-    const type = ext === 'webp' ? 'image/webp' : ext === 'png' ? 'image/png' : ext === 'json' ? 'application/json' : 'audio/ogg';
+    const type =
+      ext === 'webp'
+        ? 'image/webp'
+        : ext === 'png'
+          ? 'image/png'
+          : ext === 'json'
+            ? 'application/json'
+            : ext === 'glb'
+              ? 'model/gltf-binary'
+              : 'audio/ogg';
     try {
       const bytes = await readFile(path.join(assetsDir, name));
-      res.setHeader('Content-Type', `${type}; charset=utf-8`.replace('; charset=utf-8', ext === 'webp' || ext === 'png' ? '' : '; charset=utf-8'));
+      res.setHeader('Content-Type', `${type}; charset=utf-8`.replace('; charset=utf-8', ext === 'webp' || ext === 'png' || ext === 'glb' ? '' : '; charset=utf-8'));
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.send(bytes);

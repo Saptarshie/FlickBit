@@ -25,6 +25,7 @@ const RULES: Rule[] = [
   { match: /backgrounds?/i, kind: 'background', tags: ['background', 'sky', 'scenery', 'pixel'], prefix: 'kp_bg' },
   { match: /tiles|tilemap/i, kind: 'tileset', tags: ['tile', 'level', 'platform', 'platformer', 'pixel'], prefix: 'kp_tile' },
   { match: /ui|gui|buttons?|icons?/i, kind: 'ui', tags: ['ui', 'button', 'panel', 'hud'], prefix: 'kp_ui' },
+  { match: /glb format/i, kind: 'model', tags: ['model', '3d', 'prop', 'lowpoly'], prefix: 'kp_mdl' },
 ];
 const DEFAULT_RULE: Rule = { match: /./, kind: 'sprite', tags: ['sprite', 'kenney'], prefix: 'kp' };
 
@@ -32,7 +33,7 @@ async function walk(dir: string, out: string[] = []): Promise<string[]> {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) await walk(full, out);
-    else if (/\.png$/i.test(entry.name)) out.push(full);
+    else if (/\.(png|glb)$/i.test(entry.name)) out.push(full);
   }
   return out;
 }
@@ -68,7 +69,7 @@ async function main(): Promise<void> {
     const rule = RULES.find((r) => r.match.test(rel)) ?? DEFAULT_RULE;
     const info = await stat(file);
     if (info.size === 0) continue;
-    const base = path.basename(file, '.png');
+    const base = path.basename(file).replace(/\.(png|glb)$/i, '');
     const stem = base.replace(/[^a-z0-9]+/gi, '_').toLowerCase();
     const id = `${rule.prefix}_${stem}`;
     const n = (seen.get(id) ?? 0) + 1;

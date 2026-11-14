@@ -12,7 +12,7 @@
  */
 import { createHash } from 'node:crypto';
 
-export type AssetKind = 'sprite' | 'tileset' | 'background' | 'ui' | 'icon' | 'sfx' | 'music';
+export type AssetKind = 'sprite' | 'tileset' | 'background' | 'ui' | 'icon' | 'sfx' | 'music' | 'model';
 
 export type Licence = {
   /** SPDX-style identifier: 'CC0-1.0', 'CC-BY-4.0', 'QAL-1.0', ... */

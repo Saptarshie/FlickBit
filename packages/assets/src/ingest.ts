@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 /**
  * Ingest: raw file -> optimised, content-addressed, licence-tagged asset.
  *
@@ -90,6 +91,38 @@ export async function ingest(
       continue;
     }
 
+    // A GLB is already a packed binary container: re-encoding it would mean
+    // re-exporting meshes, which is a modelling decision, not a compression one.
+    // Publish it byte-for-byte under its content hash, exactly like a texture.
+    const head = Buffer.from(entry.buffer.subarray(0, 4)).toString('latin1');
+    if (entry.kind === 'model' || head === 'glTF') {
+      const sha = createHash('sha256').update(entry.buffer).digest('hex');
+      const file = `${sha.slice(0, 16)}.glb`;
+      const modelTarget = path.join(outDir, file);
+      if (!existsSync(modelTarget)) {
+        await writeFile(modelTarget, entry.buffer);
+        written += 1;
+      } else {
+        skipped += 1;
+      }
+      const modelRecord: AssetRecord = {
+        id: entry.id,
+        name: entry.name,
+        kind: entry.kind,
+        tags: entry.tags,
+        sha256: sha,
+        file,
+        bytes: entry.buffer.byteLength,
+        pixelArt: false,
+        runtime: ['babylon'],
+        licence: entry.licence ?? CC0,
+        source: entry.source ?? 'starter',
+      };
+      records.push(modelRecord);
+      byId.set(entry.id, modelRecord);
+      continue;
+    }
+
     const optimised = await optimizeImage(entry.buffer, { kind: entry.kind });
     const target = path.join(outDir, optimised.file);
     const already = byId.get(entry.id);
@@ -130,7 +163,7 @@ export async function ingest(
     // starter-pack run must not delete the Kenney files imported before it.
     const keep = new Set([...byId.values()].map((r) => r.file));
     for (const file of await readdir(outDir)) {
-      if (!/^[0-9a-f]{16}\.(webp|png|ogg|mp3)$/.test(file)) continue;
+      if (!/^[0-9a-f]{16}\.(webp|png|ogg|mp3|glb)$/.test(file)) continue;
       if (keep.has(file)) continue;
       await rm(path.join(outDir, file), { force: true });
     }
