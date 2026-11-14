@@ -340,6 +340,40 @@ export async function runGenerationPipeline(
     }
   }
 
+  // A 3D card that ships without a model is boxes. If the catalogue has models and
+  // the game targets babylon, one .glb must actually be loaded.
+  if (spec.runtime === 'babylon') {
+    const models = catalogue.filter((a) => a.kind === 'model');
+    const bodyCode = code.replace(/<script[^>]*id=["']pl-manifest["'][^>]*>[\s\S]*?<\/script>/i, '');
+    const usesModel = /\.glb/.test(bodyCode) && /(loadModel|SceneLoader|ImportMesh|loadAssetContainer)/i.test(bodyCode);
+    if (models.length > 0 && !usesModel && repairsCount < MAX_TOTAL_REPAIRS) {
+      const pick = models.slice(0, 6).map((a) => `${a.id} (/a/${a.file})`).join(', ');
+      reportProgress({ stage: 'repairing', message: 'Placing a 3D model in the scene...', progressPercent: 81 });
+      code = await repairCode(
+        code,
+        {
+          ok: false,
+          errors: [
+            '[3d] the game targets babylon and the catalogue has ' +
+              models.length +
+              ' models, but no .glb is loaded: the scene is primitives only',
+          ],
+          warnings: [],
+        } as unknown as ValidationResult,
+        provider,
+        [
+          `Load one model with PlayLoop.loadModel(scene, "<file>") and use it as the player or the scenery. Candidates: ${pick}.`,
+          'PlayLoop.loadModel resolves the /a/ path, imports through SceneLoader and returns { root, meshes, animationGroups }; position root, not each mesh.',
+          'Keep the primitives for what they are good at (collision volumes, HUD-facing markers), but at least one visible object must be the model.',
+        ],
+        planCtx(),
+      );
+      repairsCount += 1;
+      note('3d', 'no .glb model loaded');
+      validateReport = validateGame(code);
+    }
+  }
+
   // Stage 5b: playtest — the difference between "a game" and "a video of a game".
   // The smoke gate proves it renders and reacts; this proves a player can get
   // somewhere: the score moves or the run ends, and a tap after the end starts
