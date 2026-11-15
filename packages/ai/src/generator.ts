@@ -39,7 +39,7 @@ function runtimeBlock(runtime?: string): string {
       '  engine.runRenderLoop(function () { scene.render(); });',
       '  window.addEventListener("resize", function () { engine.resize(); });',
       '- Babylon owns the loop: do not start your own requestAnimationFrame. Clamp dt = Math.min((now - last) / 1000, 0.05).',
-      '- Build everything from MeshBuilder (box/sphere/cylinder/plane/ground/torus/disc) and StandardMaterial. No GLB, no textures on disk.',
+      '- Build scenery from MeshBuilder (box/sphere/cylinder/plane/ground/torus/disc) and StandardMaterial. Real models are available as .glb — see the ASSETS list below; there are no texture files on disk.',
       '- A 3D card must be readable at phone size: camera close to the action, strong emissive colours, fog (scene.fogMode = BABYLON.Scene.FOGMODE_EXP2) to hide the spawn edge.',
       '- Dispose meshes that leave the scene. Babylon keeps everything alive otherwise, and a runner leaks a mesh per second.',
       '- Put HUD text in DOM elements positioned with PlayLoop.safeArea (top / right / bottom), not in the 3D scene.',
